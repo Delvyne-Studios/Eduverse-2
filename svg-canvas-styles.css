@@ -1,0 +1,356 @@
+/* =================================================================
+   SVG DIAGRAM & GRAPH STYLES
+   Compact, modern UI for LLM-generated SVG diagrams
+   ================================================================= */
+
+/* =================================================================
+   SVG BACKGROUND - THEME AWARE
+   ================================================================= */
+
+.svg-bg {
+    fill: var(--bg-secondary, #2a2d3a);
+}
+
+/* =================================================================
+   EMBED CONTAINERS (Inside Chat Messages)
+   ================================================================= */
+
+.diagram-embed,
+.graph-embed {
+    margin: 12px 0;
+    width: 100%;
+    max-width: 340px;
+}
+
+/* =================================================================
+   WRAPPER & CONTAINER - COMPACT DESIGN
+   ================================================================= */
+
+.diagram-wrapper,
+.graph-wrapper {
+    background: linear-gradient(145deg, rgba(30, 33, 48, 0.95), rgba(22, 25, 38, 0.98));
+    border-radius: 10px;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    padding: 10px;
+    margin: 8px 0;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px);
+    animation: svgFadeIn 0.25s ease-out;
+}
+
+@keyframes svgFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.diagram-container,
+.graph-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #2a2d3a;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+/* =================================================================
+   SVG STYLING
+   ================================================================= */
+
+.diagram-svg,
+.graph-svg {
+    display: block;
+    border-radius: 6px;
+    width: 100%;
+    height: auto;
+    max-width: 320px;
+}
+
+.diagram-svg text,
+.graph-svg text {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    user-select: none;
+}
+
+/* SVG element default styles - can be overridden by LLM */
+.diagram-svg line,
+.diagram-svg path,
+.diagram-svg polyline {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.graph-svg line,
+.graph-svg path,
+.graph-svg polyline {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* =================================================================
+   STEP CONTROLS - COMPACT
+   ================================================================= */
+
+.diagram-controls,
+.graph-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.step-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.step-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 500;
+}
+
+.step-label .current-step {
+    color: #818cf8;
+    font-weight: 700;
+}
+
+.step-label .total-steps {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.step-description {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    text-align: center;
+    padding: 4px 10px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 5px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.step-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* =================================================================
+   NAVIGATION BUTTONS - MINIMAL
+   ================================================================= */
+
+.step-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: 'Inter', Arial, sans-serif;
+}
+
+.step-btn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.25);
+    border-color: rgba(99, 102, 241, 0.4);
+    transform: scale(1.05);
+}
+
+.step-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.step-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+.step-btn i {
+    font-size: 10px;
+}
+
+/* =================================================================
+   STEP DOTS - COMPACT
+   ================================================================= */
+
+.step-dots {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+}
+
+.step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.step-dot:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.15);
+}
+
+.step-dot.active {
+    background: #818cf8;
+    box-shadow: 0 0 8px rgba(129, 140, 248, 0.5);
+}
+
+/* =================================================================
+   COLOR PALETTE FOR SVG ELEMENTS
+   ================================================================= */
+
+/* Primary colors - use these classes in SVG */
+.stroke-primary { stroke: #6366f1; }
+.stroke-secondary { stroke: #ec4899; }
+.stroke-accent { stroke: #8b5cf6; }
+.stroke-success { stroke: #10b981; }
+.stroke-warning { stroke: #f59e0b; }
+.stroke-danger { stroke: #ef4444; }
+.stroke-white { stroke: #ffffff; }
+.stroke-cyan { stroke: #06b6d4; }
+
+.fill-primary { fill: #6366f1; }
+.fill-secondary { fill: #ec4899; }
+.fill-accent { fill: #8b5cf6; }
+.fill-success { fill: #10b981; }
+.fill-warning { fill: #f59e0b; }
+.fill-danger { fill: #ef4444; }
+.fill-white { fill: #ffffff; }
+.fill-cyan { fill: #06b6d4; }
+.fill-none { fill: none; }
+.fill-bg { fill: rgba(42, 45, 58, 0.5); }
+
+/* =================================================================
+   SVG TEXT STYLES
+   ================================================================= */
+
+.text-label {
+    fill: #ffffff;
+    font-size: 3.5px;
+    font-weight: 500;
+}
+
+.text-title {
+    fill: #ffffff;
+    font-size: 4.5px;
+    font-weight: 600;
+}
+
+.text-small {
+    fill: rgba(255, 255, 255, 0.8);
+    font-size: 2.8px;
+}
+
+.text-math {
+    fill: #818cf8;
+    font-size: 3.5px;
+    font-style: italic;
+}
+
+/* =================================================================
+   SVG ANIMATION CLASSES
+   ================================================================= */
+
+.animate-draw {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawLine 1s ease forwards;
+}
+
+@keyframes drawLine {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.animate-fade {
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+/* =================================================================
+   RESPONSIVE - EVEN MORE COMPACT ON SMALL SCREENS
+   ================================================================= */
+
+@media (max-width: 500px) {
+    .diagram-embed,
+    .graph-embed {
+        max-width: 100%;
+    }
+    
+    .diagram-wrapper,
+    .graph-wrapper {
+        padding: 8px;
+        border-radius: 8px;
+    }
+    
+    .diagram-svg,
+    .graph-svg {
+        max-width: 280px;
+    }
+    
+    .step-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .step-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .step-label,
+    .step-description {
+        font-size: 10px;
+    }
+}
+
+/* =================================================================
+   DARK MODE ADJUSTMENTS (already dark, but for consistency)
+   ================================================================= */
+
+@media (prefers-color-scheme: dark) {
+    .diagram-wrapper,
+    .graph-wrapper {
+        border-color: rgba(99, 102, 241, 0.2);
+    }
+}

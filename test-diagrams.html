@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Diagram System - Comprehensive Test</title>
+    <link rel="stylesheet" href="svg-canvas-styles.css">
+    <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #1a1f3a;
+            --primary: #6366f1;
+            --text-primary: #ffffff;
+        }
+        
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', Arial, sans-serif;
+            padding: 40px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 40px;
+        }
+        
+        h2 {
+            color: #818cf8;
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .description {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 SVG Diagram System</h1>
+    <p class="subtitle">Comprehensive Test Suite - Spatially Aware, Theme-Integrated Diagrams</p>
+    
+    <div class="test-grid">
+        <!-- Test 1: LPP Minimize Problem -->
+        <div class="test-section">
+            <h2>📊 LPP Minimize Problem <span class="badge">Graph</span></h2>
+            <p class="description">Linear Programming: Minimize Z = 3x + 2y subject to constraints with shaded feasible region</p>
+            <div id="test1"></div>
+        </div>
+        
+        <!-- Test 2: Molecular Orbital Diagram -->
+        <div class="test-section">
+            <h2>⚛️ Molecular Orbital (O₂) <span class="badge">Chemistry</span></h2>
+            <p class="description">Complete MO diagram showing bonding, antibonding, and π orbitals with electron filling</p>
+            <div id="test2"></div>
+        </div>
+        
+        <!-- Test 3: Hund's Rule -->
+        <div class="test-section">
+            <h2>🎯 Hund's Rule (Nitrogen) <span class="badge">Chemistry</span></h2>
+            <p class="description">Electron configuration for Nitrogen (2p³) demonstrating maximum multiplicity</p>
+            <div id="test3"></div>
+        </div>
+        
+        <!-- Test 4: Bohr's Atomic Model -->
+        <div class="test-section">
+            <h2>🌀 Bohr's Atomic Model <span class="badge">Physics</span></h2>
+            <p class="description">Hydrogen atom showing electron orbits (n=1,2,3) with energy levels and transitions</p>
+            <div id="test4"></div>
+        </div>
+        
+        <!-- Test 5: d Orbital -->
+        <div class="test-section">
+            <h2>🌸 d Orbital (d<sub>xy</sub>) <span class="badge">Chemistry</span></h2>
+            <p class="description">3D representation of d<sub>xy</sub> orbital showing characteristic cloverleaf shape</p>
+            <div id="test5"></div>
+        </div>
+        
+        <!-- Test 6: VSEPR Trigonal Bipyramidal -->
+        <div class="test-section">
+            <h2>⬡ VSEPR Trigonal Bipyramidal <span class="badge">Chemistry</span></h2>
+            <p class="description">PCl₅ geometry with bond angles (90°, 120°, 180°) and spatial arrangement</p>
+            <div id="test6"></div>
+        </div>
+        
+        <!-- Test 7: Plant Cell -->
+        <div class="test-section">
+            <h2>🌱 Plant Cell Structure <span class="badge">Biology</span></h2>
+            <p class="description">Detailed plant cell showing organelles: nucleus, chloroplast, vacuole, cell wall, mitochondria</p>
+            <div id="test7"></div>
+        </div>
+        
+        <!-- Test 8: Convex Lens Ray Diagram -->
+        <div class="test-section">
+            <h2>🔭 Convex Lens Ray Diagram <span class="badge">Physics</span></h2>
+            <p class="description">Ray tracing through convex lens showing image formation with step-by-step animation</p>
+            <div id="test8"></div>
+        </div>
+    </div>
+    
+    <script src="diagram-canvas-svg.js"></script>
+    <script src="test-diagrams-data.js"></script>
+</body>
+</html>

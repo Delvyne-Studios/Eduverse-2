@@ -1,0 +1,2229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduVerse - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="output-controls.css">
+    <link rel="stylesheet" href="svg-canvas-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    
+    <!-- Load libraries before any other scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Authentication Check -->
+    <script>
+        // Check if user is logged in before loading dashboard
+        function checkAuth() {
+            const session = localStorage.getItem('eduverse_session');
+            if (!session) {
+                // Not logged in, redirect to landing page
+                window.location.href = 'landing.html';
+                return false;
+            }
+            return true;
+        }
+        
+        // Run check immediately
+        checkAuth();
+    </script>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="background-animation">
+        <div class="floating-shape shape-1"></div>
+        <div class="floating-shape shape-2"></div>
+        <div class="floating-shape shape-3"></div>
+        <div class="floating-shape shape-4"></div>
+        <div class="floating-shape shape-5"></div>
+    </div>
+    
+    <!-- Gradient Orbs -->
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar glass-premium">
+        <div class="nav-container">
+            <div class="nav-brand glow-text">
+                <div class="logo-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <span>EduVerse</span>
+            </div>
+            
+            <div class="nav-menu">
+                <a href="#" class="nav-link active" data-page="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-link" data-page="doubt-solver">
+                    <i class="fas fa-brain"></i>
+                    <span>AI Solver</span>
+                </a>
+                <a href="#" class="nav-link" data-page="tools">
+                    <i class="fas fa-tools"></i>
+                    <span>Tools</span>
+                </a>
+                <a href="#" class="nav-link" data-page="study-session">
+                    <i class="fas fa-clock"></i>
+                    <span>Study Session</span>
+                </a>
+                <a href="#" class="nav-link" data-page="study-material">
+                    <i class="fas fa-book"></i>
+                    <span>Study Material</span>
+                </a>
+                <a href="#" class="nav-link" data-page="social">
+                    <i class="fas fa-users"></i>
+                    <span>Social</span>
+                </a>
+                <a href="#" class="nav-link" data-page="profile">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+            
+            <div class="nav-actions">
+                <button class="theme-toggle glass-btn" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="notification-btn glass-btn" onclick="toggleNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notifBadge" style="display: none;">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notificationPanel" style="display: none;">
+        <div class="notification-panel-header">
+            <h3><i class="fas fa-bell"></i> Notifications</h3>
+            <button class="btn-clear-notifs" onclick="clearAllNotifications()">Clear All</button>
+        </div>
+        <div class="notification-list" id="notificationList">
+            <div class="empty-notif-state">
+                <i class="fas fa-bell-slash"></i>
+                <p>No notifications yet</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="app-container">
+        
+        <!-- DASHBOARD PAGE -->
+        <div class="page active" id="dashboard-page">
+            <div class="page-header">
+                <h1 class="page-title">Welcome back, <span class="gradient-text-animated">Student</span>! 👋</h1>
+                <p class="page-subtitle">Here's your progress today</p>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Welcome Score Card -->
+                <div class="dashboard-card glass-premium hover-lift">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-line"></i> Daily Score</h3>
+                        <span class="badge gradient-bg-1">AI Powered</span>
+                    </div>
+                    <div class="score-circle">
+                        <div class="circle-progress" data-progress="78">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="circle-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="circle-fill" cx="50" cy="50" r="45" style="--progress: 78"></circle>
+                            </svg>
+                            <div class="circle-text">
+                                <span class="score-value">78</span>
+                                <span class="score-label">/100</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="card-desc">Great progress! Keep it up! 🔥</p>
+                </div>
+
+                <!-- User Level & XP -->
+                <div class="dashboard-card glass-premium hover-lift">
+                    <div class="card-header">
+                        <h3><i class="fas fa-star"></i> Level & XP</h3>
+                    </div>
+                    <div class="level-display">
+                        <div class="level-badge gradient-bg-2">
+                            <span class="level-number" id="userLevel">1</span>
+                        </div>
+                        <div class="level-info">
+                            <h4 id="userLevelTitle">Scholar Level 1</h4>
+                            <div class="xp-bar">
+                                <div class="xp-fill" id="xpFill" style="width: 0%"></div>
+                            </div>
+                            <p class="xp-text" id="xpText">0 / 100 XP</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leaderboard Rank -->
+                <div class="dashboard-card glass-premium hover-lift">
+                    <div class="card-header">
+                        <h3><i class="fas fa-trophy"></i> Your Rank</h3>
+                    </div>
+                    <div class="rank-display">
+                        <div class="rank-number gradient-text-animated">#6</div>
+                        <p>Global Ranking</p>
+                        <div class="rank-change">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>+2 from yesterday</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Streak -->
+                <div class="dashboard-card glass-premium hover-lift">
+                    <div class="card-header">
+                        <h3><i class="fas fa-fire"></i> Study Streak</h3>
+                    </div>
+                    <div class="streak-display">
+                        <div class="streak-number">
+                            <span class="counter" data-target="28">0</span>
+                            <span class="streak-label">Days</span>
+                        </div>
+                        <div class="streak-calendar">
+                            <div class="day completed"></div>
+                            <div class="day completed"></div>
+                            <div class="day completed"></div>
+                            <div class="day completed"></div>
+                            <div class="day completed"></div>
+                            <div class="day current"></div>
+                            <div class="day"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Today's Progress -->
+                <div class="dashboard-card glass-premium hover-lift large">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tasks"></i> Today's Checklist</h3>
+                        <button class="btn-icon glass-btn" onclick="addChecklistItem()" title="Add Task"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="checklist-container" id="todayChecklist">
+                        <!-- Checklist items loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Today's Schedule -->
+                <div class="dashboard-card glass-premium hover-lift">
+                    <div class="card-header">
+                        <h3><i class="fas fa-calendar-check"></i> Today's Schedule</h3>
+                        <button class="btn-icon glass-btn" onclick="openTool('study-planner')" title="Edit Schedule">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="schedule-list" id="todayScheduleList">
+                        <!-- Will be populated by JavaScript -->
+                        <div class="empty-schedule">
+                            <i class="fas fa-calendar-plus"></i>
+                            <p>No schedule yet!</p>
+                            <button class="btn-primary small" onclick="openTool('study-planner'); navigateTo('tools-page');">
+                                Create Study Plan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="dashboard-card glass-premium hover-lift">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    </div>
+                    <div class="quick-actions-grid">
+                        <button class="action-btn glass-btn" data-page="doubt-solver">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Ask Doubt</span>
+                        </button>
+                        <button class="action-btn glass-btn">
+                            <i class="fas fa-clock"></i>
+                            <span>Focus Timer</span>
+                        </button>
+                        <button class="action-btn glass-btn" data-page="tools">
+                            <i class="fas fa-calculator"></i>
+                            <span>Calculator</span>
+                        </button>
+                        <button class="action-btn glass-btn" data-page="study-material">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Notes</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI DOUBT SOLVER PAGE -->
+        <div class="page" id="doubt-solver-page">
+            <div class="chat-layout">
+                <!-- Chat Sidebar Card -->
+                <div class="chat-sidebar-card glass-premium">
+                    <div class="chat-sidebar-header">
+                        <h3><i class="fas fa-comments"></i> Chat History</h3>
+                        <button class="new-chat-btn glass-btn">
+                            <i class="fas fa-plus"></i> New Chat
+                        </button>
+                    </div>
+                    <div class="history-list" id="chat-history-list">
+                        <!-- Chat history items will be loaded dynamically -->
+                    </div>
+                    <div class="clear-history-btn-container">
+                        <button class="clear-history-btn glass-btn">
+                            <i class="fas fa-trash"></i> Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Chat Card -->
+                <div class="chat-main-card glass-premium">
+                    <div class="chat-header">
+                        <div class="chat-title-section">
+                            <i class="fas fa-robot"></i>
+                            <h2>AI Assistant</h2>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="welcome-message">
+                            <div class="welcome-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <h3>Hello! I'm your AI Assistant 👋</h3>
+                            <p>I can help you with Chemistry, Physics, and Math questions from your NCERT syllabus.</p>
+                            <p>Ask me anything, upload an image, or use voice input!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Card -->
+                <div class="chat-input-card glass-premium">
+                    <div class="image-preview-container" id="image-preview-container" style="display: none;">
+                        <img class="image-preview" id="image-preview" src="" alt="Preview">
+                        <button class="remove-image-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="chat-input-wrapper">
+                        <button class="input-icon-btn" title="Upload Image">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <textarea 
+                            class="chat-input" 
+                            id="chat-input" 
+                            placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+                            rows="1"></textarea>
+                        <button class="input-icon-btn" title="Voice Input">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STUDY SESSION PAGE -->
+        <div class="page" id="study-session-page">
+            <div class="page-header">
+                <h1 class="page-title"><i class="fas fa-clock"></i> Study Session</h1>
+                <p class="page-subtitle">Focus timer with sleep detection to keep you alert</p>
+            </div>
+
+            <div class="study-session-compact-layout">
+                <!-- Settings & Presets Row -->
+                <div class="session-row">
+                    <!-- Timer Settings -->
+                    <div class="dashboard-card glass-premium">
+                        <h3><i class="fas fa-cog"></i> Timer Settings</h3>
+                        <div class="compact-settings">
+                            <div class="setting-inline">
+                                <label><i class="fas fa-book-reader"></i> Study Time</label>
+                                <div class="time-input-group">
+                                    <input type="number" id="studyHoursPage" min="0" max="5" value="0">h
+                                    <input type="number" id="studyMinutesPage" min="1" max="59" value="25">m
+                                </div>
+                            </div>
+                            <div class="setting-inline">
+                                <label><i class="fas fa-coffee"></i> Break Time</label>
+                                <div class="time-input-group">
+                                    <input type="number" id="breakMinutesPage" min="1" max="30" value="5">m
+                                </div>
+                            </div>
+                            <div class="setting-inline">
+                                <label><i class="fas fa-redo"></i> Number of Sets</label>
+                                <input type="number" id="numSetsPage" min="1" max="20" value="4" style="width: 60px;">
+                            </div>
+                        </div>
+                        <div class="session-info">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Total session: <strong id="totalSessionTime">2h 0m</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Quick Presets -->
+                    <div class="dashboard-card glass-premium">
+                        <h3><i class="fas fa-fire"></i> Recommended Presets</h3>
+                        <div class="preset-list">
+                            <button class="preset-option" onclick="applyPresetToPage('classic')">
+                                <div class="preset-icon"><i class="fas fa-clock"></i></div>
+                                <div class="preset-info">
+                                    <span class="preset-name">Classic Pomodoro</span>
+                                    <span class="preset-time">25 min study / 5 min break</span>
+                                </div>
+                            </button>
+                            <button class="preset-option" onclick="applyPresetToPage('extended')">
+                                <div class="preset-icon"><i class="fas fa-hourglass-half"></i></div>
+                                <div class="preset-info">
+                                    <span class="preset-name">Extended Focus</span>
+                                    <span class="preset-time">50 min study / 10 min break</span>
+                                </div>
+                            </button>
+                            <button class="preset-option" onclick="applyPresetToPage('short')">
+                                <div class="preset-icon"><i class="fas fa-bolt"></i></div>
+                                <div class="preset-info">
+                                    <span class="preset-name">Short Burst</span>
+                                    <span class="preset-time">15 min study / 3 min break</span>
+                                </div>
+                            </button>
+                            <button class="preset-option" onclick="applyPresetToPage('ultra')">
+                                <div class="preset-icon"><i class="fas fa-brain"></i></div>
+                                <div class="preset-info">
+                                    <span class="preset-name">Ultra Focus</span>
+                                    <span class="preset-time">90 min study / 20 min break</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sleep Detector & Start Row -->
+                <div class="session-row">
+                    <!-- Sleep Detector -->
+                    <div class="dashboard-card glass-premium">
+                        <h3><i class="fas fa-eye"></i> Sleep Detector Settings</h3>
+                        <div class="detector-compact">
+                            <div class="detector-alert">
+                                <i class="fas fa-shield-alt"></i>
+                                <p>Your camera will monitor your eyes during study sessions. If your eyes stay closed for 2 seconds, an alarm will sound to keep you alert.</p>
+                            </div>
+                            <div class="setting-inline">
+                                <label>Detection Sensitivity <span id="sensitivityValuePage" class="sensitivity-val">(0.27)</span></label>
+                                <input type="range" id="eyeSensitivityPage" min="0.15" max="0.35" step="0.01" value="0.27" 
+                                       oninput="document.getElementById('sensitivityValuePage').textContent = '(' + this.value + ')'">
+                            </div>
+                            <small class="sensitivity-note">Lower = More sensitive | Higher = Less sensitive</small>
+                            <div class="detector-features-list">
+                                <span><i class="fas fa-check-circle"></i> Real-time eye tracking</span>
+                                <span><i class="fas fa-check-circle"></i> Privacy focused (local processing)</span>
+                                <span><i class="fas fa-check-circle"></i> Adjustable camera position</span>
+                                <span><i class="fas fa-check-circle"></i> Loud alarm sound</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Start Button -->
+                    <div class="dashboard-card glass-premium start-session-card">
+                        <div class="session-ready">
+                            <i class="fas fa-rocket"></i>
+                            <h3>Ready to Focus?</h3>
+                            <p>Configure your settings and click below to start your study session</p>
+                            <button class="btn-start-session" onclick="studySession.startSessionDirectly()">
+                                <i class="fas fa-play-circle"></i>
+                                <span>Start Study Session</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOOLS PAGE -->
+        <div class="page" id="tools-page">
+            <div class="page-header">
+                <h1 class="page-title"><i class="fas fa-tools"></i> Study Tools</h1>
+                <p class="page-subtitle">Essential tools for your academic journey</p>
+            </div>
+
+            <!-- Tools Grid - Card View -->
+            <div class="tools-card-grid" id="toolsGrid">
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('unit-converter')">
+                    <div class="tool-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h3>Unit Converter</h3>
+                    <p>Convert between different units of measurement</p>
+                </div>
+
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('periodic-table')">
+                    <div class="tool-icon">
+                        <i class="fas fa-atom"></i>
+                    </div>
+                    <h3>Periodic Table</h3>
+                    <p>Interactive periodic table of elements</p>
+                </div>
+
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('log-table')">
+                    <div class="tool-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <h3>Log Table</h3>
+                    <p>Logarithm calculator and table</p>
+                </div>
+
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('mock-test')">
+                    <div class="tool-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>Mock Test Generator</h3>
+                    <p>Generate custom practice tests</p>
+                </div>
+
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('cheat-sheet')">
+                    <div class="tool-icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <h3>Cheat Sheet Generator</h3>
+                    <p>Create quick reference sheets</p>
+                </div>
+
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('mindmap')">
+                    <div class="tool-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h3>Mindmap Maker</h3>
+                    <p>Generate visual mind maps</p>
+                </div>
+
+                <div class="tool-card glass-premium hover-lift featured-tool" onclick="openTool('study-planner')">
+                    <div class="tool-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <h3>Study Planner</h3>
+                    <p>AI-powered personalized study schedule</p>
+                    <div class="tool-badge">NEW</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Tool Views (Hidden by default - Outside page container) -->
+        <div class="tool-fullscreen" id="unitConverterTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-exchange-alt"></i> Unit Converter</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body glass-premium">
+                    <select class="tool-select glass-btn" id="conversionType" onchange="updateUnitConverter()">
+                        <option>Length</option>
+                        <option>Mass</option>
+                        <option>Temperature</option>
+                        <option>Time</option>
+                    </select>
+                    <div class="converter-inputs">
+                        <div class="input-group">
+                            <input type="number" id="converterInput" class="tool-input glass-premium" placeholder="100" value="100" oninput="convertUnits()">
+                            <select class="unit-select glass-btn" id="fromUnit" onchange="convertUnits()">
+                                <option>Meters</option>
+                                <option>Kilometers</option>
+                                <option>Miles</option>
+                                <option>Feet</option>
+                                <option>Inches</option>
+                            </select>
+                        </div>
+                        <i class="fas fa-arrows-alt-h converter-icon"></i>
+                        <div class="input-group">
+                            <input type="number" id="converterOutput" class="tool-input glass-premium" placeholder="Result" value="328.08" readonly>
+                            <select class="unit-select glass-btn" id="toUnit" onchange="convertUnits()">
+                                <option>Feet</option>
+                                <option>Meters</option>
+                                <option>Inches</option>
+                                <option>Kilometers</option>
+                                <option>Miles</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-fullscreen" id="periodicTableTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-atom"></i> Interactive Periodic Table</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body glass-premium">
+                    <div class="periodic-table-container">
+                        <div class="periodic-table-full">
+                            <!-- Period 1 -->
+                            <div class="element nonmetal" style="grid-column: 1; grid-row: 1;">
+                                <span class="atomic-number">1</span>
+                                <span class="element-symbol">H</span>
+                                <span class="element-name">Hydrogen</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 1;">
+                                <span class="atomic-number">2</span>
+                                <span class="element-symbol">He</span>
+                                <span class="element-name">Helium</span>
+                            </div>
+
+                            <!-- Period 2 -->
+                            <div class="element alkali-metal" style="grid-column: 1; grid-row: 2;">
+                                <span class="atomic-number">3</span>
+                                <span class="element-symbol">Li</span>
+                                <span class="element-name">Lithium</span>
+                            </div>
+                            <div class="element alkaline-earth" style="grid-column: 2; grid-row: 2;">
+                                <span class="atomic-number">4</span>
+                                <span class="element-symbol">Be</span>
+                                <span class="element-name">Beryllium</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 13; grid-row: 2;">
+                                <span class="atomic-number">5</span>
+                                <span class="element-symbol">B</span>
+                                <span class="element-name">Boron</span>
+                            </div>
+                            <div class="element nonmetal" style="grid-column: 14; grid-row: 2;">
+                                <span class="atomic-number">6</span>
+                                <span class="element-symbol">C</span>
+                                <span class="element-name">Carbon</span>
+                            </div>
+                            <div class="element nonmetal" style="grid-column: 15; grid-row: 2;">
+                                <span class="atomic-number">7</span>
+                                <span class="element-symbol">N</span>
+                                <span class="element-name">Nitrogen</span>
+                            </div>
+                            <div class="element nonmetal" style="grid-column: 16; grid-row: 2;">
+                                <span class="atomic-number">8</span>
+                                <span class="element-symbol">O</span>
+                                <span class="element-name">Oxygen</span>
+                            </div>
+                            <div class="element halogen" style="grid-column: 17; grid-row: 2;">
+                                <span class="atomic-number">9</span>
+                                <span class="element-symbol">F</span>
+                                <span class="element-name">Fluorine</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 2;">
+                                <span class="atomic-number">10</span>
+                                <span class="element-symbol">Ne</span>
+                                <span class="element-name">Neon</span>
+                            </div>
+
+                            <!-- Period 3 -->
+                            <div class="element alkali-metal" style="grid-column: 1; grid-row: 3;">
+                                <span class="atomic-number">11</span>
+                                <span class="element-symbol">Na</span>
+                                <span class="element-name">Sodium</span>
+                            </div>
+                            <div class="element alkaline-earth" style="grid-column: 2; grid-row: 3;">
+                                <span class="atomic-number">12</span>
+                                <span class="element-symbol">Mg</span>
+                                <span class="element-name">Magnesium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 13; grid-row: 3;">
+                                <span class="atomic-number">13</span>
+                                <span class="element-symbol">Al</span>
+                                <span class="element-name">Aluminum</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 14; grid-row: 3;">
+                                <span class="atomic-number">14</span>
+                                <span class="element-symbol">Si</span>
+                                <span class="element-name">Silicon</span>
+                            </div>
+                            <div class="element nonmetal" style="grid-column: 15; grid-row: 3;">
+                                <span class="atomic-number">15</span>
+                                <span class="element-symbol">P</span>
+                                <span class="element-name">Phosphorus</span>
+                            </div>
+                            <div class="element nonmetal" style="grid-column: 16; grid-row: 3;">
+                                <span class="atomic-number">16</span>
+                                <span class="element-symbol">S</span>
+                                <span class="element-name">Sulfur</span>
+                            </div>
+                            <div class="element halogen" style="grid-column: 17; grid-row: 3;">
+                                <span class="atomic-number">17</span>
+                                <span class="element-symbol">Cl</span>
+                                <span class="element-name">Chlorine</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 3;">
+                                <span class="atomic-number">18</span>
+                                <span class="element-symbol">Ar</span>
+                                <span class="element-name">Argon</span>
+                            </div>
+
+                            <!-- Period 4 -->
+                            <div class="element alkali-metal" style="grid-column: 1; grid-row: 4;">
+                                <span class="atomic-number">19</span>
+                                <span class="element-symbol">K</span>
+                                <span class="element-name">Potassium</span>
+                            </div>
+                            <div class="element alkaline-earth" style="grid-column: 2; grid-row: 4;">
+                                <span class="atomic-number">20</span>
+                                <span class="element-symbol">Ca</span>
+                                <span class="element-name">Calcium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 3; grid-row: 4;">
+                                <span class="atomic-number">21</span>
+                                <span class="element-symbol">Sc</span>
+                                <span class="element-name">Scandium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 4; grid-row: 4;">
+                                <span class="atomic-number">22</span>
+                                <span class="element-symbol">Ti</span>
+                                <span class="element-name">Titanium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 5; grid-row: 4;">
+                                <span class="atomic-number">23</span>
+                                <span class="element-symbol">V</span>
+                                <span class="element-name">Vanadium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 6; grid-row: 4;">
+                                <span class="atomic-number">24</span>
+                                <span class="element-symbol">Cr</span>
+                                <span class="element-name">Chromium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 7; grid-row: 4;">
+                                <span class="atomic-number">25</span>
+                                <span class="element-symbol">Mn</span>
+                                <span class="element-name">Manganese</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 8; grid-row: 4;">
+                                <span class="atomic-number">26</span>
+                                <span class="element-symbol">Fe</span>
+                                <span class="element-name">Iron</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 9; grid-row: 4;">
+                                <span class="atomic-number">27</span>
+                                <span class="element-symbol">Co</span>
+                                <span class="element-name">Cobalt</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 10; grid-row: 4;">
+                                <span class="atomic-number">28</span>
+                                <span class="element-symbol">Ni</span>
+                                <span class="element-name">Nickel</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 11; grid-row: 4;">
+                                <span class="atomic-number">29</span>
+                                <span class="element-symbol">Cu</span>
+                                <span class="element-name">Copper</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 12; grid-row: 4;">
+                                <span class="atomic-number">30</span>
+                                <span class="element-symbol">Zn</span>
+                                <span class="element-name">Zinc</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 13; grid-row: 4;">
+                                <span class="atomic-number">31</span>
+                                <span class="element-symbol">Ga</span>
+                                <span class="element-name">Gallium</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 14; grid-row: 4;">
+                                <span class="atomic-number">32</span>
+                                <span class="element-symbol">Ge</span>
+                                <span class="element-name">Germanium</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 15; grid-row: 4;">
+                                <span class="atomic-number">33</span>
+                                <span class="element-symbol">As</span>
+                                <span class="element-name">Arsenic</span>
+                            </div>
+                            <div class="element nonmetal" style="grid-column: 16; grid-row: 4;">
+                                <span class="atomic-number">34</span>
+                                <span class="element-symbol">Se</span>
+                                <span class="element-name">Selenium</span>
+                            </div>
+                            <div class="element halogen" style="grid-column: 17; grid-row: 4;">
+                                <span class="atomic-number">35</span>
+                                <span class="element-symbol">Br</span>
+                                <span class="element-name">Bromine</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 4;">
+                                <span class="atomic-number">36</span>
+                                <span class="element-symbol">Kr</span>
+                                <span class="element-name">Krypton</span>
+                            </div>
+
+                            <!-- Period 5 -->
+                            <div class="element alkali-metal" style="grid-column: 1; grid-row: 5;">
+                                <span class="atomic-number">37</span>
+                                <span class="element-symbol">Rb</span>
+                                <span class="element-name">Rubidium</span>
+                            </div>
+                            <div class="element alkaline-earth" style="grid-column: 2; grid-row: 5;">
+                                <span class="atomic-number">38</span>
+                                <span class="element-symbol">Sr</span>
+                                <span class="element-name">Strontium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 3; grid-row: 5;">
+                                <span class="atomic-number">39</span>
+                                <span class="element-symbol">Y</span>
+                                <span class="element-name">Yttrium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 4; grid-row: 5;">
+                                <span class="atomic-number">40</span>
+                                <span class="element-symbol">Zr</span>
+                                <span class="element-name">Zirconium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 5; grid-row: 5;">
+                                <span class="atomic-number">41</span>
+                                <span class="element-symbol">Nb</span>
+                                <span class="element-name">Niobium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 6; grid-row: 5;">
+                                <span class="atomic-number">42</span>
+                                <span class="element-symbol">Mo</span>
+                                <span class="element-name">Molybdenum</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 7; grid-row: 5;">
+                                <span class="atomic-number">43</span>
+                                <span class="element-symbol">Tc</span>
+                                <span class="element-name">Technetium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 8; grid-row: 5;">
+                                <span class="atomic-number">44</span>
+                                <span class="element-symbol">Ru</span>
+                                <span class="element-name">Ruthenium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 9; grid-row: 5;">
+                                <span class="atomic-number">45</span>
+                                <span class="element-symbol">Rh</span>
+                                <span class="element-name">Rhodium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 10; grid-row: 5;">
+                                <span class="atomic-number">46</span>
+                                <span class="element-symbol">Pd</span>
+                                <span class="element-name">Palladium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 11; grid-row: 5;">
+                                <span class="atomic-number">47</span>
+                                <span class="element-symbol">Ag</span>
+                                <span class="element-name">Silver</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 12; grid-row: 5;">
+                                <span class="atomic-number">48</span>
+                                <span class="element-symbol">Cd</span>
+                                <span class="element-name">Cadmium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 13; grid-row: 5;">
+                                <span class="atomic-number">49</span>
+                                <span class="element-symbol">In</span>
+                                <span class="element-name">Indium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 14; grid-row: 5;">
+                                <span class="atomic-number">50</span>
+                                <span class="element-symbol">Sn</span>
+                                <span class="element-name">Tin</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 15; grid-row: 5;">
+                                <span class="atomic-number">51</span>
+                                <span class="element-symbol">Sb</span>
+                                <span class="element-name">Antimony</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 16; grid-row: 5;">
+                                <span class="atomic-number">52</span>
+                                <span class="element-symbol">Te</span>
+                                <span class="element-name">Tellurium</span>
+                            </div>
+                            <div class="element halogen" style="grid-column: 17; grid-row: 5;">
+                                <span class="atomic-number">53</span>
+                                <span class="element-symbol">I</span>
+                                <span class="element-name">Iodine</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 5;">
+                                <span class="atomic-number">54</span>
+                                <span class="element-symbol">Xe</span>
+                                <span class="element-name">Xenon</span>
+                            </div>
+
+                            <!-- Period 6 -->
+                            <div class="element alkali-metal" style="grid-column: 1; grid-row: 6;">
+                                <span class="atomic-number">55</span>
+                                <span class="element-symbol">Cs</span>
+                                <span class="element-name">Cesium</span>
+                            </div>
+                            <div class="element alkaline-earth" style="grid-column: 2; grid-row: 6;">
+                                <span class="atomic-number">56</span>
+                                <span class="element-symbol">Ba</span>
+                                <span class="element-name">Barium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 3; grid-row: 6;">
+                                <span class="atomic-number">57-71</span>
+                                <span class="element-symbol">La-Lu</span>
+                                <span class="element-name">Lanthanides</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 4; grid-row: 6;">
+                                <span class="atomic-number">72</span>
+                                <span class="element-symbol">Hf</span>
+                                <span class="element-name">Hafnium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 5; grid-row: 6;">
+                                <span class="atomic-number">73</span>
+                                <span class="element-symbol">Ta</span>
+                                <span class="element-name">Tantalum</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 6; grid-row: 6;">
+                                <span class="atomic-number">74</span>
+                                <span class="element-symbol">W</span>
+                                <span class="element-name">Tungsten</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 7; grid-row: 6;">
+                                <span class="atomic-number">75</span>
+                                <span class="element-symbol">Re</span>
+                                <span class="element-name">Rhenium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 8; grid-row: 6;">
+                                <span class="atomic-number">76</span>
+                                <span class="element-symbol">Os</span>
+                                <span class="element-name">Osmium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 9; grid-row: 6;">
+                                <span class="atomic-number">77</span>
+                                <span class="element-symbol">Ir</span>
+                                <span class="element-name">Iridium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 10; grid-row: 6;">
+                                <span class="atomic-number">78</span>
+                                <span class="element-symbol">Pt</span>
+                                <span class="element-name">Platinum</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 11; grid-row: 6;">
+                                <span class="atomic-number">79</span>
+                                <span class="element-symbol">Au</span>
+                                <span class="element-name">Gold</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 12; grid-row: 6;">
+                                <span class="atomic-number">80</span>
+                                <span class="element-symbol">Hg</span>
+                                <span class="element-name">Mercury</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 13; grid-row: 6;">
+                                <span class="atomic-number">81</span>
+                                <span class="element-symbol">Tl</span>
+                                <span class="element-name">Thallium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 14; grid-row: 6;">
+                                <span class="atomic-number">82</span>
+                                <span class="element-symbol">Pb</span>
+                                <span class="element-name">Lead</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 15; grid-row: 6;">
+                                <span class="atomic-number">83</span>
+                                <span class="element-symbol">Bi</span>
+                                <span class="element-name">Bismuth</span>
+                            </div>
+                            <div class="element metalloid" style="grid-column: 16; grid-row: 6;">
+                                <span class="atomic-number">84</span>
+                                <span class="element-symbol">Po</span>
+                                <span class="element-name">Polonium</span>
+                            </div>
+                            <div class="element halogen" style="grid-column: 17; grid-row: 6;">
+                                <span class="atomic-number">85</span>
+                                <span class="element-symbol">At</span>
+                                <span class="element-name">Astatine</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 6;">
+                                <span class="atomic-number">86</span>
+                                <span class="element-symbol">Rn</span>
+                                <span class="element-name">Radon</span>
+                            </div>
+
+                            <!-- Period 7 -->
+                            <div class="element alkali-metal" style="grid-column: 1; grid-row: 7;">
+                                <span class="atomic-number">87</span>
+                                <span class="element-symbol">Fr</span>
+                                <span class="element-name">Francium</span>
+                            </div>
+                            <div class="element alkaline-earth" style="grid-column: 2; grid-row: 7;">
+                                <span class="atomic-number">88</span>
+                                <span class="element-symbol">Ra</span>
+                                <span class="element-name">Radium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 3; grid-row: 7;">
+                                <span class="atomic-number">89-103</span>
+                                <span class="element-symbol">Ac-Lr</span>
+                                <span class="element-name">Actinides</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 4; grid-row: 7;">
+                                <span class="atomic-number">104</span>
+                                <span class="element-symbol">Rf</span>
+                                <span class="element-name">Rutherfordium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 5; grid-row: 7;">
+                                <span class="atomic-number">105</span>
+                                <span class="element-symbol">Db</span>
+                                <span class="element-name">Dubnium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 6; grid-row: 7;">
+                                <span class="atomic-number">106</span>
+                                <span class="element-symbol">Sg</span>
+                                <span class="element-name">Seaborgium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 7; grid-row: 7;">
+                                <span class="atomic-number">107</span>
+                                <span class="element-symbol">Bh</span>
+                                <span class="element-name">Bohrium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 8; grid-row: 7;">
+                                <span class="atomic-number">108</span>
+                                <span class="element-symbol">Hs</span>
+                                <span class="element-name">Hassium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 9; grid-row: 7;">
+                                <span class="atomic-number">109</span>
+                                <span class="element-symbol">Mt</span>
+                                <span class="element-name">Meitnerium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 10; grid-row: 7;">
+                                <span class="atomic-number">110</span>
+                                <span class="element-symbol">Ds</span>
+                                <span class="element-name">Darmstadtium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 11; grid-row: 7;">
+                                <span class="atomic-number">111</span>
+                                <span class="element-symbol">Rg</span>
+                                <span class="element-name">Roentgenium</span>
+                            </div>
+                            <div class="element transition-metal" style="grid-column: 12; grid-row: 7;">
+                                <span class="atomic-number">112</span>
+                                <span class="element-symbol">Cn</span>
+                                <span class="element-name">Copernicium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 13; grid-row: 7;">
+                                <span class="atomic-number">113</span>
+                                <span class="element-symbol">Nh</span>
+                                <span class="element-name">Nihonium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 14; grid-row: 7;">
+                                <span class="atomic-number">114</span>
+                                <span class="element-symbol">Fl</span>
+                                <span class="element-name">Flerovium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 15; grid-row: 7;">
+                                <span class="atomic-number">115</span>
+                                <span class="element-symbol">Mc</span>
+                                <span class="element-name">Moscovium</span>
+                            </div>
+                            <div class="element post-transition" style="grid-column: 16; grid-row: 7;">
+                                <span class="atomic-number">116</span>
+                                <span class="element-symbol">Lv</span>
+                                <span class="element-name">Livermorium</span>
+                            </div>
+                            <div class="element halogen" style="grid-column: 17; grid-row: 7;">
+                                <span class="atomic-number">117</span>
+                                <span class="element-symbol">Ts</span>
+                                <span class="element-name">Tennessine</span>
+                            </div>
+                            <div class="element noble-gas" style="grid-column: 18; grid-row: 7;">
+                                <span class="atomic-number">118</span>
+                                <span class="element-symbol">Og</span>
+                                <span class="element-name">Oganesson</span>
+                            </div>
+
+                            <!-- Lanthanides (Row 9) -->
+                            <div class="element lanthanide" style="grid-column: 3; grid-row: 9;">
+                                <span class="atomic-number">57</span>
+                                <span class="element-symbol">La</span>
+                                <span class="element-name">Lanthanum</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 4; grid-row: 9;">
+                                <span class="atomic-number">58</span>
+                                <span class="element-symbol">Ce</span>
+                                <span class="element-name">Cerium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 5; grid-row: 9;">
+                                <span class="atomic-number">59</span>
+                                <span class="element-symbol">Pr</span>
+                                <span class="element-name">Praseodymium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 6; grid-row: 9;">
+                                <span class="atomic-number">60</span>
+                                <span class="element-symbol">Nd</span>
+                                <span class="element-name">Neodymium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 7; grid-row: 9;">
+                                <span class="atomic-number">61</span>
+                                <span class="element-symbol">Pm</span>
+                                <span class="element-name">Promethium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 8; grid-row: 9;">
+                                <span class="atomic-number">62</span>
+                                <span class="element-symbol">Sm</span>
+                                <span class="element-name">Samarium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 9; grid-row: 9;">
+                                <span class="atomic-number">63</span>
+                                <span class="element-symbol">Eu</span>
+                                <span class="element-name">Europium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 10; grid-row: 9;">
+                                <span class="atomic-number">64</span>
+                                <span class="element-symbol">Gd</span>
+                                <span class="element-name">Gadolinium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 11; grid-row: 9;">
+                                <span class="atomic-number">65</span>
+                                <span class="element-symbol">Tb</span>
+                                <span class="element-name">Terbium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 12; grid-row: 9;">
+                                <span class="atomic-number">66</span>
+                                <span class="element-symbol">Dy</span>
+                                <span class="element-name">Dysprosium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 13; grid-row: 9;">
+                                <span class="atomic-number">67</span>
+                                <span class="element-symbol">Ho</span>
+                                <span class="element-name">Holmium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 14; grid-row: 9;">
+                                <span class="atomic-number">68</span>
+                                <span class="element-symbol">Er</span>
+                                <span class="element-name">Erbium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 15; grid-row: 9;">
+                                <span class="atomic-number">69</span>
+                                <span class="element-symbol">Tm</span>
+                                <span class="element-name">Thulium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 16; grid-row: 9;">
+                                <span class="atomic-number">70</span>
+                                <span class="element-symbol">Yb</span>
+                                <span class="element-name">Ytterbium</span>
+                            </div>
+                            <div class="element lanthanide" style="grid-column: 17; grid-row: 9;">
+                                <span class="atomic-number">71</span>
+                                <span class="element-symbol">Lu</span>
+                                <span class="element-name">Lutetium</span>
+                            </div>
+
+                            <!-- Actinides (Row 10) -->
+                            <div class="element actinide" style="grid-column: 3; grid-row: 10;">
+                                <span class="atomic-number">89</span>
+                                <span class="element-symbol">Ac</span>
+                                <span class="element-name">Actinium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 4; grid-row: 10;">
+                                <span class="atomic-number">90</span>
+                                <span class="element-symbol">Th</span>
+                                <span class="element-name">Thorium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 5; grid-row: 10;">
+                                <span class="atomic-number">91</span>
+                                <span class="element-symbol">Pa</span>
+                                <span class="element-name">Protactinium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 6; grid-row: 10;">
+                                <span class="atomic-number">92</span>
+                                <span class="element-symbol">U</span>
+                                <span class="element-name">Uranium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 7; grid-row: 10;">
+                                <span class="atomic-number">93</span>
+                                <span class="element-symbol">Np</span>
+                                <span class="element-name">Neptunium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 8; grid-row: 10;">
+                                <span class="atomic-number">94</span>
+                                <span class="element-symbol">Pu</span>
+                                <span class="element-name">Plutonium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 9; grid-row: 10;">
+                                <span class="atomic-number">95</span>
+                                <span class="element-symbol">Am</span>
+                                <span class="element-name">Americium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 10; grid-row: 10;">
+                                <span class="atomic-number">96</span>
+                                <span class="element-symbol">Cm</span>
+                                <span class="element-name">Curium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 11; grid-row: 10;">
+                                <span class="atomic-number">97</span>
+                                <span class="element-symbol">Bk</span>
+                                <span class="element-name">Berkelium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 12; grid-row: 10;">
+                                <span class="atomic-number">98</span>
+                                <span class="element-symbol">Cf</span>
+                                <span class="element-name">Californium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 13; grid-row: 10;">
+                                <span class="atomic-number">99</span>
+                                <span class="element-symbol">Es</span>
+                                <span class="element-name">Einsteinium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 14; grid-row: 10;">
+                                <span class="atomic-number">100</span>
+                                <span class="element-symbol">Fm</span>
+                                <span class="element-name">Fermium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 15; grid-row: 10;">
+                                <span class="atomic-number">101</span>
+                                <span class="element-symbol">Md</span>
+                                <span class="element-name">Mendelevium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 16; grid-row: 10;">
+                                <span class="atomic-number">102</span>
+                                <span class="element-symbol">No</span>
+                                <span class="element-name">Nobelium</span>
+                            </div>
+                            <div class="element actinide" style="grid-column: 17; grid-row: 10;">
+                                <span class="atomic-number">103</span>
+                                <span class="element-symbol">Lr</span>
+                                <span class="element-name">Lawrencium</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="periodic-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ec4899;"></div>
+                            <span>Alkali Metals</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #f59e0b;"></div>
+                            <span>Alkaline Earth</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #ef4444;"></div>
+                            <span>Transition Metals</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #8b5cf6;"></div>
+                            <span>Post-Transition</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #14b8a6;"></div>
+                            <span>Metalloids</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #6366f1;"></div>
+                            <span>Nonmetals</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #10b981;"></div>
+                            <span>Halogens</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #06b6d4;"></div>
+                            <span>Noble Gases</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #a855f7;"></div>
+                            <span>Lanthanides</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #f43f5e;"></div>
+                            <span>Actinides</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-fullscreen" id="logTableTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-calculator"></i> Logarithm Calculator</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body glass-premium">
+                    <div class="log-inputs">
+                        <input type="number" id="logInput" class="tool-input glass-premium" placeholder="Enter number" oninput="calculateLog()">
+                        <select class="tool-select glass-btn" id="logType" onchange="calculateLog()">
+                            <option>log₁₀ (Common)</option>
+                            <option>ln (Natural)</option>
+                            <option>log₂ (Binary)</option>
+                        </select>
+                    </div>
+                    <div class="result-display glass-premium" id="logResult">
+                        <p>Result will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-fullscreen" id="mockTestTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-file-alt"></i> Mock Test Generator</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body glass-premium">
+                    <div class="mock-test-container">
+                        <div class="test-config-panel" id="mockTestConfig">
+                            <h3><i class="fas fa-cog"></i> Configure Your Test</h3>
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>Topic / Chapter</label>
+                                    <input type="text" id="mockTestTopic" class="tool-input glass-premium" placeholder="e.g., Newton's Laws, Chemical Bonding, Quadratic Equations">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Number of Questions</label>
+                                        <input type="number" id="mockTestCount" class="tool-input glass-premium" value="10" min="5" max="30">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Difficulty</label>
+                                        <select id="mockTestDifficulty" class="tool-select glass-btn">
+                                            <option value="easy">Easy (Basic)</option>
+                                            <option value="medium" selected>Medium (Board Level)</option>
+                                            <option value="hard">Hard (JEE/NEET Level)</option>
+                                            <option value="mixed">Mixed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Question Types</label>
+                                    <div class="checkbox-group">
+                                        <label class="checkbox-label"><input type="checkbox" id="mockMCQ" checked> MCQ</label>
+                                        <label class="checkbox-label"><input type="checkbox" id="mockShort"> Short Answer</label>
+                                        <label class="checkbox-label"><input type="checkbox" id="mockLong"> Long Answer</label>
+                                        <label class="checkbox-label"><input type="checkbox" id="mockNumerical"> Numerical</label>
+                                    </div>
+                                </div>
+                                <button class="btn-primary btn-large" onclick="generateMockTest()">
+                                    <i class="fas fa-play"></i> Generate Mock Test
+                                </button>
+                            </div>
+                        </div>
+                        <div class="test-content" id="mockTestContent" style="display: none;">
+                            <div class="test-header-bar">
+                                <h3 id="mockTestTitle">Mock Test</h3>
+                                <div class="test-timer" id="mockTestTimer">⏱️ 00:00</div>
+                            </div>
+                            <div class="test-questions" id="mockTestQuestions"></div>
+                            <div class="test-actions">
+                                <button class="btn-primary" onclick="submitMockTest()"><i class="fas fa-check"></i> Submit & Check Answers</button>
+                                <button class="btn-secondary" onclick="showMockTestConfig()"><i class="fas fa-arrow-left"></i> New Test</button>
+                            </div>
+                        </div>
+                        <div class="test-results" id="mockTestResults" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-fullscreen" id="cheatSheetTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-file-invoice"></i> Formula Cheat Sheet Generator</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body glass-premium">
+                    <div class="cheatsheet-input-area">
+                        <input type="text" id="cheatSheetTopic" class="tool-input glass-premium" placeholder="Enter topic (e.g., Thermodynamics, Integration, Organic Reactions)">
+                        <button class="btn-primary" id="generateCheatBtn" onclick="generateCheatSheet()"><i class="fas fa-magic"></i> Generate Cheat Sheet</button>
+                    </div>
+                    <div class="cheat-sheet-preview glass-premium" id="cheatSheetContent">
+                        <p class="empty-state"><i class="fas fa-scroll"></i> Your formula cheat sheet will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-fullscreen" id="mindmapTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-project-diagram"></i> Mindmap Maker</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body mindmap-fullscreen-body">
+                    <!-- Mindmap Layout -->
+                    <div class="mindmap-layout">
+                        <!-- Sidebar for saved mindmaps -->
+                        <div class="mindmap-sidebar glass-premium" id="mindmapSidebar">
+                            <div class="sidebar-header">
+                                <h3><i class="fas fa-folder"></i> Saved Mindmaps</h3>
+                                <span class="mindmap-count" id="mindmapCount">0</span>
+                            </div>
+                            <div class="saved-mindmaps-list" id="savedMindmapsList">
+                                <p class="empty-state">No saved mindmaps yet</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Main mindmap area -->
+                        <div class="mindmap-main">
+                            <!-- Controls Panel -->
+                            <div class="mindmap-controls glass-premium">
+                                <div class="control-row">
+                                    <input type="text" id="nodeTextInput" class="tool-input" placeholder="Enter node text...">
+                                    <div class="selection-info" id="selectionInfo">
+                                        <span>No node selected</span>
+                                    </div>
+                                </div>
+                                <div class="control-row buttons-row">
+                                    <button class="btn-node btn-root" onclick="addMindmapNode(0)" title="Add Root Node">
+                                        <i class="fas fa-plus-circle"></i> Root
+                                    </button>
+                                    <button class="btn-node btn-level1" onclick="addMindmapNode(1)" title="Add Main Branch">
+                                        <i class="fas fa-code-branch"></i> Branch
+                                    </button>
+                                    <button class="btn-node btn-level2" onclick="addMindmapNode(2)" title="Add Sub-Branch">
+                                        <i class="fas fa-sitemap"></i> Sub
+                                    </button>
+                                    <button class="btn-node btn-level3" onclick="addMindmapNode(3)" title="Add Detail Node">
+                                        <i class="fas fa-sticky-note"></i> Detail
+                                    </button>
+                                    <button class="btn-delete" onclick="deleteMindmapNode()" title="Delete Selected">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="control-row buttons-row">
+                                    <button class="btn-save" onclick="saveMindmap()">
+                                        <i class="fas fa-save"></i> Save
+                                    </button>
+                                    <button class="btn-clear" onclick="clearMindmap()">
+                                        <i class="fas fa-eraser"></i> Clear
+                                    </button>
+                                    <input type="text" id="mindmapNameInput" class="mindmap-name-input" placeholder="Mindmap name...">
+                                </div>
+                            </div>
+                            
+                            <!-- Canvas Area -->
+                            <div class="mindmap-canvas-container" id="mindmapCanvasContainer">
+                                <canvas id="mindmapCanvas"></canvas>
+                                <div class="mindmap-nodes" id="mindmapNodes"></div>
+                                <div class="canvas-empty-state" id="canvasEmptyState">
+                                    <i class="fas fa-project-diagram"></i>
+                                    <h3>Start Building Your Mindmap</h3>
+                                    <p>Enter text above and click "Root" to add your first node</p>
+                                    <div class="tips">
+                                        <p><strong>Tips:</strong></p>
+                                        <ul>
+                                            <li>Click a node to select it</li>
+                                            <li>Drag nodes to reposition</li>
+                                            <li>Add branches to selected nodes</li>
+                                            <li>Double-click to edit node text</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Legend -->
+                            <div class="mindmap-legend glass-premium">
+                                <span class="legend-item"><span class="legend-color root"></span> Root (L0)</span>
+                                <span class="legend-item"><span class="legend-color branch"></span> Branch (L1)</span>
+                                <span class="legend-item"><span class="legend-color sub"></span> Sub (L2)</span>
+                                <span class="legend-item"><span class="legend-color detail"></span> Detail (L3)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUDY PLANNER TOOL -->
+            <div class="tool-fullscreen" id="studyPlannerTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-calendar-check"></i> AI Study Planner</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body">
+                    <!-- Step Progress -->
+                    <div class="planner-progress glass-premium">
+                        <div class="progress-step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <span>Availability</span>
+                        </div>
+                        <div class="progress-step" data-step="2">
+                            <div class="step-number">2</div>
+                            <span>Subjects</span>
+                        </div>
+                        <div class="progress-step" data-step="3">
+                            <div class="step-number">3</div>
+                            <span>Chapters</span>
+                        </div>
+                        <div class="progress-step" data-step="4">
+                            <div class="step-number">4</div>
+                            <span>Generate</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Availability -->
+                    <div class="planner-step active" id="step1">
+                        <div class="step-content glass-premium">
+                            <h3><i class="fas fa-clock"></i> When are you free to study?</h3>
+                            
+                            <div class="mode-toggle">
+                                <button class="mode-btn active" onclick="setAvailabilityMode('simple')">
+                                    <i class="fas fa-bolt"></i> Simple
+                                </button>
+                                <button class="mode-btn" onclick="setAvailabilityMode('advanced')">
+                                    <i class="fas fa-cog"></i> Advanced (Per Day)
+                                </button>
+                            </div>
+
+                            <!-- Simple Mode -->
+                            <div class="availability-mode active" id="simpleMode">
+                                <div class="time-slots-container">
+                                    <div class="time-slot glass-card">
+                                        <div class="time-inputs">
+                                            <input type="time" class="time-input" value="06:00">
+                                            <span class="time-separator">to</span>
+                                            <input type="time" class="time-input" value="08:00">
+                                        </div>
+                                        <button class="delete-slot-btn" onclick="deleteTimeSlot(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button class="add-slot-btn" onclick="addTimeSlot()">
+                                    <i class="fas fa-plus"></i> Add Time Slot
+                                </button>
+                            </div>
+
+                            <!-- Advanced Mode -->
+                            <div class="availability-mode" id="advancedMode">
+                                <div class="days-tabs">
+                                    <button class="day-tab active" onclick="selectDay('monday')">Mon</button>
+                                    <button class="day-tab" onclick="selectDay('tuesday')">Tue</button>
+                                    <button class="day-tab" onclick="selectDay('wednesday')">Wed</button>
+                                    <button class="day-tab" onclick="selectDay('thursday')">Thu</button>
+                                    <button class="day-tab" onclick="selectDay('friday')">Fri</button>
+                                    <button class="day-tab" onclick="selectDay('saturday')">Sat</button>
+                                    <button class="day-tab" onclick="selectDay('sunday')">Sun</button>
+                                </div>
+                                
+                                <div class="day-schedule active" data-day="monday">
+                                    <div class="time-slots-container" id="monday-slots">
+                                        <div class="time-slot glass-card">
+                                            <div class="time-inputs">
+                                                <input type="time" class="time-input" value="06:00">
+                                                <span class="time-separator">to</span>
+                                                <input type="time" class="time-input" value="08:00">
+                                            </div>
+                                            <button class="delete-slot-btn" onclick="deleteTimeSlot(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button class="add-slot-btn" onclick="addDayTimeSlot('monday')">
+                                        <i class="fas fa-plus"></i> Add Slot for Monday
+                                    </button>
+                                </div>
+                                <!-- Other days will be created dynamically -->
+                            </div>
+
+                            <button class="btn-primary" onclick="goToStep(2)">
+                                Next <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Subject Weightage -->
+                    <div class="planner-step" id="step2">
+                        <div class="step-content glass-premium">
+                            <h3><i class="fas fa-balance-scale"></i> Subject Weightage</h3>
+                            <p class="step-description">Allocate time percentage for each subject (must total 100%)</p>
+
+                            <div class="weightage-controls">
+                                <div class="subject-weightage">
+                                    <div class="subject-header">
+                                        <i class="fas fa-atom subject-icon physics-color"></i>
+                                        <span class="subject-name">Physics</span>
+                                    </div>
+                                    <div class="weightage-input-group">
+                                        <input type="range" class="weightage-slider" id="physicsWeight" 
+                                               min="0" max="100" value="33" oninput="updateWeightage('physics', this.value)">
+                                        <input type="number" class="weightage-number" id="physicsWeightNum" 
+                                               value="33" min="0" max="100" oninput="updateWeightageFromInput('physics', this.value)">
+                                        <span class="weightage-unit">%</span>
+                                    </div>
+                                    <div class="weightage-bar">
+                                        <div class="weightage-fill physics-bg" style="width: 33%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-weightage">
+                                    <div class="subject-header">
+                                        <i class="fas fa-flask subject-icon chemistry-color"></i>
+                                        <span class="subject-name">Chemistry</span>
+                                    </div>
+                                    <div class="weightage-input-group">
+                                        <input type="range" class="weightage-slider" id="chemistryWeight" 
+                                               min="0" max="100" value="34" oninput="updateWeightage('chemistry', this.value)">
+                                        <input type="number" class="weightage-number" id="chemistryWeightNum" 
+                                               value="34" min="0" max="100" oninput="updateWeightageFromInput('chemistry', this.value)">
+                                        <span class="weightage-unit">%</span>
+                                    </div>
+                                    <div class="weightage-bar">
+                                        <div class="weightage-fill chemistry-bg" style="width: 34%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-weightage">
+                                    <div class="subject-header">
+                                        <i class="fas fa-calculator subject-icon math-color"></i>
+                                        <span class="subject-name">Mathematics</span>
+                                    </div>
+                                    <div class="weightage-input-group">
+                                        <input type="range" class="weightage-slider" id="mathWeight" 
+                                               min="0" max="100" value="33" oninput="updateWeightage('math', this.value)">
+                                        <input type="number" class="weightage-number" id="mathWeightNum" 
+                                               value="33" min="0" max="100" oninput="updateWeightageFromInput('math', this.value)">
+                                        <span class="weightage-unit">%</span>
+                                    </div>
+                                    <div class="weightage-bar">
+                                        <div class="weightage-fill math-bg" style="width: 33%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="total-weightage" id="totalWeightage">
+                                    Total: <span class="total-value">100%</span>
+                                    <i class="fas fa-check-circle valid-icon"></i>
+                                </div>
+                            </div>
+
+                            <div class="step-navigation">
+                                <button class="btn-secondary" onclick="goToStep(1)">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                                <button class="btn-primary" onclick="goToStep(3)" id="step2NextBtn">
+                                    Next <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Chapter Selection -->
+                    <div class="planner-step" id="step3">
+                        <div class="step-content glass-premium">
+                            <h3><i class="fas fa-book-open"></i> Select Chapters & Weightage</h3>
+                            <p class="step-description">Choose chapters to study and set their priority</p>
+
+                            <div class="subject-tabs">
+                                <button class="subject-tab active" onclick="selectSubject('physics')">
+                                    <i class="fas fa-atom"></i> Physics
+                                </button>
+                                <button class="subject-tab" onclick="selectSubject('chemistry')">
+                                    <i class="fas fa-flask"></i> Chemistry
+                                </button>
+                                <button class="subject-tab" onclick="selectSubject('math')">
+                                    <i class="fas fa-calculator"></i> Mathematics
+                                </button>
+                            </div>
+
+                            <!-- Physics Chapters -->
+                            <div class="chapters-container active" id="physicsChapters">
+                                <div class="chapters-weightage-info">
+                                    <span>Chapter Weightage Total: <strong id="physicsChapterTotal">0%</strong></span>
+                                    <span class="weightage-status" id="physicsStatus">
+                                        <i class="fas fa-info-circle"></i> Must total 100%
+                                    </span>
+                                </div>
+                                <div class="chapters-list" id="physicsChaptersList">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- Chemistry Chapters -->
+                            <div class="chapters-container" id="chemistryChapters">
+                                <div class="chapters-weightage-info">
+                                    <span>Chapter Weightage Total: <strong id="chemistryChapterTotal">0%</strong></span>
+                                    <span class="weightage-status" id="chemistryStatus">
+                                        <i class="fas fa-info-circle"></i> Must total 100%
+                                    </span>
+                                </div>
+                                <div class="chapters-list" id="chemistryChaptersList">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- Math Chapters -->
+                            <div class="chapters-container" id="mathChapters">
+                                <div class="chapters-weightage-info">
+                                    <span>Chapter Weightage Total: <strong id="mathChapterTotal">0%</strong></span>
+                                    <span class="weightage-status" id="mathStatus">
+                                        <i class="fas fa-info-circle"></i> Must total 100%
+                                    </span>
+                                </div>
+                                <div class="chapters-list" id="mathChaptersList">
+                                    <!-- Will be populated by JavaScript -->
+                                </div>
+                            </div>
+
+                            <div class="step-navigation">
+                                <button class="btn-secondary" onclick="goToStep(2)">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                                <button class="btn-primary" onclick="goToStep(4)" id="step3NextBtn">
+                                    Next <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Generate Schedule -->
+                    <div class="planner-step" id="step4">
+                        <div class="step-content glass-premium">
+                            <div class="generate-section" id="generateSection">
+                                <div class="generate-icon">
+                                    <i class="fas fa-magic"></i>
+                                </div>
+                                <h3>Ready to Create Your Schedule!</h3>
+                                <p>AI will create an optimized study plan based on your preferences</p>
+                                <button class="btn-primary large" id="generateScheduleBtn" onclick="generateSchedule()">
+                                    <i class="fas fa-sparkles"></i> Generate AI Schedule
+                                </button>
+                                <button class="btn-secondary" onclick="goToStep(3)">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                            </div>
+
+                            <div class="schedule-result" id="scheduleResult" style="display: none;">
+                                <div class="result-header">
+                                    <h3><i class="fas fa-calendar-alt"></i> Your Weekly Study Schedule</h3>
+                                    <div class="result-actions">
+                                        <button class="btn-icon" onclick="regenerateSchedule()" title="Regenerate">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        <button class="btn-icon" onclick="saveSchedule()" title="Save">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="schedule-grid" id="scheduleGrid">
+                                    <!-- Schedule will be generated here -->
+                                </div>
+                                <div class="schedule-actions">
+                                    <button class="btn-primary" onclick="saveAndApply()">
+                                        <i class="fas fa-check"></i> Save & Apply to Dashboard
+                                    </button>
+                                    <button class="btn-secondary" onclick="startOver()">
+                                        <i class="fas fa-redo"></i> Start Over
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- STUDY MATERIAL PAGE -->
+        <div class="page" id="study-material-page">
+            <div class="page-header">
+                <h1 class="page-title"><i class="fas fa-book"></i> Study Material</h1>
+                <p class="page-subtitle">NCERT Chemistry Class 11 - Chapter-wise Notes</p>
+            </div>
+
+            <div class="material-layout">
+                <div class="material-sidebar glass-premium">
+                    <h3><i class="fas fa-flask"></i> Chemistry Chapters</h3>
+                    <div class="chapter-list" id="chapter-list">
+                        <!-- Chapters will be loaded dynamically from database -->
+                    </div>
+                </div>
+
+                <div class="notes-viewer" id="notes-viewer">
+                    <div class="notes-placeholder">
+                        <i class="fas fa-book-open"></i>
+                        <h3>Select a chapter to view notes</h3>
+                        <p>Click on any chapter from the left sidebar to view detailed NCERT notes</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fullscreen Notes Modal -->
+            <div class="notes-fullscreen" id="notes-fullscreen" style="display: none;">
+                <div class="notes-fullscreen-header">
+                    <div class="notes-title-section">
+                        <i class="fas fa-flask"></i>
+                        <h2 id="fullscreen-chapter-title">Chapter Name</h2>
+                    </div>
+                    <button class="close-fullscreen-btn" onclick="closeNotesFullscreen()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="notes-fullscreen-content" id="fullscreen-notes-content">
+                    <!-- Notes content will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SOCIAL PAGE -->
+        <div class="page" id="social-page">
+            <div class="page-header">
+                <h1 class="page-title"><i class="fas fa-users"></i> Social Hub</h1>
+                <p class="page-subtitle">Connect, compete, and collaborate</p>
+            </div>
+
+            <div class="social-layout">
+                <!-- Leaderboards -->
+                <div class="leaderboard-section glass-premium">
+                    <div class="leaderboard-tabs">
+                        <button class="tab-btn active">🌍 Global</button>
+                        <button class="tab-btn">👥 Friends</button>
+                        <button class="tab-btn">🎓 Groups</button>
+                    </div>
+
+                    <div class="leaderboard-list">
+                        <div class="leaderboard-item rank-1">
+                            <div class="rank-badge gold">
+                                <i class="fas fa-crown"></i>
+                                <span>1</span>
+                            </div>
+                            <div class="user-info">
+                                <div class="user-avatar gradient-bg-1">RS</div>
+                                <div class="user-details">
+                                    <h4>Rahul Sharma</h4>
+                                    <p><i class="fas fa-fire"></i> 45 days • 5,280 XP</p>
+                                </div>
+                            </div>
+                            <div class="score-badge">5,280</div>
+                        </div>
+
+                        <div class="leaderboard-item rank-2">
+                            <div class="rank-badge silver">2</div>
+                            <div class="user-info">
+                                <div class="user-avatar gradient-bg-2">PK</div>
+                                <div class="user-details">
+                                    <h4>Priya Kumar</h4>
+                                    <p><i class="fas fa-fire"></i> 38 days • 4,850 XP</p>
+                                </div>
+                            </div>
+                            <div class="score-badge">4,850</div>
+                        </div>
+
+                        <div class="leaderboard-item rank-3">
+                            <div class="rank-badge bronze">3</div>
+                            <div class="user-info">
+                                <div class="user-avatar gradient-bg-3">AP</div>
+                                <div class="user-details">
+                                    <h4>Arjun Patel</h4>
+                                    <p><i class="fas fa-fire"></i> 35 days • 4,520 XP</p>
+                                </div>
+                            </div>
+                            <div class="score-badge">4,520</div>
+                        </div>
+
+                        <div class="leaderboard-item current-user">
+                            <div class="rank-badge">6</div>
+                            <div class="user-info">
+                                <div class="user-avatar gradient-bg-4">YO</div>
+                                <div class="user-details">
+                                    <h4>You</h4>
+                                    <p><i class="fas fa-fire"></i> 28 days • 3,450 XP</p>
+                                </div>
+                            </div>
+                            <div class="score-badge">3,450</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="social-sidebar">
+                    <!-- Study Groups -->
+                    <div class="groups-card glass-premium">
+                        <div class="card-header">
+                            <h3><i class="fas fa-users"></i> Study Groups</h3>
+                            <button class="btn-icon glass-btn"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="groups-list">
+                            <div class="group-item">
+                                <div class="group-icon gradient-bg-1">
+                                    <i class="fas fa-calculator"></i>
+                                </div>
+                                <div class="group-info">
+                                    <h4>Math Wizards</h4>
+                                    <p>24 members • Active now</p>
+                                </div>
+                            </div>
+                            <div class="group-item">
+                                <div class="group-icon gradient-bg-2">
+                                    <i class="fas fa-flask"></i>
+                                </div>
+                                <div class="group-info">
+                                    <h4>Chemistry Club</h4>
+                                    <p>18 members • 5 min ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Friends -->
+                    <div class="friends-card glass-premium">
+                        <div class="card-header">
+                            <h3><i class="fas fa-user-friends"></i> Friends</h3>
+                            <button class="btn-icon glass-btn"><i class="fas fa-search"></i></button>
+                        </div>
+                        <div class="friends-list">
+                            <div class="friend-item">
+                                <div class="friend-avatar gradient-bg-3">AK</div>
+                                <div class="friend-info">
+                                    <h4>Amit Kumar</h4>
+                                    <p class="online-status"><i class="fas fa-circle"></i> Online</p>
+                                </div>
+                            </div>
+                            <div class="friend-item">
+                                <div class="friend-avatar gradient-bg-4">SG</div>
+                                <div class="friend-info">
+                                    <h4>Sneha Gupta</h4>
+                                    <p class="offline-status"><i class="fas fa-circle"></i> Offline</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    <div class="messages-card glass-premium">
+                        <div class="card-header">
+                            <h3><i class="fas fa-comments"></i> Messages</h3>
+                        </div>
+                        <div class="message-list">
+                            <div class="message-item unread">
+                                <div class="message-avatar gradient-bg-5">VK</div>
+                                <div class="message-content">
+                                    <h4>Vikram</h4>
+                                    <p>Can you help with question 5?</p>
+                                </div>
+                                <span class="message-badge">2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE PAGE -->
+        <div class="page" id="profile-page">
+            <div class="page-header">
+                <h1 class="page-title"><i class="fas fa-user-circle"></i> Your Profile</h1>
+                <p class="page-subtitle">Track your achievements and progress</p>
+            </div>
+
+            <div class="profile-layout">
+                <div class="profile-main">
+                    <!-- Profile Card -->
+                    <div class="profile-card-main glass-premium">
+                        <div class="profile-banner gradient-bg-1"></div>
+                        <div class="profile-info">
+                            <div class="profile-avatar-large gradient-bg-2">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="profile-details">
+                                <h2 id="profileName">Student Name</h2>
+                                <p class="profile-title" id="profileHandle">@username</p>
+                                <div class="profile-stats-row">
+                                    <div class="stat">
+                                        <strong class="counter" data-target="3450">0</strong>
+                                        <span>Total XP</span>
+                                    </div>
+                                    <div class="stat">
+                                        <strong class="counter" data-target="28">0</strong>
+                                        <span>Day Streak</span>
+                                    </div>
+                                    <div class="stat">
+                                        <strong class="counter" data-target="8920">0</strong>
+                                        <span>StudyCoins</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn-secondary glass-btn" onclick="handleLogout()">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Achievements -->
+                    <div class="achievements-card glass-premium">
+                        <h3><i class="fas fa-trophy"></i> Achievements</h3>
+                        <div class="achievements-grid">
+                            <div class="achievement-item unlocked">
+                                <div class="achievement-icon gradient-bg-1">
+                                    <i class="fas fa-fire"></i>
+                                </div>
+                                <h4>Streak Master</h4>
+                                <p>7 day streak</p>
+                            </div>
+                            <div class="achievement-item unlocked">
+                                <div class="achievement-icon gradient-bg-2">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <h4>Rising Star</h4>
+                                <p>Reach Level 10</p>
+                            </div>
+                            <div class="achievement-item unlocked">
+                                <div class="achievement-icon gradient-bg-3">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                <h4>Problem Solver</h4>
+                                <p>100 doubts solved</p>
+                            </div>
+                            <div class="achievement-item locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h4>Marathon Runner</h4>
+                                <p>30 day streak</p>
+                            </div>
+                            <div class="achievement-item locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h4>Champion</h4>
+                                <p>Reach #1 rank</p>
+                            </div>
+                            <div class="achievement-item locked">
+                                <div class="achievement-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <h4>Legend</h4>
+                                <p>Reach Level 50</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="profile-sidebar">
+                    <!-- Weekly Progress -->
+                    <div class="progress-card glass-premium">
+                        <h3><i class="fas fa-chart-line"></i> Weekly Progress</h3>
+                        <div class="progress-chart">
+                            <div class="chart-bar" style="height: 60%"><span>M</span></div>
+                            <div class="chart-bar" style="height: 75%"><span>T</span></div>
+                            <div class="chart-bar" style="height: 55%"><span>W</span></div>
+                            <div class="chart-bar" style="height: 85%"><span>T</span></div>
+                            <div class="chart-bar" style="height: 70%"><span>F</span></div>
+                            <div class="chart-bar" style="height: 40%"><span>S</span></div>
+                            <div class="chart-bar" style="height: 65%"><span>S</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div class="settings-card glass-premium">
+                        <h3><i class="fas fa-cog"></i> Settings</h3>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Notifications</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <i class="fas fa-volume-up"></i>
+                                    <span>Sound Effects</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">
+                                    <i class="fas fa-moon"></i>
+                                    <span>Dark Mode</span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Floating Action Button -->
+    <button class="fab glass-premium">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Database (inline for file:// protocol support) -->
+    <script src="chem_db.js"></script>
+    
+    <!-- PDF.js Library for PDF Reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    
+    <!-- NCERT Chapter Database and PDF Reader -->
+    <script src="ncert-chapters.js"></script>
+    <script src="pdf-reader.js"></script>
+    
+    <!-- SVG Diagram and Graph System -->
+    <script src="diagram-canvas-svg.js"></script>
+    
+    <script src="app.js"></script>
+    <script src="chat-assistant.js"></script>
+    <script src="study-session.js"></script>
+    <script src="study-material.js"></script>
+    <script src="tools.js"></script>
+    <script src="study-planner.js"></script>
+    <script src="social.js"></script>
+    <script src="gamification.js"></script>
+    
+    <!-- User Session Management -->
+    <script>
+        // Load user data on page load
+        function loadUserData() {
+            const session = JSON.parse(localStorage.getItem('eduverse_session'));
+            
+            if (session) {
+                // Update profile section
+                const profileName = document.getElementById('profileName');
+                const profileHandle = document.getElementById('profileHandle');
+                
+                if (profileName) {
+                    profileName.textContent = session.name;
+                }
+                
+                if (profileHandle) {
+                    profileHandle.textContent = '@' + session.handle;
+                }
+                
+                console.log('User session loaded:', session);
+            }
+        }
+        
+        // Handle logout
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear session
+                localStorage.removeItem('eduverse_session');
+                
+                // Redirect to landing page
+                window.location.href = 'landing.html';
+            }
+        }
+        
+        // Load user data when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadUserData);
+        } else {
+            loadUserData();
+        }
+        
+        // ================================================================
+        // DASHBOARD SCHEDULE LOADER
+        // ================================================================
+        
+        function refreshDashboardSchedule() {
+            const scheduleList = document.getElementById('todayScheduleList');
+            if (!scheduleList) return;
+            
+            // Get today's day
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            
+            // Load today's schedule from localStorage
+            const todaySchedule = JSON.parse(localStorage.getItem('eduverse_today_schedule')) || [];
+            const fullSchedule = JSON.parse(localStorage.getItem('eduverse_study_schedule')) || {};
+            const actualSchedule = todaySchedule.length > 0 ? todaySchedule : (fullSchedule[today] || []);
+            
+            if (actualSchedule.length === 0) {
+                scheduleList.innerHTML = `
+                    <div class="empty-schedule">
+                        <i class="fas fa-calendar-plus"></i>
+                        <p>No schedule for today!</p>
+                        <button class="btn-primary small" onclick="openTool('study-planner'); navigateTo('tools-page');">
+                            Create Study Plan
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Load completed sessions
+            const completedKey = `eduverse_completed_${today}_${new Date().toDateString()}`;
+            const completed = JSON.parse(localStorage.getItem(completedKey)) || [];
+            
+            // Display schedule
+            scheduleList.innerHTML = actualSchedule.map((session, index) => {
+                const isCompleted = completed.includes(index);
+                const subjectIcons = { physics: 'atom', chemistry: 'flask', math: 'calculator' };
+                const icon = subjectIcons[session.subject] || 'book';
+                const gradientClass = session.subject === 'physics' ? 'gradient-bg-3' : 
+                                     session.subject === 'chemistry' ? 'gradient-bg-4' : 'gradient-bg-5';
+                
+                return `
+                    <div class="schedule-item ${isCompleted ? 'completed' : ''}" data-index="${index}">
+                        <input type="checkbox" 
+                               class="schedule-checkbox" 
+                               ${isCompleted ? 'checked' : ''}
+                               onchange="toggleScheduleComplete(${index}, this.checked)">
+                        <div class="time-badge ${gradientClass}">${formatTime(session.start)}</div>
+                        <div class="schedule-content">
+                            <h4><i class="fas fa-${icon}"></i> ${capitalizeFirst(session.subject)}</h4>
+                            <p>${session.chapter}</p>
+                            <span class="session-duration">${session.end} • ${session.duration} min</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function formatTime(time24) {
+            const [hours, minutes] = time24.split(':');
+            const h = parseInt(hours);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${h12}:${minutes} ${ampm}`;
+        }
+        
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        function toggleScheduleComplete(index, checked) {
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            const completedKey = `eduverse_completed_${today}_${new Date().toDateString()}`;
+            let completed = JSON.parse(localStorage.getItem(completedKey)) || [];
+            
+            if (checked && !completed.includes(index)) {
+                completed.push(index);
+            } else if (!checked) {
+                completed = completed.filter(i => i !== index);
+            }
+            
+            localStorage.setItem(completedKey, JSON.stringify(completed));
+            
+            // Add visual feedback
+            const item = document.querySelector(`[data-index="${index}"]`);
+            if (item) {
+                if (checked) {
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('completed');
+                }
+            }
+        }
+        
+        // Load schedule on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', refreshDashboardSchedule);
+        } else {
+            refreshDashboardSchedule();
+        }
+        
+        // Refresh schedule when navigating to dashboard
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'eduverse_today_schedule' || e.key === 'eduverse_study_schedule') {
+                refreshDashboardSchedule();
+            }
+        });
+    </script>
+</body>
+</html>
+

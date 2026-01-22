@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduVerse - Your AI-Powered Learning Companion</title>
+    <link rel="stylesheet" href="landing-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="landing-background">
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+        <div class="floating-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="landing-nav">
+        <div class="nav-container">
+            <div class="logo-section">
+                <i class="fas fa-brain logo-icon"></i>
+                <span class="logo-text">EduVerse</span>
+            </div>
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="showLogin()">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button class="nav-btn primary-btn" onclick="showSignup()">
+                    <i class="fas fa-user-plus"></i> Sign Up
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-sparkles"></i>
+                <span>AI-Powered Learning Revolution</span>
+            </div>
+            <h1 class="hero-title">
+                Master Your Studies with
+                <span class="gradient-text">EduVerse</span>
+            </h1>
+            <p class="hero-subtitle">
+                Your personal AI tutor for NCERT Chemistry, Physics & Math. 
+                Get instant answers, interactive study sessions, and personalized learning paths.
+            </p>
+            <div class="hero-buttons">
+                <button class="cta-btn primary" onclick="showSignup()">
+                    <span>Get Started Free</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <button class="cta-btn secondary" onclick="scrollToFeatures()">
+                    <i class="fas fa-play-circle"></i>
+                    <span>See Features</span>
+                </button>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">10K+</div>
+                    <div class="stat-label">Topics Covered</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">AI Support</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">NCERT Aligned</div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="floating-card card-1">
+                <i class="fas fa-atom"></i>
+                <span>Chemistry</span>
+            </div>
+            <div class="floating-card card-2">
+                <i class="fas fa-calculator"></i>
+                <span>Mathematics</span>
+            </div>
+            <div class="floating-card card-3">
+                <i class="fas fa-flask"></i>
+                <span>Physics</span>
+            </div>
+            <div class="hero-glow"></div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="section-header">
+            <h2 class="section-title">Powerful Features</h2>
+            <p class="section-subtitle">Everything you need to ace your exams</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI Assistant</h3>
+                <p>24/7 intelligent AI tutor that understands your questions and provides detailed explanations with perfect formatting</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Real-time responses</li>
+                    <li><i class="fas fa-check"></i> Image analysis support</li>
+                    <li><i class="fas fa-check"></i> Voice input enabled</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h3>Study Materials</h3>
+                <p>Complete NCERT notes organized chapter-wise for easy access and quick revision</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> All 9 Chemistry chapters</li>
+                    <li><i class="fas fa-check"></i> Comprehensive coverage</li>
+                    <li><i class="fas fa-check"></i> Easy navigation</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3>Study Sessions</h3>
+                <p>Pomodoro timer with sleep detection to keep you focused and productive</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Custom timers</li>
+                    <li><i class="fas fa-check"></i> Break reminders</li>
+                    <li><i class="fas fa-check"></i> Focus tracking</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <h3>Smart Tools</h3>
+                <p>Collection of calculators and utilities for quick problem-solving</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Scientific calculator</li>
+                    <li><i class="fas fa-check"></i> Unit converters</li>
+                    <li><i class="fas fa-check"></i> Formula sheets</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h3>Social Learning</h3>
+                <p>Connect with peers, share notes, and collaborate on study groups</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Study groups</li>
+                    <li><i class="fas fa-check"></i> Note sharing</li>
+                    <li><i class="fas fa-check"></i> Leaderboards</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>Progress Tracking</h3>
+                <p>Monitor your learning journey with detailed analytics and insights</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i> Study analytics</li>
+                    <li><i class="fas fa-check"></i> Performance metrics</li>
+                    <li><i class="fas fa-check"></i> Goal setting</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="stats-container">
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-value" data-count="15000">0</div>
+                <div class="stat-label">Active Students</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-question-circle"></i></div>
+                <div class="stat-value" data-count="75000">0</div>
+                <div class="stat-label">Doubts Solved</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-value" data-count="2500">0</div>
+                <div class="stat-label">Study Hours</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-star"></i></div>
+                <div class="stat-value" data-count="98">0</div>
+                <div class="stat-label">Satisfaction Rate</div>
+                <div class="stat-suffix">%</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials-section">
+        <div class="section-header">
+            <h2 class="section-title">What Students Say</h2>
+            <p class="section-subtitle">Real experiences from real learners</p>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">
+                    "EduVerse completely changed how I study! The AI assistant explains everything so clearly, and the formatting makes complex chemistry equations super easy to understand. My grades improved from 70% to 92%!"
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="author-info">
+                        <div class="author-name">Priya Sharma</div>
+                        <div class="author-handle">@chemwhiz</div>
+                        <div class="author-class">Class 11 • CBSE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">
+                    "The 24/7 availability is a lifesaver! I can study late at night and still get instant help. The AI understands context from previous messages, making conversations feel natural. Best study tool ever!"
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="author-info">
+                        <div class="author-name">Arjun Patel</div>
+                        <div class="author-handle">@nightowl_studies</div>
+                        <div class="author-class">Class 12 • JEE Aspirant</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div class="rating">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">
+                    "Love the organized study materials! All NCERT chapters in one place with perfect notes. The Pomodoro timer keeps me focused, and the progress tracking motivates me to study more every day."
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="author-info">
+                        <div class="author-name">Sneha Reddy</div>
+                        <div class="author-handle">@studysmart</div>
+                        <div class="author-class">Class 11 • NEET Aspirant</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <div class="section-header">
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-subtitle">Get started in 3 simple steps</p>
+        </div>
+        <div class="steps-container">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-icon"><i class="fas fa-user-plus"></i></div>
+                <h3>Create Account</h3>
+                <p>Sign up with your unique @handle in seconds. No complicated verification required.</p>
+            </div>
+            <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-icon"><i class="fas fa-cog"></i></div>
+                <h3>Personalize</h3>
+                <p>Set your subjects, goals, and study preferences to get a tailored experience.</p>
+            </div>
+            <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-icon"><i class="fas fa-rocket"></i></div>
+                <h3>Start Learning</h3>
+                <p>Ask questions, access materials, and track your progress with our AI assistant.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2>Ready to Transform Your Learning?</h2>
+            <p>Join thousands of students already using EduVerse</p>
+            <button class="cta-btn primary large" onclick="showSignup()">
+                <span>Get Started Now</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <i class="fas fa-brain"></i>
+                <span>EduVerse</span>
+            </div>
+            <div class="footer-text">
+                <p>&copy; 2025 EduVerse. All rights reserved.</p>
+                <p>Your AI-powered learning companion</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-header">
+                <i class="fas fa-sign-in-alt modal-icon"></i>
+                <h2>Welcome Back!</h2>
+                <p>Login to continue your learning journey</p>
+            </div>
+            <form class="auth-form" id="loginForm">
+                <div class="form-group">
+                    <label><i class="fas fa-at"></i> Username or Handle</label>
+                    <input type="text" id="loginIdentifier" placeholder="@username or email" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <span>Login</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+            <div class="modal-footer">
+                <p>Don't have an account? <a href="#" onclick="switchToSignup()">Sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal" id="signupModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModals()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="modal-header">
+                <i class="fas fa-user-plus modal-icon"></i>
+                <h2>Create Account</h2>
+                <p>Start your learning adventure today</p>
+            </div>
+            <form class="auth-form" id="signupForm">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Full Name</label>
+                    <input type="text" id="signupName" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-at"></i> Handle (Username)</label>
+                    <div class="handle-input">
+                        <span class="handle-prefix">@</span>
+                        <input type="text" id="signupHandle" placeholder="thenerd" pattern="[a-zA-Z0-9_]+" required>
+                    </div>
+                    <small>Only letters, numbers, and underscores</small>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="signupEmail" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Password</label>
+                    <input type="password" id="signupPassword" placeholder="Create password" minlength="4" required>
+                    <small>Minimum 4 characters</small>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <span>Create Account</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+            <div class="modal-footer">
+                <p>Already have an account? <a href="#" onclick="switchToLogin()">Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="landing.js"></script>
+</body>
+</html>

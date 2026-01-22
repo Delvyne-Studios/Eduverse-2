@@ -1,0 +1,177 @@
+/* =================================================================
+   OUTPUT CONTROLS & FOLLOW-UP SUGGESTIONS
+   ================================================================= */
+
+.output-controls-bar {
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.output-controls-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.output-controls-container::-webkit-scrollbar {
+    display: none;
+}
+
+.output-control-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+    min-width: 100px;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.output-control-select:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #6366f1;
+    transform: translateY(-1px);
+}
+
+.output-control-select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.output-control-select option {
+    background: #1a1f3a;
+    color: #ffffff;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .output-controls-bar {
+        padding: 10px 15px;
+        margin-bottom: 10px;
+    }
+    
+    .output-controls-container {
+        gap: 6px;
+    }
+    
+    .output-control-select {
+        min-width: 80px;
+        max-width: 120px;
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+}
+
+/* Follow-up Suggestions */
+.follow-up-suggestions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.follow-up-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.follow-up-header svg {
+    color: #6366f1;
+}
+
+.follow-up-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.follow-up-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.follow-up-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.follow-up-btn:hover::before {
+    left: 100%;
+}
+
+.follow-up-btn:hover {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: #6366f1;
+    transform: translateX(5px);
+}
+
+.follow-up-btn:active {
+    transform: translateX(5px) scale(0.98);
+}
+
+/* Chapter loaded badge animation */
+.chapter-loaded-badge {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #10b981;
+    font-size: 14px;
+    font-weight: 600;
+    animation: fadeInSlide 0.5s ease;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

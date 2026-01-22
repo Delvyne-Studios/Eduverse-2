@@ -1,0 +1,560 @@
+/* =================================================================
+   DIAGRAM & GRAPH CANVAS STYLES
+   Responsive, animated UI for AI-generated diagrams and graphs
+   ================================================================= */
+
+/* =================================================================
+   EMBED CONTAINERS (Inside Chat Messages)
+   ================================================================= */
+
+.diagram-embed,
+.graph-embed {
+    margin: 16px 0;
+    width: 100%;
+}
+
+.diagram-embed .diagram-wrapper,
+.graph-embed .graph-wrapper {
+    margin: 0;
+}
+
+/* =================================================================
+   WRAPPER & CONTAINER
+   ================================================================= */
+
+.diagram-wrapper,
+.graph-wrapper {
+    background: linear-gradient(135deg, rgba(20, 25, 45, 0.95), rgba(15, 20, 40, 0.98));
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 16px;
+    margin: 12px 0;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.diagram-container,
+.graph-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #2a2d3a;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 
+        inset 0 2px 10px rgba(0, 0, 0, 0.4),
+        0 4px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.diagram-container canvas,
+.graph-container canvas {
+    display: block;
+    border-radius: 8px;
+}
+
+/* =================================================================
+   SCALE LABEL
+   ================================================================= */
+
+.diagram-scale-label,
+.graph-scale-label {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'Inter', Arial, sans-serif;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* =================================================================
+   STEP CONTROLS
+   ================================================================= */
+
+.diagram-controls,
+.graph-controls {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.step-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.step-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+.step-label .current-step {
+    color: #6366f1;
+    font-weight: 700;
+}
+
+.step-label .total-steps {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.step-description {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    text-align: center;
+    padding: 6px 12px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 6px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.step-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* =================================================================
+   NAVIGATION BUTTONS
+   ================================================================= */
+
+.step-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', Arial, sans-serif;
+}
+
+.step-btn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: rgba(99, 102, 241, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.step-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.step-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.step-btn i {
+    font-size: 10px;
+}
+
+/* =================================================================
+   STEP DOTS
+   ================================================================= */
+
+.step-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 16px;
+}
+
+.step-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.step-dot:hover {
+    background: rgba(99, 102, 241, 0.4);
+    border-color: rgba(99, 102, 241, 0.6);
+    transform: scale(1.15);
+}
+
+.step-dot.active {
+    background: #6366f1;
+    border-color: #6366f1;
+    transform: scale(1.25);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
+
+.step-dot.completed {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+/* =================================================================
+   RESPONSIVE DESIGN
+   ================================================================= */
+
+@media (max-width: 768px) {
+    .diagram-wrapper,
+    .graph-wrapper {
+        padding: 12px;
+        margin: 12px 0;
+        border-radius: 12px;
+    }
+
+    .diagram-container canvas,
+    .graph-container canvas {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .step-navigation {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .step-btn {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+
+    .step-dots {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    .step-info {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .step-description {
+        font-size: 13px;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 480px) {
+    .step-btn {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+
+    .step-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .step-description {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+
+/* =================================================================
+   DIAGRAM TYPE BADGES
+   ================================================================= */
+
+.diagram-type-badge,
+.graph-type-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.8), rgba(139, 92, 246, 0.8));
+    color: #ffffff;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(5px);
+    z-index: 10;
+}
+
+/* =================================================================
+   LOADING STATE
+   ================================================================= */
+
+.canvas-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+}
+
+.canvas-loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(99, 102, 241, 0.2);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =================================================================
+   TOOLBAR (for interactive mode)
+   ================================================================= */
+
+.canvas-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.toolbar-btn {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbar-btn:hover {
+    background: rgba(99, 102, 241, 0.3);
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.toolbar-btn.active {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+.toolbar-btn i {
+    font-size: 14px;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 4px;
+}
+
+/* =================================================================
+   COLOR PALETTE (for interactive mode)
+   ================================================================= */
+
+.color-palette {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.color-swatch:hover {
+    transform: scale(1.1);
+}
+
+.color-swatch.active {
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* =================================================================
+   FULLSCREEN MODE
+   ================================================================= */
+
+.diagram-wrapper.fullscreen,
+.graph-wrapper.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    border-radius: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+}
+
+.fullscreen .diagram-container,
+.fullscreen .graph-container {
+    flex: 1;
+    border-radius: 0;
+}
+
+.fullscreen-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.fullscreen-btn:hover {
+    background: rgba(99, 102, 241, 0.5);
+}
+
+/* =================================================================
+   TOOLTIP
+   ================================================================= */
+
+.canvas-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 100;
+    max-width: 200px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.canvas-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, 0.9);
+}
+
+/* =================================================================
+   LEGEND
+   ================================================================= */
+
+.canvas-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+    margin-top: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.legend-color {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.legend-color.dashed {
+    background: repeating-linear-gradient(
+        90deg,
+        currentColor 0,
+        currentColor 4px,
+        transparent 4px,
+        transparent 8px
+    );
+}
+
+.legend-marker {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* =================================================================
+   PRINT STYLES
+   ================================================================= */
+
+@media print {
+    .diagram-wrapper,
+    .graph-wrapper {
+        background: #ffffff;
+        border: 1px solid #000000;
+        box-shadow: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .diagram-controls,
+    .graph-controls {
+        display: none !important;
+    }
+
+    .diagram-container,
+    .graph-container {
+        background: #ffffff;
+    }
+}

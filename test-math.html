@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Rendering Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .result {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #444;
+        }
+        button {
+            padding: 10px 20px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        .test-input {
+            background: #2a2a2a;
+            color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>LaTeX Math Rendering Test</h1>
+    
+    <div class="test-input">
+        <strong>Test Input:</strong><br>
+        $\cos(\frac{\pi}{2} - x) = \sin(x)$<br><br>
+        $$\frac{1}{2} m v_e^2 = G \frac{M_E m}{R_E}$$<br><br>
+        $$v_e = \sqrt{\frac{2 G M_E}{R_E}}$$
+    </div>
+    
+    <button onclick="testRender()">Test Render</button>
+    
+    <div class="result" id="result"></div>
+    
+    <script>
+        function formatSolution(text) {
+            if (!text) return '';
+            
+            console.log('=== FORMAT SOLUTION START ===');
+            console.log('Input text:', text);
+            
+            // Check if libraries are loaded
+            if (typeof marked === 'undefined' || typeof katex === 'undefined') {
+                console.error('Marked or KaTeX not loaded!');
+                return escapeHtml(text);
+            }
+            
+            try {
+                // Step 1: Extract and protect LaTeX expressions
+                const mathBlocks = [];
+                let processedText = text;
+                
+                console.log('Step 1: Extract math');
+                
+                // Extract display math $$...$$ (multiline)
+                processedText = processedText.replace(/\$\$([\s\S]+?)\$\$/g, (match, math) => {
+                    const index = mathBlocks.length;
+                    console.log(`  Found display math [${index}]:`, math.trim());
+                    mathBlocks.push({ type: 'display', content: math.trim() });
+                    return `__MATHBLOCK${index}__`;
+                });
+                
+                // Extract inline math $...$ (single line, non-greedy)
+                processedText = processedText.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+                    const index = mathBlocks.length;
+                    console.log(`  Found inline math [${index}]:`, math.trim());
+                    mathBlocks.push({ type: 'inline', content: math.trim() });
+                    return `__MATHINLINE${index}__`;
+                });
+                
+                console.log('Processed text with placeholders:', processedText);
+                console.log('Total math blocks found:', mathBlocks.length);
+                
+                // Step 2: Render markdown (with math placeholders safe)
+                console.log('Step 2: Render markdown');
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    headerIds: false,
+                    mangle: false
+                });
+                let html = marked.parse(processedText);
+                console.log('Markdown rendered:', html);
+                
+                // Step 3: Render KaTeX and replace placeholders
+                console.log('Step 3: Render KaTeX');
+                mathBlocks.forEach((block, index) => {
+                    try {
+                        console.log(`  Rendering math [${index}]:`, block.content);
+                        const rendered = katex.renderToString(block.content, {
+                            displayMode: block.type === 'display',
+                            throwOnError: false,
+                            trust: true,
+                            strict: false
+                        });
+                        
+                        const placeholder = block.type === 'display' 
+                            ? `__MATHBLOCK${index}__` 
+                            : `__MATHINLINE${index}__`;
+                        
+                        console.log(`  Rendered successfully, replacing ${placeholder}`);
+                        html = html.replace(new RegExp(placeholder, 'g'), rendered);
+                    } catch (e) {
+                        console.error('KaTeX error for:', block.content, e);
+                        const placeholder = block.type === 'display' 
+                            ? `__MATHBLOCK${index}__` 
+                            : `__MATHINLINE${index}__`;
+                        const fallback = block.type === 'display' 
+                            ? `<div class="math-error">$$${escapeHtml(block.content)}$$</div>`
+                            : `<span class="math-error">$${escapeHtml(block.content)}$</span>`;
+                        html = html.replace(new RegExp(placeholder, 'g'), fallback);
+                    }
+                });
+                
+                console.log('Final HTML:', html);
+                console.log('=== FORMAT SOLUTION END ===');
+                
+                return html;
+                
+            } catch (error) {
+                console.error('Formatting failed:', error);
+                return escapeHtml(text);
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function testRender() {
+            const testText = `Here's some inline math: $\\cos(\\frac{\\pi}{2} - x) = \\sin(x)$
+
+And display math:
+
+$$\\frac{1}{2} m v_e^2 = G \\frac{M_E m}{R_E}$$
+
+$$v_e = \\sqrt{\\frac{2 G M_E}{R_E}}$$
+
+Using $g = \\frac{G M_E}{R_E^2}$`;
+            
+            const result = formatSolution(testText);
+            document.getElementById('result').innerHTML = result;
+        }
+        
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            setTimeout(testRender, 100);
+        });
+    </script>
+</body>
+</html>
