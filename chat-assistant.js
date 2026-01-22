@@ -5,9 +5,9 @@
 
 class ChatAssistant {
     constructor() {
-        // OpenRouter API Configuration
-        this.apiKey = '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';
-        this.apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+        // OpenRouter API Configuration (now using secure proxy)
+        this.apiKey = null; // No longer needed - using serverless function
+        this.apiUrl = '/api/openrouter'; // Vercel serverless function proxy
         this.model = 'xiaomi/mimo-v2-flash:free';
         
         // DOM Elements
@@ -507,10 +507,7 @@ class ChatAssistant {
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'HTTP-Referer': window.location.href,
-                    'X-Title': 'EduVerse AI Assistant'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     model: this.model,

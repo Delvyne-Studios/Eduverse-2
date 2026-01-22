@@ -19,10 +19,9 @@ If no specific chapter is needed (general topic), respond with: NONE
 
 Your response (path only):`;
 
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        const response = await fetch('/api/openrouter', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${API_CONFIG.key}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -812,10 +811,9 @@ function clearMindmap(skipConfirm = false) {
 // CHEAT SHEET GENERATOR
 // =================================================================
 
-// Use the same API configuration as chat assistant
+// Use the same API configuration as chat assistant (secure proxy)
 const API_CONFIG = {
-    key: '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',
-    url: 'https://openrouter.ai/api/v1/chat/completions',
+    url: '/api/openrouter',
     model: 'xiaomi/mimo-v2-flash:free'
 };
 
@@ -936,10 +934,7 @@ Remember: Include EVERYTHING from NCERT. Be comprehensive.`;
         const response = await fetch(API_CONFIG.url, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_CONFIG.key}`,
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'EduVerse Cheat Sheet'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: API_CONFIG.model,
@@ -1113,10 +1108,7 @@ Make sure questions are exam-oriented and follow NCERT pattern exactly.`;
         const response = await fetch(API_CONFIG.url, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_CONFIG.key}`,
-                'HTTP-Referer': window.location.href,
-                'X-Title': 'EduVerse Mock Test'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 model: API_CONFIG.model,
