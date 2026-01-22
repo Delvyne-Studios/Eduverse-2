@@ -928,7 +928,7 @@ Remember: Include EVERYTHING from NCERT. Be comprehensive.`;
         let userMessage = `Generate a complete formula cheat sheet for: ${topic}. Include ALL formulas, ALL laws, and their applications from NCERT Class 11.`;
         
         if (chapterContext) {
-            userMessage += `\n\n📖 COMPLETE NCERT CHAPTER PROVIDED:\n**${chapterContext.chapter.subject}${chapterContext.chapter.part} - ${chapterContext.chapter.chapter}**\n\nFull Chapter Content:\n${chapterContext.content}\n\n⚠️ Use the above chapter as your PRIMARY source. Extract ALL formulas, laws, and important equations from it.`;
+            userMessage += `\n\n📖 COMPLETE NCERT CHAPTER PROVIDED:\n**${chapterContext.info.subject}${chapterContext.info.part} - ${chapterContext.info.chapter}**\n\nFull Chapter Content:\n${chapterContext.text}\n\n⚠️ Use the above chapter as your PRIMARY source. Extract ALL formulas, laws, and important equations from it.`;
         }
         
         const response = await fetch(API_CONFIG.url, {
@@ -1102,7 +1102,7 @@ Question types to include: ${questionTypes.join(', ')}
 Make sure questions are exam-oriented and follow NCERT pattern exactly.`;
         
         if (chapterContext) {
-            userMessage += `\n\n📖 COMPLETE NCERT CHAPTER PROVIDED:\n**${chapterContext.chapter.subject}${chapterContext.chapter.part} - ${chapterContext.chapter.chapter}**\n\nFull Chapter Content:\n${chapterContext.content}\n\n⚠️ Use the above chapter as your PRIMARY source. Generate questions directly from this NCERT content.`;
+            userMessage += `\n\n📖 COMPLETE NCERT CHAPTER PROVIDED:\n**${chapterContext.info.subject}${chapterContext.info.part} - ${chapterContext.info.chapter}**\n\nFull Chapter Content:\n${chapterContext.text}\n\n⚠️ Use the above chapter as your PRIMARY source. Generate questions directly from this NCERT content.`;
         }
         
         const response = await fetch(API_CONFIG.url, {
