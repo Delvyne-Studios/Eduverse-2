@@ -6,10 +6,8 @@
 
 class PDFReader {
     constructor() {
-        // Base path for PDFs - use localhost when server is running
-        this.basePath = window.location.protocol === 'file:' 
-            ? 'ncert-textbooks/' 
-            : 'http://localhost:3000/ncert-textbooks/';
+        // Base path for PDFs - relative path works for both local and deployed
+        this.basePath = '/ncert-textbooks/';
         
         // Cache to avoid re-loading same PDF
         this.cache = new Map();
