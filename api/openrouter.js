@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         });
 
         // Handle streaming responses
-        if (req.body.stream) {
+        if (req.body.stream && response.ok) {
             // Set headers for streaming
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
@@ -51,9 +51,16 @@ export default async function handler(req, res) {
 
             res.end();
         } else {
-            // Non-streaming response
-            const data = await response.json();
-            res.status(response.status).json(data);
+            // Non-streaming response or error response
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                return res.status(response.status).json(data);
+            } else {
+                const text = await response.text();
+                return res.status(response.status).send(text);
+            }
         }
     } catch (error) {
         console.error('❌ Proxy error:', error);

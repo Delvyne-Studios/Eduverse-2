@@ -728,7 +728,8 @@ Your response (path or NONE):`;
             });
 
             if (!identificationResponse.ok) {
-                throw new Error(`AI API failed: ${identificationResponse.status}`);
+                console.warn(`⚠️ AI API failed with status ${identificationResponse.status}, using database fallback...`);
+                return await this.useDatabaseFallback();
             }
 
             const identificationData = await identificationResponse.json();
