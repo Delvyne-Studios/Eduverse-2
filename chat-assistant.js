@@ -205,6 +205,9 @@ class ChatAssistant {
         let diagramCount = 0;
         let graphCount = 0;
         
+        // Store diagram/graph placeholders and their content
+        const visualElements = [];
+        
         // Process diagrams (now expects SVG content)
         remainingText = remainingText.replace(diagramRegex, (match, svgContent) => {
             try {
@@ -214,42 +217,18 @@ class ChatAssistant {
                 const titleMatch = svgContent.match(/<!--\s*title:\s*(.+?)\s*-->/i);
                 const title = titleMatch ? titleMatch[1] : 'Visual Diagram';
                 
-                // Create diagram container
-                const diagramContainer = document.createElement('div');
-                diagramContainer.className = 'diagram-embed';
-                diagramContainer.id = `container-${diagramId}`;
+                // Store for later rendering
+                visualElements.push({
+                    type: 'diagram',
+                    id: diagramId,
+                    content: svgContent.trim(),
+                    title: title
+                });
                 
-                // Insert after the message bubble
-                const bubbleDiv = contentDiv.querySelector('.message-bubble');
-                if (bubbleDiv) {
-                    bubbleDiv.parentNode.insertBefore(diagramContainer, bubbleDiv.nextSibling);
-                } else {
-                    contentDiv.appendChild(diagramContainer);
-                }
-                
-                // Initialize SVG diagram canvas (compact: 320x220)
-                setTimeout(() => {
-                    if (window.DiagramCanvas) {
-                        try {
-                            console.log('🎨 Creating DiagramCanvas:', diagramId);
-                            console.log('📝 SVG Content:', svgContent.trim().substring(0, 200) + '...');
-                            const canvas = new window.DiagramCanvas(diagramId, 320, 220);
-                            canvas.create(diagramContainer);
-                            canvas.renderSVG(svgContent.trim(), title);
-                            console.log('✅ SVG Diagram rendered successfully:', diagramId);
-                        } catch (err) {
-                            console.error('❌ Error rendering diagram:', err);
-                            diagramContainer.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">Failed to render diagram: ${err.message}</div>`;
-                        }
-                    } else {
-                        console.error('❌ DiagramCanvas not found on window object');
-                        diagramContainer.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">DiagramCanvas class not loaded</div>`;
-                    }
-                }, 100);
-                
-                return `\n[Diagram: ${title}]\n`;
+                // Return inline placeholder that will be replaced in the HTML
+                return `<div class="inline-diagram-placeholder" data-diagram-id="${diagramId}"></div>`;
             } catch (e) {
-                console.error('Failed to render diagram:', e);
+                console.error('Failed to process diagram:', e);
                 return match;
             }
         });
@@ -263,45 +242,61 @@ class ChatAssistant {
                 const titleMatch = svgContent.match(/<!--\s*title:\s*(.+?)\s*-->/i);
                 const title = titleMatch ? titleMatch[1] : 'Mathematical Graph';
                 
-                // Create graph container
-                const graphContainer = document.createElement('div');
-                graphContainer.className = 'graph-embed';
-                graphContainer.id = `container-${graphId}`;
+                // Store for later rendering
+                visualElements.push({
+                    type: 'graph',
+                    id: graphId,
+                    content: svgContent.trim(),
+                    title: title
+                });
                 
-                // Insert after the message bubble
-                const bubbleDiv = contentDiv.querySelector('.message-bubble');
-                if (bubbleDiv) {
-                    bubbleDiv.parentNode.insertBefore(graphContainer, bubbleDiv.nextSibling);
-                } else {
-                    contentDiv.appendChild(graphContainer);
-                }
-                
-                // Initialize SVG graph canvas (compact: 320x240)
-                setTimeout(() => {
-                    if (window.GraphCanvas) {
-                        try {
-                            console.log('📊 Creating GraphCanvas:', graphId);
-                            console.log('📝 SVG Content:', svgContent.trim().substring(0, 200) + '...');
-                            const graph = new window.GraphCanvas(graphId, 320, 240);
-                            graph.create(graphContainer);
-                            graph.renderSVG(svgContent.trim(), title);
-                            console.log('✅ SVG Graph rendered successfully:', graphId);
-                        } catch (err) {
-                            console.error('❌ Error rendering graph:', err);
-                            graphContainer.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">Failed to render graph: ${err.message}</div>`;
-                        }
-                    } else {
-                        console.error('❌ GraphCanvas not found on window object');
-                        graphContainer.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">GraphCanvas class not loaded</div>`;
-                    }
-                }, 100);
-                
-                return `\n[Graph: ${title}]\n`;
+                // Return inline placeholder
+                return `<div class="inline-graph-placeholder" data-graph-id="${graphId}"></div>`;
             } catch (e) {
-                console.error('Failed to render graph:', e);
+                console.error('Failed to process graph:', e);
                 return match;
             }
         });
+        
+        // After content is rendered, replace placeholders with actual diagrams/graphs
+        setTimeout(() => {
+            visualElements.forEach(element => {
+                const placeholder = contentDiv.querySelector(`[data-${element.type}-id="${element.id}"]`);
+                if (placeholder) {
+                    const container = document.createElement('div');
+                    container.className = `${element.type}-embed`;
+                    container.id = `container-${element.id}`;
+                    placeholder.replaceWith(container);
+                    
+                    if (element.type === 'diagram' && window.DiagramCanvas) {
+                        try {
+                            console.log('🎨 Creating DiagramCanvas:', element.id);
+                            const canvas = new window.DiagramCanvas(element.id, 320, 220);
+                            canvas.create(container);
+                            canvas.renderSVG(element.content, element.title);
+                            console.log('✅ SVG Diagram rendered successfully:', element.id);
+                        } catch (err) {
+                            console.error('❌ Error rendering diagram:', err);
+                            container.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">Failed to render diagram: ${err.message}</div>`;
+                        }
+                    } else if (element.type === 'graph' && window.GraphCanvas) {
+                        try {
+                            console.log('📊 Creating GraphCanvas:', element.id);
+                            const graph = new window.GraphCanvas(element.id, 320, 240);
+                            graph.create(container);
+                            graph.renderSVG(element.content, element.title);
+                            console.log('✅ SVG Graph rendered successfully:', element.id);
+                        } catch (err) {
+                            console.error('❌ Error rendering graph:', err);
+                            container.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">Failed to render graph: ${err.message}</div>`;
+                        }
+                    } else {
+                        console.error(`❌ ${element.type === 'diagram' ? 'DiagramCanvas' : 'GraphCanvas'} not found`);
+                        container.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">${element.type === 'diagram' ? 'Diagram' : 'Graph'} renderer not loaded</div>`;
+                    }
+                }
+            });
+        }, 100);
         
         return { text: remainingText };
     }
@@ -719,10 +714,9 @@ Be STRICT: Only load chapters when the question genuinely needs that specific NC
 Your response (path or NONE):`;
 
             // Make API call to identify chapter
-            const identificationResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            const identificationResponse = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({

@@ -8,9 +8,35 @@
    ================================================================= */
 
 .diagram-embed,
-.graph-embed {
+.graph-embed,
+.inline-diagram-placeholder,
+.inline-graph-placeholder {
     margin: 16px 0;
     width: 100%;
+    display: block;
+}
+
+.inline-diagram-placeholder,
+.inline-graph-placeholder {
+    min-height: 50px;
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px dashed rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.inline-diagram-placeholder::before {
+    content: '📊 Loading diagram...';
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+}
+
+.inline-graph-placeholder::before {
+    content: '📈 Loading graph...';
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
 }
 
 .diagram-embed .diagram-wrapper,
