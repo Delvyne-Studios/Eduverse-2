@@ -9,15 +9,21 @@
 
 .diagram-embed,
 .graph-embed,
+.plotly-graph-wrapper,
+.svg-diagram-wrapper,
 .inline-diagram-placeholder,
-.inline-graph-placeholder {
+.inline-graph-placeholder,
+.inline-plotly-placeholder,
+.inline-svg-diagram-placeholder {
     margin: 16px 0;
     width: 100%;
     display: block;
 }
 
 .inline-diagram-placeholder,
-.inline-graph-placeholder {
+.inline-graph-placeholder,
+.inline-plotly-placeholder,
+.inline-svg-diagram-placeholder {
     min-height: 50px;
     background: rgba(99, 102, 241, 0.05);
     border: 1px dashed rgba(99, 102, 241, 0.3);
@@ -37,6 +43,106 @@
     content: '📈 Loading graph...';
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.9rem;
+}
+
+.inline-plotly-placeholder::before {
+    content: '📉 Rendering Plotly graph...';
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+}
+
+.inline-svg-diagram-placeholder::before {
+    content: '🎨 Rendering diagram...';
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+}
+
+/* =================================================================
+   PLOTLY GRAPH CONTAINER
+   ================================================================= */
+
+.plotly-graph-wrapper {
+    background: linear-gradient(135deg, rgba(14, 17, 23, 0.98), rgba(20, 24, 32, 0.98));
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.plotly-graph-container {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.plotly-graph-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    gap: 8px;
+}
+
+.plotly-btn {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.plotly-btn:hover {
+    background: rgba(99, 102, 241, 0.4);
+}
+
+/* =================================================================
+   SVG DIAGRAM CONTAINER
+   ================================================================= */
+
+.svg-diagram-wrapper {
+    background: linear-gradient(135deg, rgba(14, 17, 23, 0.98), rgba(20, 24, 32, 0.98));
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.svg-diagram-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.svg-diagram-container svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.svg-diagram-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    gap: 8px;
+}
+
+.svg-btn {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.svg-btn:hover {
+    background: rgba(99, 102, 241, 0.4);
 }
 
 .diagram-embed .diagram-wrapper,

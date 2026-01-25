@@ -198,26 +198,60 @@ class ChatAssistant {
     async processVisualContent(fullResponse, contentDiv) {
         let remainingText = fullResponse;
         
-        // Extract SVG diagram content (```diagram ... ```)
+        // Extract different content types
+        const plotlyRegex = /```python\s*([\s\S]*?plotly[\s\S]*?)```/gi;
+        const jsonDiagramRegex = /```json-diagram\s*([\s\S]*?)```/gi;
         const diagramRegex = /```diagram\s*([\s\S]*?)```/gi;
         const graphRegex = /```graph\s*([\s\S]*?)```/gi;
         
-        let diagramCount = 0;
-        let graphCount = 0;
+        let visualCount = 0;
         
-        // Store diagram/graph placeholders and their content
+        // Store all visual elements for later rendering
         const visualElements = [];
         
-        // Process diagrams (now expects SVG content)
+        // Process Plotly Python code
+        remainingText = remainingText.replace(plotlyRegex, (match, pythonCode) => {
+            try {
+                const plotlyId = `plotly-${Date.now()}-${visualCount++}`;
+                
+                visualElements.push({
+                    type: 'plotly',
+                    id: plotlyId,
+                    content: pythonCode.trim()
+                });
+                
+                return `<div class="inline-plotly-placeholder" data-plotly-id="${plotlyId}"></div>`;
+            } catch (e) {
+                console.error('Failed to process Plotly code:', e);
+                return match;
+            }
+        });
+        
+        // Process JSON diagram plans
+        remainingText = remainingText.replace(jsonDiagramRegex, (match, jsonContent) => {
+            try {
+                const diagramId = `svg-diagram-${Date.now()}-${visualCount++}`;
+                
+                visualElements.push({
+                    type: 'json-diagram',
+                    id: diagramId,
+                    content: jsonContent.trim()
+                });
+                
+                return `<div class="inline-svg-diagram-placeholder" data-json-diagram-id="${diagramId}"></div>`;
+            } catch (e) {
+                console.error('Failed to process JSON diagram:', e);
+                return match;
+            }
+        });
+        
+        // Process SVG diagrams (legacy support)
         remainingText = remainingText.replace(diagramRegex, (match, svgContent) => {
             try {
-                const diagramId = `diagram-${Date.now()}-${diagramCount++}`;
-                
-                // Extract title from SVG comment if present
+                const diagramId = `diagram-${Date.now()}-${visualCount++}`;
                 const titleMatch = svgContent.match(/<!--\s*title:\s*(.+?)\s*-->/i);
                 const title = titleMatch ? titleMatch[1] : 'Visual Diagram';
                 
-                // Store for later rendering
                 visualElements.push({
                     type: 'diagram',
                     id: diagramId,
@@ -225,7 +259,6 @@ class ChatAssistant {
                     title: title
                 });
                 
-                // Return inline placeholder that will be replaced in the HTML
                 return `<div class="inline-diagram-placeholder" data-diagram-id="${diagramId}"></div>`;
             } catch (e) {
                 console.error('Failed to process diagram:', e);
@@ -233,16 +266,13 @@ class ChatAssistant {
             }
         });
         
-        // Process graphs (now expects SVG content)
+        // Process graphs (legacy support)
         remainingText = remainingText.replace(graphRegex, (match, svgContent) => {
             try {
-                const graphId = `graph-${Date.now()}-${graphCount++}`;
-                
-                // Extract title from SVG comment if present
+                const graphId = `graph-${Date.now()}-${visualCount++}`;
                 const titleMatch = svgContent.match(/<!--\s*title:\s*(.+?)\s*-->/i);
                 const title = titleMatch ? titleMatch[1] : 'Mathematical Graph';
                 
-                // Store for later rendering
                 visualElements.push({
                     type: 'graph',
                     id: graphId,
@@ -250,7 +280,6 @@ class ChatAssistant {
                     title: title
                 });
                 
-                // Return inline placeholder
                 return `<div class="inline-graph-placeholder" data-graph-id="${graphId}"></div>`;
             } catch (e) {
                 console.error('Failed to process graph:', e);
@@ -258,47 +287,97 @@ class ChatAssistant {
             }
         });
         
-        // After content is rendered, replace placeholders with actual diagrams/graphs
+        // Render visual elements after DOM is ready
         setTimeout(() => {
             visualElements.forEach(element => {
-                const placeholder = contentDiv.querySelector(`[data-${element.type}-id="${element.id}"]`);
-                if (placeholder) {
-                    const container = document.createElement('div');
-                    container.className = `${element.type}-embed`;
-                    container.id = `container-${element.id}`;
-                    placeholder.replaceWith(container);
-                    
-                    if (element.type === 'diagram' && window.DiagramCanvas) {
-                        try {
-                            console.log('🎨 Creating DiagramCanvas:', element.id);
-                            const canvas = new window.DiagramCanvas(element.id, 320, 220);
-                            canvas.create(container);
-                            canvas.renderSVG(element.content, element.title);
-                            console.log('✅ SVG Diagram rendered successfully:', element.id);
-                        } catch (err) {
-                            console.error('❌ Error rendering diagram:', err);
-                            container.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">Failed to render diagram: ${err.message}</div>`;
-                        }
-                    } else if (element.type === 'graph' && window.GraphCanvas) {
-                        try {
-                            console.log('📊 Creating GraphCanvas:', element.id);
-                            const graph = new window.GraphCanvas(element.id, 320, 240);
-                            graph.create(container);
-                            graph.renderSVG(element.content, element.title);
-                            console.log('✅ SVG Graph rendered successfully:', element.id);
-                        } catch (err) {
-                            console.error('❌ Error rendering graph:', err);
-                            container.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">Failed to render graph: ${err.message}</div>`;
-                        }
-                    } else {
-                        console.error(`❌ ${element.type === 'diagram' ? 'DiagramCanvas' : 'GraphCanvas'} not found`);
-                        container.innerHTML = `<div style="padding:20px;color:#ef4444;text-align:center;">${element.type === 'diagram' ? 'Diagram' : 'Graph'} renderer not loaded</div>`;
-                    }
-                }
+                this.renderVisualElement(element, contentDiv);
             });
         }, 100);
         
         return { text: remainingText };
+    }
+    
+    /**
+     * Render a single visual element
+     */
+    renderVisualElement(element, contentDiv) {
+        let placeholder;
+        
+        switch (element.type) {
+            case 'plotly':
+                placeholder = contentDiv.querySelector(`[data-plotly-id="${element.id}"]`);
+                if (placeholder && window.plotlyRenderer) {
+                    const wrapper = window.plotlyRenderer.createGraphContainer(element.id);
+                    placeholder.replaceWith(wrapper);
+                    
+                    const figData = window.plotlyRenderer.parsePythonToPlotly(element.content);
+                    if (figData) {
+                        const container = wrapper.querySelector('.plotly-graph-container');
+                        window.plotlyRenderer.render(container, figData);
+                        console.log('✅ Plotly graph rendered:', element.id);
+                    }
+                }
+                break;
+                
+            case 'json-diagram':
+                placeholder = contentDiv.querySelector(`[data-json-diagram-id="${element.id}"]`);
+                if (placeholder && window.svgDiagramRenderer) {
+                    try {
+                        const plan = JSON.parse(element.content);
+                        const wrapper = window.svgDiagramRenderer.createContainer(element.id);
+                        placeholder.replaceWith(wrapper);
+                        
+                        const svgString = window.svgDiagramRenderer.render(plan);
+                        const container = wrapper.querySelector('.svg-diagram-container');
+                        container.innerHTML = svgString;
+                        console.log('✅ JSON diagram rendered:', element.id);
+                    } catch (e) {
+                        console.error('Failed to parse JSON diagram:', e);
+                        placeholder.innerHTML = `<div class="error-message">Invalid diagram format</div>`;
+                    }
+                }
+                break;
+                
+            case 'diagram':
+                placeholder = contentDiv.querySelector(`[data-diagram-id="${element.id}"]`);
+                if (placeholder && window.DiagramCanvas) {
+                    const container = document.createElement('div');
+                    container.className = 'diagram-embed';
+                    container.id = `container-${element.id}`;
+                    placeholder.replaceWith(container);
+                    
+                    try {
+                        const canvas = new window.DiagramCanvas(element.id, 320, 220);
+                        canvas.create(container);
+                        canvas.renderSVG(element.content, element.title);
+                        console.log('✅ Diagram rendered:', element.id);
+                    } catch (err) {
+                        console.error('Failed to render diagram:', err);
+                        container.innerHTML = `<div class="error-message">Failed to render diagram</div>`;
+                    }
+                }
+                break;
+                
+            case 'graph':
+                placeholder = contentDiv.querySelector(`[data-graph-id="${element.id}"]`);
+                if (placeholder && window.GraphCanvas) {
+                    const container = document.createElement('div');
+                    container.className = 'graph-embed';
+                    container.id = `container-${element.id}`;
+                    placeholder.replaceWith(container);
+                    
+                    try {
+                        const graph = new window.GraphCanvas(element.id, 320, 240);
+                        graph.create(container);
+                        graph.renderSVG(element.content, element.title);
+                        console.log('✅ Graph rendered:', element.id);
+                    } catch (err) {
+                        console.error('Failed to render graph:', err);
+                        container.innerHTML = `<div class="error-message">Failed to render graph</div>`;
+                    }
+                }
+                break;
+        }
     }
     
     // =================================================================
@@ -609,19 +688,27 @@ class ChatAssistant {
                 contentDiv.appendChild(contextLog);
             }
             
+            // Add context usage display
+            if (window.chatManager) {
+                const usageHtml = window.chatManager.getContextUsageDisplay(
+                    systemPrompt,
+                    this.currentMessages,
+                    null
+                );
+                const usageDiv = document.createElement('div');
+                usageDiv.className = 'message-context-usage';
+                usageDiv.innerHTML = usageHtml;
+                contentDiv.appendChild(usageDiv);
+            }
+            
             // Store message
             this.currentMessages.push({
                 role: 'assistant',
                 content: fullResponse
             });
             
-            // Save to history
-            const chatIndex = this.chatHistory.findIndex(c => c.id === this.currentChatId);
-            if (chatIndex >= 0) {
-                this.chatHistory[chatIndex].messages.push({ role: 'assistant', text: fullResponse });
-                this.chatHistory[chatIndex].lastMessage = fullResponse.substring(0, 100);
-                localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
-            }
+            // Save to history and generate summary
+            await this.saveAIResponseToHistory(fullResponse);
             
         } catch (error) {
             console.error(`❌ API Error (attempt ${retryCount + 1}):`, error);
@@ -1104,7 +1191,7 @@ Important: Use this context as guidance. If the question goes beyond what's prov
         return saved ? JSON.parse(saved) : [];
     }
     
-    saveChatToHistory(message, image) {
+    async saveChatToHistory(message, image, isNewChat = false) {
         const chatIndex = this.chatHistory.findIndex(c => c.id === this.currentChatId);
         
         if (chatIndex >= 0) {
@@ -1113,9 +1200,15 @@ Important: Use this context as guidance. If the question goes beyond what's prov
             this.chatHistory[chatIndex].lastMessage = message;
             this.chatHistory[chatIndex].date = new Date().toISOString();
         } else {
-            // Create new chat
+            // Create new chat - auto-generate name
+            let chatName = null;
+            if (window.chatManager) {
+                chatName = await window.chatManager.generateChatName(message, this);
+            }
+            
             this.chatHistory.unshift({
                 id: this.currentChatId,
+                name: chatName,
                 messages: [{ role: 'user', text: message, image }],
                 lastMessage: message,
                 date: new Date().toISOString()
@@ -1126,24 +1219,179 @@ Important: Use this context as guidance. If the question goes beyond what's prov
         this.renderChatHistory();
     }
     
+    /**
+     * Save AI response to history and generate summary
+     */
+    async saveAIResponseToHistory(aiResponse) {
+        const chatIndex = this.chatHistory.findIndex(c => c.id === this.currentChatId);
+        
+        if (chatIndex >= 0) {
+            const chat = this.chatHistory[chatIndex];
+            chat.messages.push({ role: 'assistant', text: aiResponse });
+            chat.date = new Date().toISOString();
+            
+            // Generate and save summary for the exchange
+            if (window.chatManager && chat.messages.length >= 2) {
+                const lastUserMsg = chat.messages[chat.messages.length - 2];
+                if (lastUserMsg && lastUserMsg.role === 'user') {
+                    const summary = await window.chatManager.generateMessageSummary(
+                        lastUserMsg.text, 
+                        aiResponse, 
+                        this
+                    );
+                    const messageIndex = Math.floor(chat.messages.length / 2);
+                    window.chatManager.addSummary(this.currentChatId, summary, messageIndex);
+                }
+            }
+            
+            localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        }
+    }
+    
     renderChatHistory() {
         this.historyList.innerHTML = '';
         
         this.chatHistory.forEach(chat => {
             const item = document.createElement('div');
             item.className = 'history-item';
+            if (chat.id === this.currentChatId) {
+                item.classList.add('active');
+            }
+            
+            // Check if this chat is referenced
+            const isReferenced = window.chatManager && window.chatManager.isReferenced(chat.id);
             
             const date = new Date(chat.date);
             const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             
+            // Use chat name if available, otherwise use message preview
+            const displayName = chat.name || chat.lastMessage.substring(0, 40);
+            
             item.innerHTML = `
-                <div class="history-item-date">${dateStr}</div>
-                <div class="history-item-preview">${chat.lastMessage.substring(0, 60)}${chat.lastMessage.length > 60 ? '...' : ''}</div>
+                <div class="history-item-content">
+                    <div class="history-item-name">${displayName}${displayName.length > 40 ? '...' : ''}</div>
+                    <div class="history-item-date">${dateStr}</div>
+                </div>
+                <div class="history-item-actions">
+                    ${isReferenced ? '<span class="reference-badge"><i class="fas fa-link"></i></span>' : ''}
+                    <button class="history-menu-btn" data-chat-id="${chat.id}">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+                <div class="history-item-menu" id="menu-${chat.id}" style="display: none;">
+                    <button class="menu-option rename-chat" data-chat-id="${chat.id}">
+                        <i class="fas fa-edit"></i> Rename
+                    </button>
+                    <button class="menu-option reference-chat" data-chat-id="${chat.id}">
+                        <i class="fas fa-link"></i> ${isReferenced ? 'Unreference' : 'Reference'}
+                    </button>
+                    <button class="menu-option delete-chat" data-chat-id="${chat.id}">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
             `;
             
-            item.addEventListener('click', () => this.loadChat(chat.id));
+            // Click to load chat
+            item.querySelector('.history-item-content').addEventListener('click', () => this.loadChat(chat.id));
+            
+            // Menu button click
+            const menuBtn = item.querySelector('.history-menu-btn');
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleChatMenu(chat.id);
+            });
+            
+            // Menu options
+            item.querySelector('.rename-chat').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.renameChatPrompt(chat.id);
+            });
+            
+            item.querySelector('.reference-chat').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleReferenceChat(chat.id);
+            });
+            
+            item.querySelector('.delete-chat').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteChat(chat.id);
+            });
+            
             this.historyList.appendChild(item);
         });
+        
+        // Close menus when clicking outside
+        document.addEventListener('click', () => this.closeAllChatMenus());
+    }
+    
+    toggleChatMenu(chatId) {
+        this.closeAllChatMenus();
+        const menu = document.getElementById(`menu-${chatId}`);
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+    
+    closeAllChatMenus() {
+        document.querySelectorAll('.history-item-menu').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+    
+    renameChatPrompt(chatId) {
+        const chat = this.chatHistory.find(c => c.id === chatId);
+        if (!chat) return;
+        
+        const newName = prompt('Enter new chat name:', chat.name || chat.lastMessage.substring(0, 40));
+        if (newName && newName.trim()) {
+            this.renameChat(chatId, newName.trim());
+        }
+        this.closeAllChatMenus();
+    }
+    
+    renameChat(chatId, newName) {
+        const chatIndex = this.chatHistory.findIndex(c => c.id === chatId);
+        if (chatIndex >= 0) {
+            this.chatHistory[chatIndex].name = newName;
+            localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+            this.renderChatHistory();
+            this.showToast('Chat renamed', 'success');
+        }
+    }
+    
+    toggleReferenceChat(chatId) {
+        if (!window.chatManager) return;
+        
+        if (window.chatManager.isReferenced(chatId)) {
+            window.chatManager.removeReferenceChat(chatId);
+            this.showToast('Chat unreferenced', 'info');
+        } else {
+            window.chatManager.addReferenceChat(chatId);
+            this.showToast('Chat referenced - context will be included', 'success');
+        }
+        this.closeAllChatMenus();
+        this.renderChatHistory();
+    }
+    
+    deleteChat(chatId) {
+        if (!confirm('Delete this chat?')) return;
+        
+        this.chatHistory = this.chatHistory.filter(c => c.id !== chatId);
+        localStorage.setItem('chatHistory', JSON.stringify(this.chatHistory));
+        
+        // Also delete summaries
+        if (window.chatManager) {
+            window.chatManager.deleteChatSummaries(chatId);
+        }
+        
+        // If deleting current chat, start new
+        if (chatId === this.currentChatId) {
+            this.startNewChat();
+        }
+        
+        this.renderChatHistory();
+        this.closeAllChatMenus();
+        this.showToast('Chat deleted', 'success');
     }
     
     loadChat(chatId) {
@@ -1307,319 +1555,250 @@ Important: Use this context as guidance. If the question goes beyond what's prov
     // =================================================================
     getDiagramAndGraphInstructions() {
         return `
-🎨 SVG DIAGRAMS & GRAPHS CAPABILITY:
-You can create PROFESSIONAL, DETAILED visual diagrams using **SVG** (NOT JSON commands)!
-SVG is perfect - you excel at HTML/SVG. Think in proportions, not pixels.
-
 ═══════════════════════════════════════════════════════════════
-⭐ QUALITY STANDARDS - YOUR DIAGRAMS MUST BE EXCELLENT! ⭐
+📊 PLOTLY GRAPHS - FOR MATHEMATICAL PLOTS & DATA VISUALIZATION
 ═══════════════════════════════════════════════════════════════
 
-✅ SPATIAL AWARENESS IS CRITICAL:
-- Calculate positions CAREFULLY - avoid overlapping text/elements
-- Use consistent spacing between elements
-- Align related elements horizontally/vertically
-- Place labels strategically - never covering important features
-- Test your mental model: Will text at (x,y) overlap with nearby elements?
+For **mathematical graphs**, **functions**, **LPP problems**, **data plots**, use Plotly Python code!
+The system will automatically render it with a beautiful dark theme.
 
-✅ STRUCTURAL CLARITY:
-- Use proper geometric shapes (ellipse for lenses, rect for orbitals, polygon for shading)
-- Maintain accurate proportions (e.g., trigonal angles should look 120°)
-- Group related elements logically in data-step groups
-- Use stroke-width consistently (0.5-0.8 for main elements, 0.3-0.5 for secondary)
+🎯 WHEN TO USE PLOTLY:
+- Function plots (y = x², sin(x), log(x), etc.)
+- Linear Programming Problems (feasible regions, constraints)
+- Statistical data (histograms, scatter plots)
+- Calculus visualizations (derivatives, integrals, area under curve)
+- Coordinate geometry (lines, circles, conics)
+- Sequences and series plots
 
-✅ VISUAL HIERARCHY:
-- Primary elements: Brighter colors (#ef4444, #22c55e, #3b82f6), stroke-width 0.6-0.8
-- Secondary elements: Softer colors (#f59e0b, #06b6d4), stroke-width 0.4-0.6
-- Annotations: Smaller font-size (2-2.5), complementary colors
-- Backgrounds/fills: Use rgba() with opacity 0.2-0.4 for shading
+📝 HOW TO CREATE A PLOTLY GRAPH:
+Wrap Python Plotly code in \`\`\`python ... \`\`\`
 
-⚠️ CRITICAL: SVG VIEWBOX COORDINATE SYSTEM:
+✅ EXAMPLE - LPP with Feasible Region (BEAUTIFUL AESTHETIC):
+\`\`\`python
+import plotly.graph_objects as go
+import numpy as np
+
+# Create figure
+fig = go.Figure()
+
+# X range
+x = np.linspace(0, 10, 100)
+
+# Constraint lines
+fig.add_trace(go.Scatter(x=x, y=4-x, mode='lines', name='x + y = 4', 
+    line=dict(color='#FF6B6B', width=2)))
+fig.add_trace(go.Scatter(x=x, y=6-2*x, mode='lines', name='2x + y = 6', 
+    line=dict(color='#4ECDC4', width=2)))
+
+# Feasible region (shaded polygon)
+fig.add_trace(go.Scatter(x=[0, 0, 2, 4], y=[6, 4, 2, 0], fill='toself', 
+    fillcolor='rgba(78, 205, 196, 0.3)', line=dict(color='rgba(0,0,0,0)'),
+    name='Feasible Region'))
+
+# Corner points
+fig.add_trace(go.Scatter(x=[0, 2, 4, 0], y=[6, 2, 0, 4], mode='markers+text',
+    marker=dict(size=12, color='#FFE66D', symbol='diamond'),
+    text=['A(0,6)', 'B(2,2)', 'C(4,0)', 'D(0,4)'],
+    textposition='top right', textfont=dict(color='#FFE66D', size=12),
+    name='Corner Points'))
+
+# Optimal point highlight
+fig.add_trace(go.Scatter(x=[2], y=[2], mode='markers',
+    marker=dict(size=20, color='#FF6B6B', symbol='star'),
+    name='Optimal: (2,2)'))
+
+fig.update_layout(
+    title='Minimize Z = 3x + 5y',
+    xaxis_title='x',
+    yaxis_title='y',
+    showlegend=True
+)
+fig.show()
+\`\`\`
+
+✅ EXAMPLE - Function Plot (Quadratic):
+\`\`\`python
+import plotly.graph_objects as go
+import numpy as np
+
+x = np.linspace(-5, 5, 200)
+y = x**2 - 4*x + 3
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines', name='y = x² - 4x + 3',
+    line=dict(color='#3B82F6', width=3)))
+
+# Mark roots
+fig.add_trace(go.Scatter(x=[1, 3], y=[0, 0], mode='markers+text',
+    marker=dict(size=12, color='#EF4444'), text=['(1,0)', '(3,0)'],
+    textposition='top center', name='Roots'))
+
+# Mark vertex
+fig.add_trace(go.Scatter(x=[2], y=[-1], mode='markers+text',
+    marker=dict(size=12, color='#22C55E'), text=['Vertex (2,-1)'],
+    textposition='bottom center', name='Vertex'))
+
+fig.update_layout(title='Quadratic Function', xaxis_title='x', yaxis_title='y')
+fig.show()
+\`\`\`
+
+🎨 PLOTLY COLOR PALETTE (Use these for consistency):
+- Primary: #FF6B6B (red), #4ECDC4 (teal), #45B7D1 (blue), #96CEB4 (green)
+- Accents: #FFE66D (yellow), #DDA0DD (plum), #F7DC6F (gold)
+- Fill colors: Use rgba() with 0.2-0.4 opacity for regions
+
+═══════════════════════════════════════════════════════════════
+🔬 JSON DIAGRAM PLANS - FOR PHYSICS & CHEMISTRY DIAGRAMS
+═══════════════════════════════════════════════════════════════
+
+For **physics diagrams** (optics, circuits, forces) and **chemistry diagrams** (molecular structures, orbitals), use JSON diagram plans!
+
+🎯 WHEN TO USE JSON DIAGRAMS:
+- Ray diagrams (lenses, mirrors, prisms)
+- Circuit diagrams (resistors, capacitors, batteries)
+- Force diagrams (vectors, free body diagrams)
+- Wave diagrams (interference, diffraction)
+- Molecular geometry (VSEPR, orbital diagrams)
+- Atomic models (Bohr model, electron configurations)
+
+📝 HOW TO CREATE A JSON DIAGRAM:
+Wrap the JSON in \`\`\`json-diagram ... \`\`\`
+
+📐 GRID SYSTEM (12 × 10):
+- X: 0-12 (left to right), Y: 0-10 (top to bottom)
+- Center: (6, 5)
+- Each grid unit = ~50px when rendered
+
+✅ EXAMPLE - Convex Lens Ray Diagram:
+\`\`\`json-diagram
+{
+  "title": "Image Formation by Convex Lens",
+  "elements": [
+    {"type": "line", "from": [0, 5], "to": [12, 5], "color": "white", "label": "Principal Axis"},
+    {"type": "lens", "position": [6, 5], "height": 4, "type": "convex"},
+    {"type": "text", "position": [3, 5.3], "content": "F", "color": "yellow"},
+    {"type": "circle", "center": [3, 5], "radius": 0.15, "color": "yellow", "fill": true},
+    {"type": "text", "position": [9, 5.3], "content": "F'", "color": "yellow"},
+    {"type": "circle", "center": [9, 5], "radius": 0.15, "color": "yellow", "fill": true},
+    {"type": "arrow", "from": [2, 5], "to": [2, 3], "color": "green", "label": "Object"},
+    {"type": "ray", "from": [2, 3], "to": [6, 3], "color": "red"},
+    {"type": "ray", "from": [6, 3], "to": [10, 7], "color": "red"},
+    {"type": "ray", "from": [2, 3], "to": [6, 5], "color": "orange"},
+    {"type": "ray", "from": [6, 5], "to": [10, 7], "color": "orange"},
+    {"type": "arrow", "from": [10, 5], "to": [10, 7], "color": "blue", "label": "Image"},
+    {"type": "text", "position": [10, 7.8], "content": "(Real, Inverted)", "color": "cyan", "size": "small"}
+  ],
+  "steps": [
+    {"elements": [0, 1, 2, 3, 4, 5], "description": "Setup: Principal axis with convex lens and focal points"},
+    {"elements": [6], "description": "Object placed beyond 2F"},
+    {"elements": [7, 8, 9, 10], "description": "Ray tracing through lens"},
+    {"elements": [11, 12], "description": "Real, inverted image formed between F and 2F"}
+  ]
+}
+\`\`\`
+
+✅ EXAMPLE - Simple Circuit:
+\`\`\`json-diagram
+{
+  "title": "Series Circuit with Resistors",
+  "elements": [
+    {"type": "battery", "position": [2, 5], "orientation": "vertical", "label": "V = 12V"},
+    {"type": "line", "from": [2, 3], "to": [5, 3], "color": "white"},
+    {"type": "resistor", "position": [5, 3], "orientation": "horizontal", "label": "R₁ = 4Ω"},
+    {"type": "line", "from": [7, 3], "to": [10, 3], "color": "white"},
+    {"type": "resistor", "position": [10, 5], "orientation": "vertical", "label": "R₂ = 6Ω"},
+    {"type": "line", "from": [10, 7], "to": [5, 7], "color": "white"},
+    {"type": "line", "from": [5, 7], "to": [2, 7], "color": "white"},
+    {"type": "arrow", "from": [3, 2.5], "to": [4.5, 2.5], "color": "yellow", "label": "I"},
+    {"type": "text", "position": [6, 9], "content": "Total R = 10Ω, I = 1.2A", "color": "cyan"}
+  ]
+}
+\`\`\`
+
+✅ EXAMPLE - VSEPR Molecular Geometry:
+\`\`\`json-diagram
+{
+  "title": "VSEPR - Tetrahedral (CH₄)",
+  "elements": [
+    {"type": "circle", "center": [6, 5], "radius": 0.5, "color": "orange", "fill": true, "label": "C"},
+    {"type": "line", "from": [6, 5], "to": [4, 3], "color": "cyan"},
+    {"type": "circle", "center": [4, 3], "radius": 0.3, "color": "cyan", "fill": true, "label": "H"},
+    {"type": "line", "from": [6, 5], "to": [8, 3], "color": "cyan"},
+    {"type": "circle", "center": [8, 3], "radius": 0.3, "color": "cyan", "fill": true, "label": "H"},
+    {"type": "line", "from": [6, 5], "to": [5, 7], "color": "cyan"},
+    {"type": "circle", "center": [5, 7], "radius": 0.3, "color": "cyan", "fill": true, "label": "H"},
+    {"type": "dashed-line", "from": [6, 5], "to": [7, 7], "color": "cyan"},
+    {"type": "circle", "center": [7, 7], "radius": 0.3, "color": "cyan", "fill": true, "label": "H"},
+    {"type": "text", "position": [6, 9], "content": "Bond Angle: 109.5°", "color": "yellow"},
+    {"type": "text", "position": [6, 9.5], "content": "Hybridization: sp³", "color": "purple"}
+  ]
+}
+\`\`\`
+
+🔧 AVAILABLE ELEMENT TYPES:
+- **line**: {from: [x,y], to: [x,y], color, label}
+- **arrow**: {from: [x,y], to: [x,y], color, label}
+- **ray**: {from: [x,y], to: [x,y], color} - line with arrowhead
+- **dashed-line**: {from: [x,y], to: [x,y], color}
+- **circle**: {center: [x,y], radius, color, fill, label}
+- **arc**: {center: [x,y], radius, startAngle, endAngle, color}
+- **rectangle**: {position: [x,y], width, height, color, fill}
+- **text**: {position: [x,y], content, color, size}
+- **lens**: {position: [x,y], height, type: "convex"|"concave"}
+- **mirror**: {position: [x,y], height, type: "concave"|"convex"|"plane"}
+- **spring**: {from: [x,y], to: [x,y], coils}
+- **wave**: {from: [x,y], to: [x,y], amplitude, wavelength}
+- **resistor**: {position: [x,y], orientation}
+- **capacitor**: {position: [x,y], orientation}
+- **battery**: {position: [x,y], orientation, label}
+
+🎨 JSON DIAGRAM COLOR PALETTE:
+- white, red, blue, green, yellow, cyan, orange, purple, pink, lime
+
+═══════════════════════════════════════════════════════════════
+🎨 FALLBACK: SVG DIAGRAMS (For Complex Custom Diagrams)
+═══════════════════════════════════════════════════════════════
+
+For highly custom diagrams not covered by JSON or Plotly, you can use raw SVG.
+Use \`\`\`diagram ... \`\`\` for general diagrams or \`\`\`graph ... \`\`\` for coordinate graphs.
+
+⚠️ SVG VIEWBOX COORDINATE SYSTEM:
 - ViewBox: **100 × 70** (percentage-like coordinates!)
 - Center: **(50, 35)**
 - Safe zone: x: 10-90, y: 10-65 (leave margins!)
 - This is NOT pixels - think of it as 100 units wide
 
-📐 WHEN TO CREATE DIAGRAMS:
-- Physics: Ray diagrams (lens/mirror), circuit diagrams, force diagrams, wave interference
-- Chemistry: Molecular orbitals, VSEPR geometry, orbital diagrams, atomic models, reaction mechanisms
-- Mathematics: Graphs, geometric figures, LPP regions, transformations
-- Biology: Cell structures, anatomical diagrams, ecological relationships
-
-═══════════════════════════════════════════════════════════════
-📚 LEARN FROM THESE EXCELLENT EXAMPLES:
-═══════════════════════════════════════════════════════════════
-
-🔧 HOW TO CREATE A DIAGRAM:
-Wrap SVG elements in \`\`\`diagram ... \`\`\`
+� SVG HOW TO:
+Wrap SVG in \`\`\`diagram ... \`\`\` or \`\`\`graph ... \`\`\`
 Use <g data-step="N" data-description="..."> for step-by-step revelation!
 
-✅ EXAMPLE 1 - Convex Lens Ray Diagram (EXCELLENT SPATIAL LAYOUT):
-\`\`\`diagram
-<!-- title: Convex Lens Ray Diagram -->
-
-<g data-step="1" data-description="Principal axis and lens">
-  <line x1="5" y1="35" x2="95" y2="35" stroke="#ffffff" stroke-width="0.5"/>
-  <ellipse cx="50" cy="35" rx="2" ry="15" fill="none" stroke="#06b6d4" stroke-width="0.8"/>
-  <circle cx="35" cy="35" r="1" fill="#eab308"/>
-  <text x="35" y="40" fill="#eab308" font-size="3" text-anchor="middle">F</text>
-  <circle cx="65" cy="35" r="1" fill="#eab308"/>
-  <text x="65" y="40" fill="#eab308" font-size="3" text-anchor="middle">F'</text>
-</g>
-
-<g data-step="2" data-description="Object placed beyond 2F">
-  <line x1="20" y1="35" x2="20" y2="20" stroke="#22c55e" stroke-width="0.8" marker-end="url(#arrowhead)"/>
-  <text x="20" y="17" fill="#22c55e" font-size="3" text-anchor="middle">Object</text>
-</g>
-
-<g data-step="3" data-description="Ray tracing and image formation">
-  <line x1="20" y1="20" x2="50" y2="20" stroke="#ef4444" stroke-width="0.5"/>
-  <line x1="50" y1="20" x2="75" y2="45" stroke="#ef4444" stroke-width="0.5"/>
-  <line x1="20" y1="20" x2="75" y2="45" stroke="#f59e0b" stroke-width="0.5" stroke-dasharray="1,1"/>
-  <line x1="75" y1="35" x2="75" y2="45" stroke="#3b82f6" stroke-width="0.8"/>
-  <text x="75" y="50" fill="#3b82f6" font-size="3" text-anchor="middle">Image</text>
-  <text x="75" y="54" fill="#3b82f6" font-size="2" text-anchor="middle">(Real, Inverted)</text>
-</g>
-\`\`\`
-**Why this is excellent:** Clean layout, no overlaps, rays clearly traced, proper use of colors for different rays, labels don't obscure features.
-
-✅ EXAMPLE 2 - VSEPR Trigonal Bipyramidal PCl₅ (PERFECT GEOMETRY):
-\`\`\`diagram
-<!-- title: VSEPR - Trigonal Bipyramidal (PCl₅) -->
-
-<g data-step="1" data-description="Central phosphorus atom">
-  <circle cx="50" cy="35" r="3" fill="#f59e0b" stroke="#fb923c" stroke-width="0.6"/>
-  <text x="50" y="36.5" fill="#ffffff" font-size="2.5" text-anchor="middle" font-weight="bold">P</text>
-  <text x="50" y="45" fill="#f59e0b" font-size="2.5" text-anchor="middle">Phosphorus</text>
-</g>
-
-<g data-step="2" data-description="Axial chlorine atoms (180°)">
-  <line x1="50" y1="35" x2="50" y2="15" stroke="#06b6d4" stroke-width="0.6"/>
-  <circle cx="50" cy="13" r="2.5" fill="#06b6d4" opacity="0.7"/>
-  <text x="50" y="14.5" fill="#ffffff" font-size="2" text-anchor="middle" font-weight="bold">Cl</text>
-  <text x="54" y="12" fill="#06b6d4" font-size="2">axial</text>
-  
-  <line x1="50" y1="35" x2="50" y2="55" stroke="#06b6d4" stroke-width="0.6"/>
-  <circle cx="50" cy="57" r="2.5" fill="#06b6d4" opacity="0.7"/>
-  <text x="50" y="58.5" fill="#ffffff" font-size="2" text-anchor="middle" font-weight="bold">Cl</text>
-  <text x="54" y="59" fill="#06b6d4" font-size="2">axial</text>
-  <text x="55" y="35" fill="#eab308" font-size="2">180°</text>
-</g>
-
-<g data-step="3" data-description="Equatorial chlorine atoms (120°)">
-  <line x1="50" y1="35" x2="28" y2="35" stroke="#22c55e" stroke-width="0.6"/>
-  <circle cx="25" cy="35" r="2.5" fill="#22c55e" opacity="0.7"/>
-  <text x="25" y="36.5" fill="#ffffff" font-size="2" text-anchor="middle" font-weight="bold">Cl</text>
-  <text x="18" y="38" fill="#22c55e" font-size="1.8">equatorial</text>
-  
-  <line x1="50" y1="35" x2="64" y2="26" stroke="#22c55e" stroke-width="0.6"/>
-  <circle cx="66" cy="24" r="2.5" fill="#22c55e" opacity="0.7"/>
-  <text x="66" y="25.5" fill="#ffffff" font-size="2" text-anchor="middle" font-weight="bold">Cl</text>
-  
-  <line x1="50" y1="35" x2="64" y2="44" stroke="#22c55e" stroke-width="0.6"/>
-  <circle cx="66" cy="46" r="2.5" fill="#22c55e" opacity="0.7"/>
-  <text x="66" y="47.5" fill="#ffffff" font-size="2" text-anchor="middle" font-weight="bold">Cl</text>
-  
-  <path d="M 45 35 A 5 5 0 0 1 48 30" fill="none" stroke="#eab308" stroke-width="0.4"/>
-  <text x="44" y="30" fill="#eab308" font-size="2">120°</text>
-</g>
-
-<g data-step="4" data-description="Complete structure">
-  <text x="50" y="66" fill="#ffffff" font-size="3.5" text-anchor="middle" font-weight="bold">PCl₅</text>
-  <text x="50" y="70" fill="#818cf8" font-size="2" text-anchor="middle">Trigonal Bipyramidal (sp³d)</text>
-</g>
-\`\`\`
-**Why this is excellent:** Accurate 3D representation in 2D, proper 120° spacing for equatorial, different colors distinguish axial vs equatorial, angle labels placed strategically, subscript notation (₅), no overlapping text.
-
-✅ EXAMPLE 3 - Bohr's Atomic Model (CLEAN CONCENTRIC STRUCTURE):
-\`\`\`diagram
-<!-- title: Bohr's Atomic Model - Hydrogen -->
-
-<g data-step="1" data-description="Nucleus">
-  <circle cx="50" cy="35" r="3" fill="#ef4444" stroke="#ff6b6b" stroke-width="0.5"/>
-  <text x="50" y="36.5" fill="#ffffff" font-size="2" text-anchor="middle" font-weight="bold">p⁺</text>
-  <text x="50" y="45" fill="#ef4444" font-size="2.5" text-anchor="middle">Nucleus</text>
-</g>
-
-<g data-step="2" data-description="First orbit (n=1, ground state)">
-  <circle cx="50" cy="35" r="10" fill="none" stroke="#22c55e" stroke-width="0.5" stroke-dasharray="1,0.5"/>
-  <circle cx="60" cy="35" r="1.2" fill="#22c55e"/>
-  <text x="63" y="36" fill="#22c55e" font-size="2.5">e⁻</text>
-  <text x="62" y="32" fill="#22c55e" font-size="2">n=1</text>
-  <text x="62" y="40" fill="#22c55e" font-size="1.8">E₁=-13.6eV</text>
-</g>
-
-<g data-step="3" data-description="Second orbit (n=2)">
-  <circle cx="50" cy="35" r="18" fill="none" stroke="#3b82f6" stroke-width="0.5" stroke-dasharray="1,0.5"/>
-  <circle cx="68" cy="35" r="1" fill="#3b82f6" opacity="0.5"/>
-  <text x="70" y="35" fill="#3b82f6" font-size="2">n=2</text>
-  <text x="70" y="38" fill="#3b82f6" font-size="1.6">E₂=-3.4eV</text>
-</g>
-
-<g data-step="4" data-description="Third orbit (n=3) and transitions">
-  <circle cx="50" cy="35" r="26" fill="none" stroke="#a855f7" stroke-width="0.5" stroke-dasharray="1,0.5"/>
-  <circle cx="76" cy="35" r="1" fill="#a855f7" opacity="0.5"/>
-  <text x="78" y="35" fill="#a855f7" font-size="2">n=3</text>
-  <text x="78" y="38" fill="#a855f7" font-size="1.6">E₃=-1.5eV</text>
-  
-  <line x1="68" y1="30" x2="62" y2="33" stroke="#f59e0b" stroke-width="0.5" marker-end="url(#arrowhead)"/>
-  <text x="62" y="28" fill="#f59e0b" font-size="2">Emission</text>
-  <text x="60" y="24" fill="#f59e0b" font-size="1.8">hν = E₂ - E₁</text>
-  
-  <text x="50" y="63" fill="#eab308" font-size="3" text-anchor="middle" font-weight="bold">Quantized Energy Levels</text>
-</g>
-\`\`\`
-**Why this is excellent:** Perfect concentric circles (same center), energy values positioned outside orbits to avoid clutter, dashed lines for orbits, electron positions at different angles, proper subscript notation, emission arrow clearly shows transition.
-
-✅ EXAMPLE 4 - Hund's Rule Nitrogen 2p³ (PERFECT ELECTRON FILLING):
-\`\`\`diagram
-<!-- title: Hund's Rule - Nitrogen 2p³ -->
-
-<g data-step="1" data-description="Empty 2p orbitals">
-  <text x="50" y="15" fill="#ffffff" font-size="4" text-anchor="middle" font-weight="bold">Nitrogen (N): 1s² 2s² 2p³</text>
-  
-  <rect x="25" y="30" width="12" height="8" fill="none" stroke="#06b6d4" stroke-width="0.6"/>
-  <text x="31" y="42" fill="#06b6d4" font-size="2.5" text-anchor="middle">2pₓ</text>
-  
-  <rect x="44" y="30" width="12" height="8" fill="none" stroke="#06b6d4" stroke-width="0.6"/>
-  <text x="50" y="42" fill="#06b6d4" font-size="2.5" text-anchor="middle">2p_y</text>
-  
-  <rect x="63" y="30" width="12" height="8" fill="none" stroke="#06b6d4" stroke-width="0.6"/>
-  <text x="69" y="42" fill="#06b6d4" font-size="2.5" text-anchor="middle">2p_z</text>
-</g>
-
-<g data-step="2" data-description="First electron - spin up">
-  <text x="29" y="34.5" font-size="4" fill="#22c55e">↑</text>
-  <text x="20" y="50" fill="#22c55e" font-size="2.5">Electron 1</text>
-  <line x1="27" y1="48" x2="29" y2="37" stroke="#22c55e" stroke-width="0.3" marker-end="url(#arrowhead)"/>
-</g>
-
-<g data-step="3" data-description="Second electron - spin up (different orbital)">
-  <text x="48" y="34.5" font-size="4" fill="#f59e0b">↑</text>
-  <text x="39" y="50" fill="#f59e0b" font-size="2.5">Electron 2</text>
-  <line x1="46" y1="48" x2="48" y2="37" stroke="#f59e0b" stroke-width="0.3" marker-end="url(#arrowhead)"/>
-</g>
-
-<g data-step="4" data-description="Third electron - spin up (maximum multiplicity)">
-  <text x="67" y="34.5" font-size="4" fill="#ef4444">↑</text>
-  <text x="58" y="50" fill="#ef4444" font-size="2.5">Electron 3</text>
-  <line x1="65" y1="48" x2="67" y2="37" stroke="#ef4444" stroke-width="0.3" marker-end="url(#arrowhead)"/>
-  
-  <text x="50" y="58" fill="#a855f7" font-size="3.5" text-anchor="middle" font-weight="bold">✓ Hund's Rule Satisfied</text>
-  <text x="50" y="63" fill="#818cf8" font-size="2.5" text-anchor="middle">Maximum multiplicity: All spins parallel</text>
-</g>
-\`\`\`
-**Why this is excellent:** Equal-sized orbital boxes perfectly aligned, arrows point from labels to orbitals (clear association), each electron in different color, progressive filling shown step-by-step, electron configuration at top, no overlaps.
-
-📊 HOW TO CREATE A GRAPH:
-Wrap SVG in \`\`\`graph ... \`\`\`
-The graph already has axes at center (50, 37.5) with scale labels.
-Graph coordinate system: origin at (50, 37.5), +X right, +Y up (inverted SVG Y)
-
-✅ EXAMPLE 5 - LPP with Constraints (NOTE: Shading complex unbounded regions is HARD):
-\`\`\`graph
-<!-- title: LPP Minimize Problem -->
-
-<g data-step="1" data-description="Constraint: x + y ≥ 4">
-  <line x1="50" y1="12.5" x2="90" y2="37.5" stroke="#ef4444" stroke-width="0.6"/>
-  <text x="72" y="22" fill="#ef4444" font-size="2.5">x+y=4</text>
-  <circle cx="50" cy="12.5" r="1" fill="#ef4444"/>
-  <text x="47" y="10" fill="#ef4444" font-size="2">A(0,4)</text>
-  <circle cx="90" cy="37.5" r="1" fill="#ef4444"/>
-  <text x="92" y="37" fill="#ef4444" font-size="2">B(4,0)</text>
-</g>
-
-<g data-step="2" data-description="Constraint: 2x + y ≥ 6">
-  <line x1="50" y1="0" x2="80" y2="37.5" stroke="#22c55e" stroke-width="0.6"/>
-  <text x="62" y="15" fill="#22c55e" font-size="2.5">2x+y=6</text>
-  <circle cx="50" cy="0" r="1" fill="#22c55e"/>
-  <text x="47" y="-2" fill="#22c55e" font-size="2">C(0,6)</text>
-  <circle cx="80" cy="37.5" r="1" fill="#22c55e"/>
-  <text x="82" y="37" fill="#22c55e" font-size="2">D(3,0)</text>
-</g>
-
-<g data-step="3" data-description="Feasible region and corner points">
-  <!-- Corner points -->
-  <circle cx="50" cy="12.5" r="1.5" fill="#a855f7"/>
-  <text x="52" y="14" fill="#a855f7" font-size="2.5" font-weight="bold">(0,4)</text>
-  <circle cx="66" cy="4" r="1.5" fill="#a855f7"/>
-  <text x="68" y="4" fill="#a855f7" font-size="2.5" font-weight="bold">(2,2)*</text>
-  <text x="55" y="60" fill="#eab308" font-size="3" font-weight="bold">Min Z at (2,2) = 10</text>
-</g>
-\`\`\`
-**Note about LPP:** Shading unbounded feasible regions correctly is VERY HARD - polygon points must be calculated precisely. It's often better to just mark corner points clearly and label the optimal solution. If you do shade, use semi-transparent fills: rgba(139, 92, 246, 0.25).
-
-🎯 COORDINATE CONVERSION FOR GRAPHS:
-Graph coords (x, y) → SVG coords:
-- Origin: Graph (0,0) = SVG (50, 37.5)
-- X-axis: Graph (x,0) = SVG (50 + x*10, 37.5)
-- Y-axis: Graph (0,y) = SVG (50, 37.5 - y*6.25)
-- General: SVG_X = 50 + graph_x * 10, SVG_Y = 37.5 - graph_y * 6.25
-
-🎯 SVG POSITIONING GUIDE (ViewBox 100×70):
-| Position | X | Y | Use Case |
-|----------|---|---|----------|
-| Center | 50 | 35 | Nucleus, central atom, lens |
-| Top-left | 10 | 10 | Text labels, legends |
-| Top-right | 90 | 10 | Energy values, notes |
-| Bottom-left | 10 | 60 | Titles, descriptors |
-| Bottom-right | 90 | 60 | Results, conclusions |
-| Left edge | 15-20 | 35 | Objects, starting points |
-| Right edge | 75-85 | 35 | Images, end points |
-
-🎨 AVAILABLE SVG ELEMENTS:
-- **<line>**: x1, y1, x2, y2, stroke, stroke-width, stroke-dasharray, marker-end
+🔧 QUICK SVG REFERENCE:
+- **<line>**: x1, y1, x2, y2, stroke, stroke-width, marker-end="url(#arrowhead)"
 - **<circle>**: cx, cy, r, fill, stroke, opacity
-- **<ellipse>**: cx, cy, rx, ry (perfect for lenses, orbitals)
-- **<rect>**: x, y, width, height, fill, stroke, rx (rounded corners)
-- **<polygon>**: points="x1,y1 x2,y2 x3,y3..." (for shading, closed shapes)
-- **<path>**: d="M x,y L x,y Q x,y,x,y" (for curves, arcs)
-- **<text>**: x, y, font-size, fill, text-anchor="start|middle|end", font-weight
-- **<g data-step="N" data-description="...">**: Group for step-by-step animation
+- **<ellipse>**: cx, cy, rx, ry (for lenses, orbitals)
+- **<rect>**: x, y, width, height, fill, stroke, rx
+- **<polygon>**: points="x1,y1 x2,y2..."
+- **<path>**: d="M x,y L x,y Q x,y,x,y" (curves)
+- **<text>**: x, y, font-size (2-4), fill, text-anchor="middle"
 
-🎨 COLOR PALETTE (Use consistently):
-- **Primary:** White #ffffff, Red #ef4444, Blue #3b82f6, Green #22c55e
-- **Secondary:** Yellow #eab308, Cyan #06b6d4, Orange #f59e0b, Purple #8b5cf6, Pink #ec4899
-- **Accents:** Indigo #818cf8, Lime #10b981, Amber #fb923c
-- **Opacity:** Use rgba() with 0.2-0.4 for fills, 0.5-0.7 for secondary elements
+🎨 SVG COLOR PALETTE:
+- Primary: #ffffff, #ef4444, #3b82f6, #22c55e
+- Secondary: #eab308, #06b6d4, #f59e0b, #8b5cf6
+- Use rgba() with 0.2-0.4 opacity for fills
 
-⚡ ADVANCED TECHNIQUES:
-1. **Arrows**: \`marker-end="url(#arrowhead)"\` on any line
-2. **Dashed lines**: \`stroke-dasharray="2,1"\` (orbit) or "1,1" (construction)
-3. **Subscripts**: Use UTF-8: ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇ ₈ ₉ (e.g., H₂O, 2p₃)
-4. **Superscripts**: Use UTF-8: ⁺ ⁻ ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ (e.g., p⁺, e⁻, x²)
-5. **Greek letters**: α β γ δ ε ζ η θ λ μ ν π ρ σ τ φ χ ψ ω Δ Σ Ω
-6. **Transparency**: Use opacity="0.5" or rgba(r,g,b,0.3)
-7. **Rounded corners**: rx="2" on rectangles
-8. **Text alignment**: text-anchor="middle" centers text at x coordinate
+⚡ SVG TIPS:
+- Arrows: marker-end="url(#arrowhead)"
+- Dashed: stroke-dasharray="2,1"
+- Subscripts: ₀₁₂₃₄₅₆₇₈₉, Superscripts: ⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹
+- Greek: α β γ δ ε θ λ μ π ω Δ Σ
 
-⚡ SPACING & SIZING BEST PRACTICES:
-- **Font sizes**: Title 3.5-4, Main text 2.5-3, Labels 2-2.5, Annotations 1.8-2
-- **Stroke widths**: Primary 0.6-0.8, Secondary 0.4-0.5, Fine details 0.3
-- **Circle radius**: Atoms 2-3, Points 0.8-1.5, Nuclei 3-4
-- **Minimum spacing**: 5 units between unrelated elements
-- **Text padding**: Place at least 2 units away from shapes
-
-⚠️ CRITICAL DO NOT DO:
-- ❌ Overlap text labels - calculate positions carefully!
-- ❌ Use inconsistent scales - if one circle is r=3 for an atom, all should be
-- ❌ Place elements at edges (x<5 or x>95, y<5 or y>65)
-- ❌ Use tiny fonts (<1.8) or huge fonts (>4.5)
-- ❌ Mix coordinate systems - stay in ViewBox 100×70
-- ❌ Forget to close tags properly
-- ❌ Use JSON commands or canvas API
-
-✅ QUALITY CHECKLIST BEFORE SUBMITTING:
-□ All text is readable and doesn't overlap
-□ Elements are properly spaced (no crowding)
-□ Colors are consistent and meaningful
-□ Geometry is accurate (angles, proportions)
-□ Step-by-step groups are logical
-□ Labels clearly identify all parts
-□ Coordinate calculations are correct
-□ SVG tags are properly closed
-□ ViewBox stays within 5-95, 5-65
-□ Font sizes are 2-4 range
+🎯 DECISION GUIDE - WHICH FORMAT TO USE:
+| Content Type | Format |
+|-------------|--------|
+| Math functions, LPP, data plots | \`\`\`python (Plotly) |
+| Ray diagrams, circuits, molecules | \`\`\`json-diagram |
+| Complex custom diagrams | \`\`\`diagram (SVG) |
+| Coordinate graphs (fallback) | \`\`\`graph (SVG) |
 `;
     }
     
