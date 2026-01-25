@@ -209,10 +209,29 @@ class ChatAssistant {
         // Store all visual elements for later rendering
         const visualElements = [];
         
+        // DEBUG: Log raw response to check what format AI is using
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('📊 VISUAL CONTENT DETECTION - RAW AI RESPONSE:');
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('🔍 Checking for Plotly (```python with plotly):', plotlyRegex.test(fullResponse));
+        plotlyRegex.lastIndex = 0; // Reset regex
+        console.log('🔍 Checking for JSON diagrams (```json-diagram):', jsonDiagramRegex.test(fullResponse));
+        jsonDiagramRegex.lastIndex = 0;
+        console.log('🔍 Checking for SVG diagrams (```diagram):', diagramRegex.test(fullResponse));
+        diagramRegex.lastIndex = 0;
+        console.log('🔍 Checking for SVG graphs (```graph):', graphRegex.test(fullResponse));
+        graphRegex.lastIndex = 0;
+        console.log('═══════════════════════════════════════════════════════════════');
+        
         // Process Plotly Python code
         remainingText = remainingText.replace(plotlyRegex, (match, pythonCode) => {
             try {
                 const plotlyId = `plotly-${Date.now()}-${visualCount++}`;
+                
+                console.log('🐍 PLOTLY PYTHON CODE DETECTED:');
+                console.log('─────────────────────────────────────────');
+                console.log(pythonCode.trim());
+                console.log('─────────────────────────────────────────');
                 
                 visualElements.push({
                     type: 'plotly',
@@ -231,6 +250,11 @@ class ChatAssistant {
         remainingText = remainingText.replace(jsonDiagramRegex, (match, jsonContent) => {
             try {
                 const diagramId = `svg-diagram-${Date.now()}-${visualCount++}`;
+                
+                console.log('📐 JSON DIAGRAM PLAN DETECTED:');
+                console.log('─────────────────────────────────────────');
+                console.log(jsonContent.trim());
+                console.log('─────────────────────────────────────────');
                 
                 visualElements.push({
                     type: 'json-diagram',
@@ -251,6 +275,11 @@ class ChatAssistant {
                 const diagramId = `diagram-${Date.now()}-${visualCount++}`;
                 const titleMatch = svgContent.match(/<!--\s*title:\s*(.+?)\s*-->/i);
                 const title = titleMatch ? titleMatch[1] : 'Visual Diagram';
+                
+                console.log('🎨 SVG DIAGRAM CODE (Legacy Format):');
+                console.log('─────────────────────────────────────────');
+                console.log(svgContent.trim());
+                console.log('─────────────────────────────────────────');
                 
                 visualElements.push({
                     type: 'diagram',
@@ -273,6 +302,11 @@ class ChatAssistant {
                 const titleMatch = svgContent.match(/<!--\s*title:\s*(.+?)\s*-->/i);
                 const title = titleMatch ? titleMatch[1] : 'Mathematical Graph';
                 
+                console.log('📈 SVG GRAPH CODE (Legacy Format):');
+                console.log('─────────────────────────────────────────');
+                console.log(svgContent.trim());
+                console.log('─────────────────────────────────────────');
+                
                 visualElements.push({
                     type: 'graph',
                     id: graphId,
@@ -286,6 +320,13 @@ class ChatAssistant {
                 return match;
             }
         });
+        
+        // Log summary
+        console.log('📊 VISUAL ELEMENTS SUMMARY:');
+        visualElements.forEach((el, i) => {
+            console.log(`  ${i+1}. Type: ${el.type}, ID: ${el.id}`);
+        });
+        console.log('═══════════════════════════════════════════════════════════════');
         
         // Render visual elements after DOM is ready
         setTimeout(() => {
