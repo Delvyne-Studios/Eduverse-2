@@ -381,41 +381,105 @@ class ChatAssistant {
                 
             case 'diagram':
                 placeholder = contentDiv.querySelector(`[data-diagram-id="${element.id}"]`);
-                if (placeholder && window.DiagramCanvas) {
+                if (placeholder) {
+                    // Create a direct SVG container - NO WRAPPER MODIFICATIONS
                     const container = document.createElement('div');
-                    container.className = 'diagram-embed';
+                    container.className = 'diagram-embed direct-svg-render';
                     container.id = `container-${element.id}`;
-                    placeholder.replaceWith(container);
                     
-                    try {
-                        const canvas = new window.DiagramCanvas(element.id, 320, 220);
-                        canvas.create(container);
-                        canvas.renderSVG(element.content, element.title);
-                        console.log('✅ Diagram rendered:', element.id);
-                    } catch (err) {
-                        console.error('Failed to render diagram:', err);
-                        container.innerHTML = `<div class="error-message">Failed to render diagram</div>`;
+                    // Extract title if present
+                    const titleMatch = element.content.match(/<!--\s*title:\s*(.+?)\s*-->/i);
+                    const title = titleMatch ? titleMatch[1] : element.title || 'Diagram';
+                    
+                    // Build the SVG directly - preserve AI's exact output
+                    let svgContent = element.content;
+                    
+                    // Check if AI included <svg> tags - if not, wrap it
+                    if (!svgContent.includes('<svg')) {
+                        svgContent = `
+                            <svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" 
+                                 style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+                                    </marker>
+                                </defs>
+                                ${element.content}
+                            </svg>
+                        `;
+                    } else {
+                        // AI included SVG tags - add styling
+                        svgContent = svgContent.replace(/<svg([^>]*)>/i, (match, attrs) => {
+                            // Add default styling if not present
+                            if (!attrs.includes('style=')) {
+                                return `<svg${attrs} style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">`;
+                            }
+                            return match;
+                        });
                     }
+                    
+                    container.innerHTML = `
+                        <div class="diagram-title">${title}</div>
+                        <div class="svg-direct-container">${svgContent}</div>
+                    `;
+                    
+                    placeholder.replaceWith(container);
+                    console.log('✅ Direct SVG diagram rendered:', element.id);
                 }
                 break;
                 
             case 'graph':
                 placeholder = contentDiv.querySelector(`[data-graph-id="${element.id}"]`);
-                if (placeholder && window.GraphCanvas) {
+                if (placeholder) {
+                    // Create a direct SVG container for graphs too
                     const container = document.createElement('div');
-                    container.className = 'graph-embed';
+                    container.className = 'graph-embed direct-svg-render';
                     container.id = `container-${element.id}`;
-                    placeholder.replaceWith(container);
                     
-                    try {
-                        const graph = new window.GraphCanvas(element.id, 320, 240);
-                        graph.create(container);
-                        graph.renderSVG(element.content, element.title);
-                        console.log('✅ Graph rendered:', element.id);
-                    } catch (err) {
-                        console.error('Failed to render graph:', err);
-                        container.innerHTML = `<div class="error-message">Failed to render graph</div>`;
+                    // Extract title if present
+                    const titleMatch = element.content.match(/<!--\s*title:\s*(.+?)\s*-->/i);
+                    const title = titleMatch ? titleMatch[1] : element.title || 'Graph';
+                    
+                    // Build the SVG directly
+                    let svgContent = element.content;
+                    
+                    // Check if AI included <svg> tags - if not, wrap it with graph-specific viewBox
+                    if (!svgContent.includes('<svg')) {
+                        // Graph viewBox: origin at center (50, 37.5) for coordinate system
+                        svgContent = `
+                            <svg viewBox="0 0 100 75" xmlns="http://www.w3.org/2000/svg" 
+                                 style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+                                    </marker>
+                                </defs>
+                                <!-- X and Y axes -->
+                                <line x1="10" y1="37.5" x2="90" y2="37.5" stroke="#6b7280" stroke-width="0.5"/>
+                                <line x1="50" y1="5" x2="50" y2="70" stroke="#6b7280" stroke-width="0.5"/>
+                                <!-- Axis labels -->
+                                <text x="92" y="38" fill="#9ca3af" font-size="3">x</text>
+                                <text x="51" y="4" fill="#9ca3af" font-size="3">y</text>
+                                ${element.content}
+                            </svg>
+                        `;
+                    } else {
+                        // AI included SVG tags - add styling
+                        svgContent = svgContent.replace(/<svg([^>]*)>/i, (match, attrs) => {
+                            if (!attrs.includes('style=')) {
+                                return `<svg${attrs} style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">`;
+                            }
+                            return match;
+                        });
                     }
+                    
+                    container.innerHTML = `
+                        <div class="diagram-title">${title}</div>
+                        <div class="svg-direct-container">${svgContent}</div>
+                    `;
+                    
+                    placeholder.replaceWith(container);
+                    console.log('✅ Direct SVG graph rendered:', element.id);
                 }
                 break;
         }
