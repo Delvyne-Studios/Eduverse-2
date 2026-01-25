@@ -380,109 +380,100 @@ class ChatAssistant {
                 break;
                 
             case 'diagram':
-                placeholder = contentDiv.querySelector(`[data-diagram-id="${element.id}"]`);
-                if (placeholder) {
-                    // Create a direct SVG container - NO WRAPPER MODIFICATIONS
-                    const container = document.createElement('div');
-                    container.className = 'diagram-embed direct-svg-render';
-                    container.id = `container-${element.id}`;
-                    
-                    // Extract title if present
-                    const titleMatch = element.content.match(/<!--\s*title:\s*(.+?)\s*-->/i);
-                    const title = titleMatch ? titleMatch[1] : element.title || 'Diagram';
-                    
-                    // Build the SVG directly - preserve AI's exact output
-                    let svgContent = element.content;
-                    
-                    // Check if AI included <svg> tags - if not, wrap it
-                    if (!svgContent.includes('<svg')) {
-                        svgContent = `
-                            <svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" 
-                                 style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">
-                                <defs>
-                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-                                    </marker>
-                                </defs>
-                                ${element.content}
-                            </svg>
-                        `;
-                    } else {
-                        // AI included SVG tags - add styling
-                        svgContent = svgContent.replace(/<svg([^>]*)>/i, (match, attrs) => {
-                            // Add default styling if not present
-                            if (!attrs.includes('style=')) {
-                                return `<svg${attrs} style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">`;
-                            }
-                            return match;
-                        });
-                    }
-                    
-                    container.innerHTML = `
-                        <div class="diagram-title">${title}</div>
-                        <div class="svg-direct-container">${svgContent}</div>
-                    `;
-                    
-                    placeholder.replaceWith(container);
-                    console.log('✅ Direct SVG diagram rendered:', element.id);
-                }
-                break;
-                
             case 'graph':
-                placeholder = contentDiv.querySelector(`[data-graph-id="${element.id}"]`);
+                placeholder = contentDiv.querySelector(
+                    element.type === 'diagram' 
+                        ? `[data-diagram-id="${element.id}"]`
+                        : `[data-graph-id="${element.id}"]`
+                );
                 if (placeholder) {
-                    // Create a direct SVG container for graphs too
-                    const container = document.createElement('div');
-                    container.className = 'graph-embed direct-svg-render';
-                    container.id = `container-${element.id}`;
-                    
-                    // Extract title if present
-                    const titleMatch = element.content.match(/<!--\s*title:\s*(.+?)\s*-->/i);
-                    const title = titleMatch ? titleMatch[1] : element.title || 'Graph';
-                    
-                    // Build the SVG directly
-                    let svgContent = element.content;
-                    
-                    // Check if AI included <svg> tags - if not, wrap it with graph-specific viewBox
-                    if (!svgContent.includes('<svg')) {
-                        // Graph viewBox: origin at center (50, 37.5) for coordinate system
-                        svgContent = `
-                            <svg viewBox="0 0 100 75" xmlns="http://www.w3.org/2000/svg" 
-                                 style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">
-                                <defs>
-                                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-                                    </marker>
-                                </defs>
-                                <!-- X and Y axes -->
-                                <line x1="10" y1="37.5" x2="90" y2="37.5" stroke="#6b7280" stroke-width="0.5"/>
-                                <line x1="50" y1="5" x2="50" y2="70" stroke="#6b7280" stroke-width="0.5"/>
-                                <!-- Axis labels -->
-                                <text x="92" y="38" fill="#9ca3af" font-size="3">x</text>
-                                <text x="51" y="4" fill="#9ca3af" font-size="3">y</text>
-                                ${element.content}
-                            </svg>
-                        `;
-                    } else {
-                        // AI included SVG tags - add styling
-                        svgContent = svgContent.replace(/<svg([^>]*)>/i, (match, attrs) => {
-                            if (!attrs.includes('style=')) {
-                                return `<svg${attrs} style="width: 100%; height: auto; max-width: 500px; background: #1a1a2e; border-radius: 8px;">`;
-                            }
-                            return match;
-                        });
-                    }
-                    
-                    container.innerHTML = `
-                        <div class="diagram-title">${title}</div>
-                        <div class="svg-direct-container">${svgContent}</div>
-                    `;
-                    
-                    placeholder.replaceWith(container);
-                    console.log('✅ Direct SVG graph rendered:', element.id);
+                    this.renderRawSVG(placeholder, element);
                 }
                 break;
         }
+    }
+    
+    /**
+     * Professional SVG Renderer - Renders SVG exactly as AI outputs
+     * Uses DOMParser for safe parsing and preserveAspectRatio for proper scaling
+     */
+    renderRawSVG(placeholder, element) {
+        const container = document.createElement('div');
+        container.className = `${element.type}-embed svg-render-container`;
+        container.id = `container-${element.id}`;
+        
+        // Extract title
+        const titleMatch = element.content.match(/<!--\s*title:\s*(.+?)\s*-->/i);
+        const title = titleMatch ? titleMatch[1] : element.title || (element.type === 'graph' ? 'Graph' : 'Diagram');
+        
+        // Get the raw SVG content
+        let svgString = element.content.trim();
+        
+        // Remove HTML comments (title comments)
+        svgString = svgString.replace(/<!--[\s\S]*?-->/g, '');
+        
+        // Check if it's wrapped in <svg> tags
+        const hasSvgWrapper = /<svg[\s\S]*?>/i.test(svgString);
+        
+        if (!hasSvgWrapper) {
+            // Wrap with proper SVG - use the EXACT viewBox the AI expects
+            svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <marker id="arrowhead-${element.id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+                    </marker>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+                    </marker>
+                </defs>
+                ${svgString}
+            </svg>`;
+        }
+        
+        // Parse SVG using DOMParser (professional approach)
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
+        
+        // Check for parsing errors
+        const parseError = svgDoc.querySelector('parsererror');
+        if (parseError) {
+            console.error('SVG Parse Error:', parseError.textContent);
+            container.innerHTML = `
+                <div class="svg-error">
+                    <span>⚠️ SVG Parsing Error</span>
+                    <pre>${element.content.substring(0, 200)}...</pre>
+                </div>
+            `;
+            placeholder.replaceWith(container);
+            return;
+        }
+        
+        // Get the parsed SVG element
+        const svgElement = svgDoc.documentElement;
+        
+        // Ensure viewBox exists - if not, add default
+        if (!svgElement.getAttribute('viewBox')) {
+            svgElement.setAttribute('viewBox', '0 0 100 70');
+        }
+        
+        // Set proper scaling attributes
+        svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svgElement.setAttribute('width', '100%');
+        svgElement.setAttribute('height', 'auto');
+        svgElement.style.maxWidth = '600px';
+        svgElement.style.display = 'block';
+        svgElement.style.margin = '0 auto';
+        
+        // Build the container
+        container.innerHTML = `<div class="svg-title">${title}</div>`;
+        
+        const svgWrapper = document.createElement('div');
+        svgWrapper.className = 'svg-wrapper';
+        svgWrapper.appendChild(svgElement);
+        container.appendChild(svgWrapper);
+        
+        placeholder.replaceWith(container);
+        console.log(`✅ Raw SVG ${element.type} rendered:`, element.id);
     }
     
     // =================================================================
