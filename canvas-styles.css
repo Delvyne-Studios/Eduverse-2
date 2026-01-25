@@ -4,66 +4,21 @@
    ================================================================= */
 
 /* =================================================================
-   PROFESSIONAL SVG RENDERER - Renders AI SVG exactly as-is
+   AI SVG OUTPUT - Direct injection, no modifications
    ================================================================= */
 
-.svg-render-container {
-    margin: 20px 0;
+.ai-svg-output {
+    margin: 16px 0;
     width: 100%;
+    max-width: 600px;
 }
 
-.svg-render-container .svg-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #e2e8f0;
-    margin-bottom: 12px;
-    text-align: center;
-}
-
-.svg-render-container .svg-wrapper {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    overflow: visible;
-}
-
-.svg-render-container .svg-wrapper svg {
-    display: block;
+.ai-svg-output svg {
     width: 100%;
     height: auto;
-    overflow: visible;
-}
-
-/* Ensure SVG elements render correctly */
-.svg-render-container svg text {
-    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-}
-
-.svg-render-container svg line,
-.svg-render-container svg circle,
-.svg-render-container svg ellipse,
-.svg-render-container svg path,
-.svg-render-container svg polygon,
-.svg-render-container svg rect {
-    vector-effect: non-scaling-stroke;
-}
-
-/* Error display */
-.svg-error {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    display: block;
+    background: #0f0f1a;
     border-radius: 8px;
-    padding: 16px;
-    color: #ef4444;
-}
-
-.svg-error pre {
-    margin-top: 8px;
-    font-size: 0.75rem;
-    color: #9ca3af;
-    overflow-x: auto;
 }
 
 /* =================================================================

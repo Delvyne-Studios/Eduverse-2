@@ -394,86 +394,39 @@ class ChatAssistant {
     }
     
     /**
-     * Professional SVG Renderer - Renders SVG exactly as AI outputs
-     * Uses DOMParser for safe parsing and preserveAspectRatio for proper scaling
+     * SIMPLEST POSSIBLE SVG RENDERER
+     * Just injects the AI's SVG exactly as-is. No modifications. No parsing.
+     * The AI's output is trusted - render it directly.
      */
     renderRawSVG(placeholder, element) {
+        // Create a simple container
         const container = document.createElement('div');
-        container.className = `${element.type}-embed svg-render-container`;
-        container.id = `container-${element.id}`;
+        container.className = 'ai-svg-output';
+        container.id = `svg-${element.id}`;
         
-        // Extract title
-        const titleMatch = element.content.match(/<!--\s*title:\s*(.+?)\s*-->/i);
-        const title = titleMatch ? titleMatch[1] : element.title || (element.type === 'graph' ? 'Graph' : 'Diagram');
+        // Get the EXACT content from AI - no modifications
+        let svgContent = element.content;
         
-        // Get the raw SVG content
-        let svgString = element.content.trim();
-        
-        // Remove HTML comments (title comments)
-        svgString = svgString.replace(/<!--[\s\S]*?-->/g, '');
-        
-        // Check if it's wrapped in <svg> tags
-        const hasSvgWrapper = /<svg[\s\S]*?>/i.test(svgString);
-        
-        if (!hasSvgWrapper) {
-            // Wrap with proper SVG - use the EXACT viewBox the AI expects
-            svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70" preserveAspectRatio="xMidYMid meet">
-                <defs>
-                    <marker id="arrowhead-${element.id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-                    </marker>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-                    </marker>
-                </defs>
-                ${svgString}
-            </svg>`;
+        // Only thing we do: if AI didn't include <svg> wrapper, add a minimal one
+        if (!svgContent.includes('<svg')) {
+            svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70">
+<defs>
+<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+</marker>
+</defs>
+${element.content}
+</svg>`;
         }
         
-        // Parse SVG using DOMParser (professional approach)
-        const parser = new DOMParser();
-        const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
+        // DIRECT INJECTION - no parsing, no modifications
+        container.innerHTML = svgContent;
         
-        // Check for parsing errors
-        const parseError = svgDoc.querySelector('parsererror');
-        if (parseError) {
-            console.error('SVG Parse Error:', parseError.textContent);
-            container.innerHTML = `
-                <div class="svg-error">
-                    <span>⚠️ SVG Parsing Error</span>
-                    <pre>${element.content.substring(0, 200)}...</pre>
-                </div>
-            `;
-            placeholder.replaceWith(container);
-            return;
-        }
-        
-        // Get the parsed SVG element
-        const svgElement = svgDoc.documentElement;
-        
-        // Ensure viewBox exists - if not, add default
-        if (!svgElement.getAttribute('viewBox')) {
-            svgElement.setAttribute('viewBox', '0 0 100 70');
-        }
-        
-        // Set proper scaling attributes
-        svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        svgElement.setAttribute('width', '100%');
-        svgElement.setAttribute('height', 'auto');
-        svgElement.style.maxWidth = '600px';
-        svgElement.style.display = 'block';
-        svgElement.style.margin = '0 auto';
-        
-        // Build the container
-        container.innerHTML = `<div class="svg-title">${title}</div>`;
-        
-        const svgWrapper = document.createElement('div');
-        svgWrapper.className = 'svg-wrapper';
-        svgWrapper.appendChild(svgElement);
-        container.appendChild(svgWrapper);
-        
+        // Replace placeholder with container
         placeholder.replaceWith(container);
-        console.log(`✅ Raw SVG ${element.type} rendered:`, element.id);
+        
+        console.log(`✅ SVG injected directly:`, element.id);
+        console.log('📋 SVG Content:', svgContent);
     }
     
     // =================================================================
