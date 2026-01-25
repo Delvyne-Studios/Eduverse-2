@@ -1762,19 +1762,41 @@ Wrap the JSON in \`\`\`json-diagram ... \`\`\`
 For highly custom diagrams not covered by JSON or Plotly, you can use raw SVG.
 Use \`\`\`diagram ... \`\`\` for general diagrams or \`\`\`graph ... \`\`\` for coordinate graphs.
 
-⚠️ SVG VIEWBOX COORDINATE SYSTEM:
-- ViewBox: **100 × 70** (percentage-like coordinates!)
-- Center: **(50, 35)**
+⚠️ CRITICAL: SVG VIEWBOX COORDINATE SYSTEM:
+- ViewBox: **100 × 70** (NOT pixels!)
+- **CENTER is at (50, 35)** - ALWAYS START HERE!
 - Safe zone: x: 10-90, y: 10-65 (leave margins!)
-- This is NOT pixels - think of it as 100 units wide
+- NEVER use (0,0) - that's TOP-LEFT and will be CUT OFF!
 
-� SVG HOW TO:
+🎯 WHERE TO PLACE ELEMENTS (MANDATORY):
+| Element | X | Y |
+|---------|---|---|
+| Main subject (ball, lens, atom) | **50** | **35** |
+| Left objects | 20-30 | 35 |
+| Right objects | 70-80 | 35 |
+| Top arrows | 50 | 15-25 |
+| Bottom labels | 50 | 50-60 |
+
+✅ EXAMPLE - Properly Centered Ball:
+\`\`\`diagram
+<!-- title: Magnus Effect -->
+<g data-step="1" data-description="Ball at center">
+  <circle cx="50" cy="35" r="10" fill="#f97316" stroke="#fb923c" stroke-width="1"/>
+  <text x="50" y="37" fill="#fff" font-size="3" text-anchor="middle">Ball</text>
+</g>
+<g data-step="2" data-description="Force arrows">
+  <line x1="50" y1="35" x2="50" y2="15" stroke="#22c55e" stroke-width="1" marker-end="url(#arrowhead)"/>
+  <text x="55" y="12" fill="#22c55e" font-size="2.5">Lift Force</text>
+</g>
+\`\`\`
+
+📝 SVG HOW TO:
 Wrap SVG in \`\`\`diagram ... \`\`\` or \`\`\`graph ... \`\`\`
 Use <g data-step="N" data-description="..."> for step-by-step revelation!
 
 🔧 QUICK SVG REFERENCE:
+- **<circle>**: cx="50" cy="35" r=radius (CENTERED!)
 - **<line>**: x1, y1, x2, y2, stroke, stroke-width, marker-end="url(#arrowhead)"
-- **<circle>**: cx, cy, r, fill, stroke, opacity
 - **<ellipse>**: cx, cy, rx, ry (for lenses, orbitals)
 - **<rect>**: x, y, width, height, fill, stroke, rx
 - **<polygon>**: points="x1,y1 x2,y2..."
