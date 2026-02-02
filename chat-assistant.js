@@ -816,95 +816,203 @@ class ChatAssistant {
     }
     
     async searchRelevantContext(query) {
-        // NEW APPROACH: Let AI identify which chapter it needs, then load that PDF
-        console.log('🤖 Asking AI to identify relevant chapter...');
-        
+        // Fast chapter identification and loading
+        console.log('🔍 Finding relevant NCERT chapter...');
+
+        // Step 1: Try direct keyword matching first (fast)
+        const directMatch = await this.tryDirectChapterMatch(query);
+        if (directMatch.chapterBased) {
+            console.log('✅ Direct match found, loading chapter...');
+            return directMatch;
+        }
+
+        // Step 2: Use AI for complex queries
         try {
-            // Step 1: Ask AI which chapter is relevant to the query
             const chapterList = getChapterListForAI();
-            const identificationPrompt = `You are an AI assistant helping with NCERT Class 11 studies.
+            const simplePrompt = `QUESTION: "${query}"
 
-Here is the COMPLETE list of available NCERT chapters:
-
+AVAILABLE CHAPTERS:
 ${chapterList}
 
-User's question: "${query}"
+TASK: Which chapter covers this topic? Reply with just the path like "chemistry-part1/kech101.pdf" or "NONE" if no match.`;
 
-TASK: Analyze the question carefully:
-- If it's a GENERAL question (greetings, casual chat, non-academic) → respond: NONE
-- If it's about a topic NOT covered in any chapter → respond: NONE  
-- If it's asking for a diagram/visual only (no theory needed) → respond: NONE
-- If it requires specific NCERT chapter content → respond with the path (e.g., physics-part1/keph107.pdf)
-
-Be STRICT: Only load chapters when the question genuinely needs that specific NCERT content.
-
-Your response (path or NONE):`;
-
-            // Make API call to identify chapter
-            const identificationResponse = await fetch(this.apiUrl, {
+            const response = await fetch(this.apiUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: 'z-ai/glm-4.5-air:free',
-                    messages: [{ role: 'user', content: identificationPrompt }],
-                    temperature: 0.3,
-                    max_tokens: 100
+                    messages: [{ role: 'user', content: simplePrompt }],
+                    temperature: 0.1,
+                    max_tokens: 30
                 })
             });
 
-            if (!identificationResponse.ok) {
-                console.warn(`⚠️ AI API failed with status ${identificationResponse.status}, using database fallback...`);
-                return await this.useDatabaseFallback();
+            if (!response.ok) {
+                console.warn('AI identification failed, using general knowledge');
+                return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
             }
 
-            const identificationData = await identificationResponse.json();
-            const aiDecision = identificationData.choices[0].message.content.trim();
-            
-            console.log(`🤖 AI identified: ${aiDecision}`);
+            const data = await response.json();
+            const aiPath = data.choices?.[0]?.message?.content?.trim() || '';
 
-            // Step 2: Parse AI's decision
-            if (aiDecision === 'NONE' || aiDecision.includes('NONE')) {
-                console.log('📚 No specific chapter needed, using database fallback...');
-                return await this.useDatabaseFallback();
+            console.log(`🤖 AI suggested: "${aiPath}"`);
+
+            if (aiPath && aiPath !== 'NONE' && aiPath.includes('.pdf')) {
+                const chapterPath = parseChapterSelection(aiPath) || aiPath.replace(/[\[\]]/g, '');
+
+                if (chapterPath) {
+                    console.log(`📖 Loading: ${chapterPath}`);
+                    const chapterData = await pdfReader.loadChapterFromPath(chapterPath);
+
+                    if (chapterData) {
+                        this.showChapterLoadedBadge(chapterData.info);
+                        return {
+                            chapterBased: true,
+                            chapter: chapterData.info,
+                            content: chapterData.text,
+                            summary: `Full chapter: ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`,
+                            subtopics: [`📖 ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`],
+                            context: chapterData.text
+                        };
+                    }
+                }
             }
 
-            const chapterPath = parseChapterSelection(aiDecision);
-            
-            if (!chapterPath) {
-                console.log('⚠️ Could not parse AI response, using database fallback...');
-                return await this.useDatabaseFallback();
-            }
-
-            // Step 3: Load the PDF chapter
-            console.log(`📖 Loading chapter: ${chapterPath}`);
-            const chapterData = await pdfReader.loadChapterFromPath(chapterPath);
-
-            if (!chapterData) {
-                console.log('⚠️ Failed to load chapter, using database fallback...');
-                return await this.useDatabaseFallback();
-            }
-
-            // Step 4: Return chapter context
-            console.log(`✅ Chapter loaded successfully!`);
-            
-            // Show badge to user
-            this.showChapterLoadedBadge(chapterData.info);
-
-            return {
-                chapterBased: true,
-                chapter: chapterData.info,
-                content: chapterData.text,
-                summary: `Full chapter content from: ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`,
-                subtopics: [`📖 ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`],
-                context: chapterData.text
-            };
+            // Fallback
+            console.log('📚 Using general knowledge');
+            return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
 
         } catch (error) {
-            console.error('❌ Error in AI chapter identification:', error);
-            return await this.useDatabaseFallback();
+            console.error('Chapter identification error:', error);
+            return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
         }
+    }
+
+    // Fast direct chapter matching with comprehensive keywords
+    async tryDirectChapterMatch(query) {
+        const queryLower = query.toLowerCase();
+
+        // Comprehensive keyword mappings - expanded for better matching
+        const chapterMappings = {
+            // Chemistry Part 1
+            'kech101.pdf': ['basic concepts', 'chemistry', 'mole', 'molar mass', 'stoichiometry', 'mole concept', 'molecular mass', 'formula mass', 'percentage composition', 'empirical formula', 'molecular formula'],
+            'kech102.pdf': ['atomic structure', 'atom', 'electron', 'proton', 'neutron', 'bohr', 'quantum', 'energy levels', 'orbitals', 'subatomic particles', 'rutherford', 'thomson', 'dalton'],
+            'kech103.pdf': ['periodic table', 'periodic classification', 'mendeleev', 'modern periodic law', 'groups', 'periods', 'periodic trends', 'atomic radius', 'ionization energy', 'electronegativity'],
+            'kech104.pdf': ['chemical bonding', 'bond', 'ionic', 'covalent', 'metallic', 'bonding', 'lewis structure', 'valence electrons', 'octet rule', 'bond length', 'bond energy'],
+            'kech105.pdf': ['states of matter', 'gas laws', 'kinetic theory', 'solid', 'liquid', 'gas', 'boyle', 'charles', 'gay lussac', 'ideal gas', 'real gas', 'van der waals'],
+            'kech106.pdf': ['thermodynamics', 'enthalpy', 'entropy', 'heat', 'energy', 'first law', 'second law', 'spontaneous', 'gibbs', 'hess law', 'thermochemistry'],
+            'kech107.pdf': ['equilibrium', 'chemical equilibrium', 'le chatelier', 'equilibrium constant', 'kc', 'kp', 'reaction quotient', 'acid base equilibrium', 'solubility product'],
+
+            // Chemistry Part 2
+            'kech201.pdf': ['redox reactions', 'oxidation', 'reduction', 'electrode', 'redox', 'oxidizing agent', 'reducing agent', 'half reactions', 'cell potential'],
+            'kech202.pdf': ['hydrogen', 'water', 'hydrides', 'dihydrogen', 'heavy water', 'hydrides', 'hydrogen peroxide', 'h2o2'],
+            'kech203.pdf': ['s-block elements', 'alkali', 'alkaline earth', 'sodium', 'potassium', 'magnesium', 'calcium', 'group 1', 'group 2'],
+            'kech204.pdf': ['p-block elements', 'boron', 'carbon', 'nitrogen', 'oxygen', 'halogens', 'noble gases', 'group 13', 'group 14', 'group 15', 'group 16', 'group 17', 'group 18'],
+            'kech205.pdf': ['organic chemistry', 'hydrocarbons', 'alkane', 'alkene', 'alkyne', 'functional groups', 'isomerism', 'nomenclature', 'ethane', 'ethene', 'ethyne'],
+            'kech206.pdf': ['environmental chemistry', 'pollution', 'ozone', 'greenhouse', 'acid rain', 'photochemical smog', 'catalytic converter', 'stratospheric ozone'],
+
+            // Physics Part 1
+            'keph101.pdf': ['physical world', 'physics', 'measurement', 'units', 'dimensions', 'accuracy', 'precision', 'significant figures', 'dimensional analysis'],
+            'keph102.pdf': ['units measurements', 'si units', 'dimensional analysis', 'error analysis', 'vernier caliper', 'screw gauge', 'least count'],
+            'keph103.pdf': ['motion straight line', 'kinematics', 'velocity', 'acceleration', 'distance', 'displacement', 'speed', 'uniform motion', 'non uniform motion'],
+            'keph104.pdf': ['motion plane', 'vector', 'projectile', 'relative velocity', 'vector addition', 'scalar', 'vector quantities', 'resolution of vectors'],
+            'keph105.pdf': ['laws motion', 'newton', 'force', 'inertia', 'momentum', 'impulse', 'conservation of momentum', 'friction', 'circular motion'],
+            'keph106.pdf': ['work energy power', 'work', 'energy', 'power', 'kinetic energy', 'potential energy', 'conservation of energy', 'elastic collision'],
+            'keph107.pdf': ['system particles', 'center mass', 'momentum', 'angular momentum', 'torque', 'equilibrium', 'rigid body', 'rotational motion'],
+
+            // Physics Part 2
+            'keph201.pdf': ['oscillations', 'waves', 'simple harmonic motion', 'shm', 'pendulum', 'spring', 'wave motion', 'transverse waves', 'longitudinal waves'],
+            'keph202.pdf': ['mechanical properties', 'elasticity', 'stress', 'strain', 'young modulus', 'bulk modulus', 'shear modulus', 'poisson ratio'],
+            'keph203.pdf': ['thermal properties', 'heat', 'temperature', 'thermal expansion', 'calorimetry', 'specific heat', 'latent heat', 'thermal conductivity'],
+            'keph204.pdf': ['thermodynamics', 'heat engine', 'carnot', 'refrigerator', 'second law', 'entropy', 'heat pump', 'efficiency'],
+            'keph205.pdf': ['kinetic theory', 'gas laws', 'ideal gas', 'rms speed', 'kinetic energy', 'maxwell distribution', 'brownian motion'],
+            'keph206.pdf': ['ray optics', 'reflection', 'refraction', 'lens', 'mirror', 'spherical mirror', 'thin lens', 'lens formula', 'mirror formula'],
+            'keph207.pdf': ['optical instruments', 'microscope', 'telescope', 'magnification', 'resolving power', 'astronomical telescope', 'compound microscope'],
+
+            // Mathematics
+            'kemh101.pdf': ['sets', 'relations', 'functions', 'domain', 'range', 'types of functions', 'composite functions', 'inverse functions'],
+            'kemh102.pdf': ['complex numbers', 'imaginary', 'complex', 'argand plane', 'polar form', 'euler form', 'de moivre theorem'],
+            'kemh103.pdf': ['quadratic equations', 'quadratic', 'discriminant', 'nature of roots', 'sum product of roots', 'quadratic formula'],
+            'kemh104.pdf': ['linear inequalities', 'inequalities', 'solution of inequalities', 'graphical solution', 'interval notation'],
+            'kemh105.pdf': ['permutation combination', 'permutation', 'combination', 'factorial', 'circular permutation', 'fundamental principle'],
+            'kemh106.pdf': ['binomial theorem', 'binomial', 'pascal triangle', 'general term', 'middle term', 'expansion'],
+            'kemh107.pdf': ['sequence series', 'sequence', 'series', 'arithmetic', 'geometric', 'harmonic', 'infinite series', 'convergence'],
+            'kemh108.pdf': ['straight lines', 'coordinate geometry', 'line', 'slope', 'intercept', 'distance formula', 'section formula'],
+            'kemh109.pdf': ['conic sections', 'circle', 'parabola', 'ellipse', 'hyperbola', 'eccentricity', 'directrix', 'focus'],
+            'kemh110.pdf': ['3d geometry', 'three dimensional', 'direction cosines', 'planes', 'straight lines in space'],
+            'kemh111.pdf': ['limits derivatives', 'limit', 'derivative', 'differentiation', 'chain rule', 'product rule', 'quotient rule'],
+            'kemh112.pdf': ['mathematical reasoning', 'logic', 'proof', 'contradiction', 'converse', 'inverse', 'contrapositive'],
+            'kemh113.pdf': ['statistics', 'mean', 'median', 'mode', 'variance', 'standard deviation', 'correlation', 'regression'],
+            'kemh114.pdf': ['probability', 'random', 'event', 'sample space', 'conditional probability', 'bayes theorem', 'binomial distribution']
+        };
+
+        // Find best matching chapter
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const [pdfFile, keywords] of Object.entries(chapterMappings)) {
+            let score = 0;
+            for (const keyword of keywords) {
+                if (queryLower.includes(keyword)) {
+                    score += keyword.length; // Longer matches get higher score
+                }
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = pdfFile;
+            }
+        }
+
+        if (bestMatch && bestScore > 0) {
+            // Determine subject and construct path
+            let subject, part, fullPath;
+
+            if (bestMatch.startsWith('kech1')) {
+                subject = 'chemistry';
+                part = 'part1';
+                fullPath = `chemistry-part1/${bestMatch}`;
+            } else if (bestMatch.startsWith('kech2')) {
+                subject = 'chemistry';
+                part = 'part2';
+                fullPath = `chemistry-part2/${bestMatch}`;
+            } else if (bestMatch.startsWith('keph1')) {
+                subject = 'physics';
+                part = 'part1';
+                fullPath = `physics-part1/${bestMatch}`;
+            } else if (bestMatch.startsWith('keph2')) {
+                subject = 'physics';
+                part = 'part2';
+                fullPath = `physics-part2/${bestMatch}`;
+            } else if (bestMatch.startsWith('kemh')) {
+                subject = 'mathematics';
+                part = '';
+                fullPath = `mathematics/${bestMatch}`;
+            }
+
+            if (fullPath) {
+                console.log(`🎯 Direct match: ${fullPath} (score: ${bestScore})`);
+                try {
+                    const chapterData = await pdfReader.loadChapterFromPath(fullPath);
+                    if (chapterData) {
+                        this.showChapterLoadedBadge(chapterData.info);
+                        return {
+                            chapterBased: true,
+                            chapter: chapterData.info,
+                            content: chapterData.text,
+                            summary: `Full chapter: ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`,
+                            subtopics: [`📖 ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`],
+                            context: chapterData.text
+                        };
+                    }
+                } catch (e) {
+                    console.warn(`Failed to load matched chapter ${fullPath}:`, e);
+                }
+            }
+        }
+
+        // No match found
+        return { chapterBased: false, subtopics: [], context: '', allContext: [] };
     }
 
     // Database fallback when no chapter is identified
