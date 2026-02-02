@@ -860,10 +860,18 @@ Your answer:`;
             }
 
             const data = await response.json();
-            console.log('📡 AI response data:', data);
+            console.log('📡 AI response data:', JSON.stringify(data, null, 2));
+
+            // Check if there's an error in the response
+            if (data.error) {
+                console.error('❌ AI API error:', data.error);
+                return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
+            }
 
             const aiResponse = data.choices?.[0]?.message?.content?.trim() || '';
             console.log(`🤖 AI raw response: "${aiResponse}"`);
+            console.log(`🤖 AI response length: ${aiResponse.length}`);
+            console.log(`🤖 AI response type: ${typeof aiResponse}`);
 
             // Extract chapter path from AI response
             let chapterPath = null;
