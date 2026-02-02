@@ -834,16 +834,31 @@ class ChatAssistant {
 AVAILABLE CHAPTERS:
 ${chapterList}
 
-TASK: Which chapter covers this topic? Reply with just the path like "chemistry-part1/kech101.pdf" or "NONE" if no match.`;
+INSTRUCTIONS:
+- If you find a matching chapter, reply with ONLY the path (like "chemistry-part1/kech101.pdf")
+- If no chapter matches the topic, reply with ONLY "NONE"
+- Do not add any other text, explanations, or formatting
+
+EXAMPLE:
+Question: "What is atomic structure?"
+Answer: chemistry-part1/kech102.pdf
+
+Question: "How to bake a cake?"
+Answer: NONE
+
+Your answer:`;
+
+            console.log('🤖 Asking AI to identify chapter...');
+            console.log('📝 Prompt:', simplePrompt);
 
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'z-ai/glm-4.5-air:free',
+                    model: this.model,
                     messages: [{ role: 'user', content: simplePrompt }],
                     temperature: 0.1,
-                    max_tokens: 30
+                    max_tokens: 50
                 })
             });
 
@@ -853,33 +868,74 @@ TASK: Which chapter covers this topic? Reply with just the path like "chemistry-
             }
 
             const data = await response.json();
-            const aiPath = data.choices?.[0]?.message?.content?.trim() || '';
+            console.log('📡 AI response data:', data);
 
-            console.log(`🤖 AI suggested: "${aiPath}"`);
+            const aiResponse = data.choices?.[0]?.message?.content?.trim() || '';
+            console.log(`🤖 AI raw response: "${aiResponse}"`);
 
-            if (aiPath && aiPath !== 'NONE' && aiPath.includes('.pdf')) {
-                const chapterPath = parseChapterSelection(aiPath) || aiPath.replace(/[\[\]]/g, '');
+            // Extract chapter path from AI response
+            let chapterPath = null;
 
-                if (chapterPath) {
-                    console.log(`📖 Loading: ${chapterPath}`);
-                    const chapterData = await pdfReader.loadChapterFromPath(chapterPath);
+            // First try parseChapterSelection (for bracketed responses)
+            if (parseChapterSelection) {
+                chapterPath = parseChapterSelection(aiResponse);
+            }
 
-                    if (chapterData) {
-                        this.showChapterLoadedBadge(chapterData.info);
-                        return {
-                            chapterBased: true,
-                            chapter: chapterData.info,
-                            content: chapterData.text,
-                            summary: `Full chapter: ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`,
-                            subtopics: [`📖 ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`],
-                            context: chapterData.text
-                        };
+            // If that fails, try to extract any valid path from the response
+            if (!chapterPath) {
+                const pathPatterns = [
+                    /(chemistry-part[12]|physics-part[12]|mathematics)\/ke[cpm]h[12]?\d{2}\.pdf/gi,
+                    /ke[cpm]h[12]?\d{2}\.pdf/gi
+                ];
+
+                for (const pattern of pathPatterns) {
+                    const match = aiResponse.match(pattern);
+                    if (match) {
+                        const foundPath = match[0];
+                        // If it's just the filename, try to construct full path
+                        if (foundPath.startsWith('ke')) {
+                            // Determine subject from filename
+                            if (foundPath.startsWith('kech')) {
+                                const part = foundPath.charAt(4) === '1' ? 'part1' : 'part2';
+                                chapterPath = `chemistry-${part}/${foundPath}`;
+                            } else if (foundPath.startsWith('keph')) {
+                                const part = foundPath.charAt(4) === '1' ? 'part1' : 'part2';
+                                chapterPath = `physics-${part}/${foundPath}`;
+                            } else if (foundPath.startsWith('kemh')) {
+                                chapterPath = `mathematics/${foundPath}`;
+                            }
+                        } else {
+                            chapterPath = foundPath;
+                        }
+                        break;
                     }
                 }
             }
 
-            // Fallback
-            console.log('📚 Using general knowledge');
+            console.log(`🎯 Extracted chapter path: "${chapterPath}"`);
+
+            // Check if we got a valid path and it's not NONE
+            if (chapterPath && chapterPath !== 'NONE' && chapterPath.includes('.pdf')) {
+                console.log(`📖 Loading: ${chapterPath}`);
+                const chapterData = await pdfReader.loadChapterFromPath(chapterPath);
+
+                if (chapterData) {
+                    this.showChapterLoadedBadge(chapterData.info);
+                    return {
+                        chapterBased: true,
+                        chapter: chapterData.info,
+                        content: chapterData.text,
+                        summary: `Full chapter: ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`,
+                        subtopics: [`📖 ${chapterData.info.subject}${chapterData.info.part} - ${chapterData.info.chapter}`],
+                        context: chapterData.text
+                    };
+                } else {
+                    console.warn(`Failed to load chapter: ${chapterPath}`);
+                }
+            }
+
+            // Fallback to general knowledge
+            console.log('📚 Using general knowledge (no valid chapter found)');
             return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
 
         } catch (error) {
