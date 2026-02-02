@@ -25,7 +25,7 @@ Your response (path only):`;
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'xiaomi/mimo-v2-flash:free',
+                model: 'z-ai/glm-4.5-air:free',
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.3,
                 max_tokens: 100
@@ -814,7 +814,7 @@ function clearMindmap(skipConfirm = false) {
 // Use the same API configuration as chat assistant (secure proxy)
 const API_CONFIG = {
     url: '/api/openrouter',
-    model: 'xiaomi/mimo-v2-flash:free'
+    model: 'z-ai/glm-4.5-air:free'
 };
 
 async function generateCheatSheet() {
