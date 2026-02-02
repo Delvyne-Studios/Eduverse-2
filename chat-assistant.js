@@ -816,17 +816,9 @@ class ChatAssistant {
     }
     
     async searchRelevantContext(query) {
-        // Fast chapter identification and loading
-        console.log('🔍 Finding relevant NCERT chapter...');
+        // Direct AI chapter identification
+        console.log('🔍 Finding relevant NCERT chapter using AI...');
 
-        // Step 1: Try direct keyword matching first (fast)
-        const directMatch = await this.tryDirectChapterMatch(query);
-        if (directMatch.chapterBased) {
-            console.log('✅ Direct match found, loading chapter...');
-            return directMatch;
-        }
-
-        // Step 2: Use AI for complex queries
         try {
             const chapterList = getChapterListForAI();
             const simplePrompt = `QUESTION: "${query}"
