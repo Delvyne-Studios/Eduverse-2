@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
     // Get API key from environment variable
     const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-    const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free';
+    const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'z-ai/glm-4.5-air:free';
 
     if (!OPENROUTER_API_KEY) {
         console.error('❌ Missing OPENROUTER_API_KEY environment variable');

@@ -8,7 +8,7 @@ class ChatAssistant {
         // OpenRouter API Configuration (now using secure proxy)
         this.apiKey = null; // No longer needed - using serverless function
         this.apiUrl = '/api/openrouter'; // Vercel serverless function proxy
-        this.model = 'xiaomi/mimo-v2-flash:free';
+        this.model = 'z-ai/glm-4.5-air:free';
         
         // DOM Elements
         this.chatMessages = document.querySelector('.chat-messages');
@@ -394,39 +394,30 @@ class ChatAssistant {
     }
     
     /**
-     * SIMPLEST POSSIBLE SVG RENDERER
-     * Just injects the AI's SVG exactly as-is. No modifications. No parsing.
-     * The AI's output is trusted - render it directly.
+     * ABSOLUTE SIMPLEST - Just replace placeholder with AI's exact output
+     * NO containers, NO wrappers, NOTHING
      */
     renderRawSVG(placeholder, element) {
-        // Create a simple container
-        const container = document.createElement('div');
-        container.className = 'ai-svg-output';
-        container.id = `svg-${element.id}`;
+        // Get EXACT content from AI
+        const exactContent = element.content.trim();
         
-        // Get the EXACT content from AI - no modifications
-        let svgContent = element.content;
+        // Log it so you can verify
+        console.log('═══════════════════════════════════════');
+        console.log('🎨 EXACT AI OUTPUT (being injected as-is):');
+        console.log(exactContent);
+        console.log('═══════════════════════════════════════');
         
-        // Only thing we do: if AI didn't include <svg> wrapper, add a minimal one
-        if (!svgContent.includes('<svg')) {
-            svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70">
-<defs>
-<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-<polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-</marker>
-</defs>
-${element.content}
-</svg>`;
-        }
+        // Create a temporary div to hold the content
+        const temp = document.createElement('div');
+        temp.innerHTML = exactContent;
         
-        // DIRECT INJECTION - no parsing, no modifications
-        container.innerHTML = svgContent;
+        // Get the actual SVG element (or whatever the AI outputted)
+        const content = temp.firstElementChild || temp;
         
-        // Replace placeholder with container
-        placeholder.replaceWith(container);
+        // Replace placeholder with the exact content
+        placeholder.replaceWith(content);
         
-        console.log(`✅ SVG injected directly:`, element.id);
-        console.log('📋 SVG Content:', svgContent);
+        console.log('✅ Injected exactly as AI outputted');
     }
     
     // =================================================================
