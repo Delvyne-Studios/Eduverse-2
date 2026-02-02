@@ -821,24 +821,12 @@ class ChatAssistant {
 
         try {
             const chapterList = getChapterListForAI();
-            const simplePrompt = `QUESTION: "${query}"
+            const simplePrompt = `Find the NCERT Class 11 chapter that covers: "${query}"
 
-AVAILABLE CHAPTERS:
+Available chapters:
 ${chapterList}
 
-INSTRUCTIONS:
-- If you find a matching chapter, reply with ONLY the path (like "chemistry-part1/kech101.pdf")
-- If no chapter matches the topic, reply with ONLY "NONE"
-- Do not add any other text, explanations, or formatting
-
-EXAMPLE:
-Question: "What is atomic structure?"
-Answer: chemistry-part1/kech102.pdf
-
-Question: "How to bake a cake?"
-Answer: NONE
-
-Your answer:`;
+Reply with ONLY the file path like "chemistry-part1/kech101.pdf" or "NONE" if no match.`;
 
             console.log('🤖 Asking AI to identify chapter...');
             console.log('📝 Prompt:', simplePrompt);
@@ -847,7 +835,7 @@ Your answer:`;
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: this.model,
+                    model: 'mistralai/mistral-7b-instruct:free', // Try different model for identification
                     messages: [{ role: 'user', content: simplePrompt }],
                     temperature: 0.1,
                     max_tokens: 50
