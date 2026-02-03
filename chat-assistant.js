@@ -837,8 +837,7 @@ Reply with ONLY the file path (e.g., "chemistry-part1/kech101.pdf") or "NONE" if
                 body: JSON.stringify({
                     model: 'z-ai/glm-4.5-air:free',
                     messages: [{ role: 'user', content: simplePrompt }],
-                    temperature: 0.1,
-                    max_tokens: 200
+                    temperature: 0.1
                 })
             });
 
@@ -856,24 +855,23 @@ Reply with ONLY the file path (e.g., "chemistry-part1/kech101.pdf") or "NONE" if
                 return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
             }
 
-            // Get response from content OR reasoning field (GLM-4.5-air uses reasoning field)
-            let aiResponse = data.choices?.[0]?.message?.content?.trim() || '';
+            // GLM-4.5-air puts response in reasoning field, not content field
+            const messageData = data.choices?.[0]?.message;
+            let aiResponse = '';
             
-            // If content is empty, check reasoning field
-            if (!aiResponse && data.choices?.[0]?.message?.reasoning) {
-                aiResponse = data.choices[0].message.reasoning.trim();
-                console.log('📝 Using reasoning field instead of content');
+            // Try reasoning field first (GLM-4.5-air)
+            if (messageData?.reasoning) {
+                aiResponse = messageData.reasoning.trim();
+                console.log('📝 Using reasoning field');
+            }
+            // Fallback to content field
+            else if (messageData?.content) {
+                aiResponse = messageData.content.trim();
+                console.log('📝 Using content field');
             }
             
             console.log(`🤖 AI raw response: "${aiResponse}"`);
-            console.log(`🤖 AI response length: ${aiResponse.length}`);
-            console.log(`🤖 AI response type: ${typeof aiResponse}`);
-            console.log(`🤖 Finish reason: ${data.choices?.[0]?.finish_reason}`);
-            
-            // If finish_reason is 'length', warn about truncation
-            if (data.choices?.[0]?.finish_reason === 'length') {
-                console.warn('⚠️ Response was truncated due to token limit');
-            }
+            console.log(`🤖 Response length: ${aiResponse.length}`);
 
             // Extract chapter path from AI response
             let chapterPath = null;
