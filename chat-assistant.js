@@ -835,10 +835,10 @@ Reply with ONLY the file path like "chemistry-part1/kech101.pdf" or "NONE" if no
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'mistralai/mistral-7b-instruct:free', // Try different model for identification
+                    model: 'z-ai/glm-4.5-air:free',
                     messages: [{ role: 'user', content: simplePrompt }],
                     temperature: 0.1,
-                    max_tokens: 50
+                    max_tokens: 200
                 })
             });
 
@@ -856,10 +856,24 @@ Reply with ONLY the file path like "chemistry-part1/kech101.pdf" or "NONE" if no
                 return { subtopics: [], context: "I can help with NCERT Class 11 Chemistry, Physics, and Mathematics. What specific topic would you like to learn?", allContext: [] };
             }
 
-            const aiResponse = data.choices?.[0]?.message?.content?.trim() || '';
+            // Get response from content OR reasoning field (GLM-4.5-air uses reasoning field)
+            let aiResponse = data.choices?.[0]?.message?.content?.trim() || '';
+            
+            // If content is empty, check reasoning field
+            if (!aiResponse && data.choices?.[0]?.message?.reasoning) {
+                aiResponse = data.choices[0].message.reasoning.trim();
+                console.log('📝 Using reasoning field instead of content');
+            }
+            
             console.log(`🤖 AI raw response: "${aiResponse}"`);
             console.log(`🤖 AI response length: ${aiResponse.length}`);
             console.log(`🤖 AI response type: ${typeof aiResponse}`);
+            console.log(`🤖 Finish reason: ${data.choices?.[0]?.finish_reason}`);
+            
+            // If finish_reason is 'length', warn about truncation
+            if (data.choices?.[0]?.finish_reason === 'length') {
+                console.warn('⚠️ Response was truncated due to token limit');
+            }
 
             // Extract chapter path from AI response
             let chapterPath = null;
