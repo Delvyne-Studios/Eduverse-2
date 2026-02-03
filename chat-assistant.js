@@ -826,7 +826,7 @@ class ChatAssistant {
 Available chapters:
 ${chapterList}
 
-Reply with ONLY the file path like "chemistry-part1/kech101.pdf" or "NONE" if no match.`;
+Reply with ONLY the file path (e.g., "chemistry-part1/kech101.pdf") or "NONE" if no match.`;
 
             console.log('🤖 Asking AI to identify chapter...');
             console.log('📝 Prompt:', simplePrompt);
