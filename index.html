@@ -70,6 +70,10 @@
                     <i class="fas fa-tools"></i>
                     <span>Tools</span>
                 </a>
+                <a href="#" class="nav-link" data-page="games">
+                    <i class="fas fa-gamepad"></i>
+                    <span>Games</span>
+                </a>
                 <a href="#" class="nav-link" data-page="study-session">
                     <i class="fas fa-clock"></i>
                     <span>Study Session</span>
@@ -512,6 +516,155 @@
                     <div class="tool-badge">NEW</div>
                 </div>
             </div>
+        </div>
+
+        <!-- GAMES PAGE -->
+        <div class="page" id="games-page">
+            <div class="page-header">
+                <h1 class="page-title"><i class="fas fa-gamepad"></i> Games Lab</h1>
+                <p class="page-subtitle">Play, learn, and master concepts with elite-grade educational games</p>
+            </div>
+
+            <div class="games-hero glass-premium">
+                <div class="games-hero-text">
+                    <span class="badge gradient-bg-3">AI Powered</span>
+                    <h2>Goated learning experiences</h2>
+                    <p>Every game is built to teach deeply. Smart generation, competitive scoring, and simulations that feel real.</p>
+                    <div class="games-hero-actions">
+                        <button class="btn-primary" data-game="quiz-arena" data-action="play">
+                            <i class="fas fa-bolt"></i> Start Quiz Arena
+                        </button>
+                        <button class="btn-secondary glass-btn" data-game="simulators" data-action="play">
+                            <i class="fas fa-cube"></i> Open Simulators
+                        </button>
+                    </div>
+                </div>
+                <div class="games-hero-visual">
+                    <div class="hero-orbit">
+                        <div class="hero-orbit-ring ring-1"></div>
+                        <div class="hero-orbit-ring ring-2"></div>
+                        <div class="hero-orbit-ring ring-3"></div>
+                        <div class="hero-orbit-core">
+                            <i class="fas fa-atom"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="games-card-grid" id="gamesGrid">
+                <div class="game-card glass-premium hover-lift" data-game="quiz-arena">
+                    <div class="game-card-art gradient-bg-5">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="game-card-content">
+                        <div class="game-card-header">
+                            <h3>Quiz Arena</h3>
+                            <span class="game-tag">Multiplayer / Solo</span>
+                        </div>
+                        <p>Enter a topic, pick difficulty, and battle AI-generated MCQs with time-based scoring.</p>
+                        <div class="game-card-actions">
+                            <button class="btn-primary small game-play-btn" data-action="play" data-game="quiz-arena">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button class="btn-secondary small glass-btn" data-action="details" data-game="quiz-arena">Details</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card glass-premium hover-lift" data-game="simulators">
+                    <div class="game-card-art gradient-bg-3">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="game-card-content">
+                        <div class="game-card-header">
+                            <h3>Simulators</h3>
+                            <span class="game-tag">Physics • Chem • Math</span>
+                        </div>
+                        <p>High-fidelity 3D simulations built with Three.js. Concepts you can feel.</p>
+                        <div class="game-card-actions">
+                            <button class="btn-primary small game-play-btn" data-action="play" data-game="simulators">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button class="btn-secondary small glass-btn" data-action="details" data-game="simulators">Details</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card glass-premium hover-lift" data-game="memory-formulas">
+                    <div class="game-card-art gradient-bg-2">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="game-card-content">
+                        <div class="game-card-header">
+                            <h3>Memory Match</h3>
+                            <span class="game-tag">AI Cards</span>
+                        </div>
+                        <p>Match equivalent formulas and values. AI builds the card deck around your topic.</p>
+                        <div class="game-card-actions">
+                            <button class="btn-primary small game-play-btn" data-action="play" data-game="memory-formulas">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button class="btn-secondary small glass-btn" data-action="details" data-game="memory-formulas">Details</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card glass-premium hover-lift" data-game="mental-math">
+                    <div class="game-card-art gradient-bg-4">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="game-card-content">
+                        <div class="game-card-header">
+                            <h3>Mental Math</h3>
+                            <span class="game-tag">Speed Drill</span>
+                        </div>
+                        <p>Choose topic, difficulty, and count. AI generates questions to sharpen speed.</p>
+                        <div class="game-card-actions">
+                            <button class="btn-primary small game-play-btn" data-action="play" data-game="mental-math">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button class="btn-secondary small glass-btn" data-action="details" data-game="mental-math">Details</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME DETAIL OVERLAY -->
+        <div class="game-fullscreen" id="gameDetailView" style="display: none;">
+            <div class="tool-fullscreen-header">
+                <h2 id="gameDetailTitle"><i class="fas fa-gamepad"></i> Game Details</h2>
+                <button class="close-tool-btn" onclick="closeGameDetail()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tool-fullscreen-body glass-premium game-detail-body">
+                <div class="game-detail-hero">
+                    <div class="game-detail-art" id="gameDetailArt"></div>
+                    <div class="game-detail-copy">
+                        <p id="gameDetailDescription"></p>
+                        <div class="game-detail-meta" id="gameDetailMeta"></div>
+                        <div class="game-detail-actions">
+                            <button class="btn-primary" id="gameDetailPlayBtn">
+                                <i class="fas fa-play"></i> Play Now
+                            </button>
+                            <button class="btn-secondary glass-btn" onclick="closeGameDetail()">Back</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="game-detail-sections" id="gameDetailSections"></div>
+            </div>
+        </div>
+
+        <!-- GAME PLAY OVERLAY -->
+        <div class="game-fullscreen" id="gamePlayView" style="display: none;">
+            <div class="tool-fullscreen-header">
+                <h2 id="gamePlayTitle"><i class="fas fa-gamepad"></i> Game</h2>
+                <button class="close-tool-btn" onclick="closeGamePlay()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="tool-fullscreen-body glass-premium game-play-body" id="gamePlayBody"></div>
         </div>
 
         <!-- Full Tool Views (Hidden by default - Outside page container) -->
@@ -2071,12 +2224,15 @@
     <script src="svg-diagram-renderer.js"></script>
     <script src="plotly-renderer.js"></script>
     <script src="chat-manager.js"></script>
-    
+
     <script src="app.js"></script>
     <script src="chat-assistant.js"></script>
     <script src="study-session.js"></script>
     <script src="study-material.js"></script>
     <script src="tools.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="games.js"></script>
     <script src="study-planner.js"></script>
     <script src="social.js"></script>
     <script src="gamification.js"></script>
