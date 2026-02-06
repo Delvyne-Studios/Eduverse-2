@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Make THREE and OrbitControls globally available for compatibility
 window.THREE = THREE;
-window.THREE.OrbitControls = OrbitControls;
+window.OrbitControls = OrbitControls;
 
 // Games Lab - High fidelity educational games and simulators
 
