@@ -1,3 +1,10 @@
+// Import Three.js as ES Module
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// Make THREE and OrbitControls globally available for compatibility
+window.THREE = THREE;
+window.THREE.OrbitControls = OrbitControls;
 
 // Games Lab - High fidelity educational games and simulators
 
@@ -686,13 +693,20 @@ Ensure each pair is logically equivalent. No extra text.`;
         let deckJson = null;
         try {
             const response = await callOpenRouter(prompt, 0.5, 900);
+            if (!response || response.trim().length === 0) {
+                throw new Error('Empty AI response');
+            }
             deckJson = safeJsonParse(response);
+            if (!deckJson || !deckJson.pairs || deckJson.pairs.length === 0) {
+                throw new Error('Invalid deck format from AI');
+            }
         } catch (error) {
-            deckJson = null;
-        }
-
-        if (!deckJson || !deckJson.pairs) {
-            deckJson = { pairs: createFallbackPairs(pairsCount) };
+            console.error('❌ Memory Match AI error:', error);
+            statusEl.textContent = '❌ AI generation failed. Please try again.';
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate Cards';
+            showToast('Failed to generate cards with AI. Check console for details.', 'error');
+            return;
         }
 
         cards = [];
@@ -874,13 +888,20 @@ No extra text.`;
         let drillJson = null;
         try {
             const response = await callOpenRouter(prompt, 0.5, 800);
+            if (!response || response.trim().length === 0) {
+                throw new Error('Empty AI response');
+            }
             drillJson = safeJsonParse(response);
+            if (!drillJson || !drillJson.questions || drillJson.questions.length === 0) {
+                throw new Error('Invalid drill format from AI');
+            }
         } catch (error) {
-            drillJson = null;
-        }
-
-        if (!drillJson || !drillJson.questions) {
-            drillJson = { questions: createFallbackMental(count) };
+            console.error('❌ Mental Math AI error:', error);
+            statusEl.textContent = '❌ AI generation failed. Please try again.';
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate Drill';
+            showToast('Failed to generate drill with AI. Check console for details.', 'error');
+            return;
         }
 
         state.questions = drillJson.questions;
@@ -1065,25 +1086,33 @@ function renderSimulators(container) {
 }
 
 function createSimEngine(container) {
+    // Clear container first
+    container.innerHTML = '';
+    
     // Ensure container has proper dimensions
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 520;
     
     console.log('🎨 Creating sim engine with dimensions:', width, 'x', height);
     
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Create renderer with explicit settings
+    const renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: false,
+        preserveDrawingBuffer: true
+    });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x0a0a1a, 1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
-    // Ensure canvas is visible
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.display = 'block';
+    // Ensure canvas is visible with explicit styles
+    renderer.domElement.style.cssText = 'width: 100%; height: 100%; display: block; position: relative;';
+    renderer.domElement.setAttribute('data-engine', 'active');
     
     container.appendChild(renderer.domElement);
+    console.log('✅ Canvas appended to container');
 
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
@@ -1106,7 +1135,7 @@ function createSimEngine(container) {
     camera.position.set(10, 8, 15);
     camera.lookAt(0, 0, 0);
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.minDistance = 5;
