@@ -1237,107 +1237,86 @@ function createSimEngine(container) {
 }
 
 function initProjectileSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
+    const { scene, camera } = engine;
+    // Scale factor: divide real values to fit scene
+    const S = 0.4;
     
-    // Create launcher platform
+    // Launcher platform
     const launcherBase = new THREE.Mesh(
         new THREE.BoxGeometry(1.5, 0.3, 1.5),
         new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.5, roughness: 0.5 })
     );
-    launcherBase.position.set(-0.5, 0.15, 0);
+    launcherBase.position.set(0, 0.15, 0);
     launcherBase.castShadow = true;
     scene.add(launcherBase);
-    
-    // Projectile with glow effect
-    const projectileGeom = new THREE.SphereGeometry(0.4, 32, 32);
-    const projectileMat = new THREE.MeshStandardMaterial({ 
-        color: 0xf59e0b, 
-        emissive: 0xf59e0b,
-        emissiveIntensity: 0.3,
-        metalness: 0.8,
-        roughness: 0.2
-    });
-    const projectile = new THREE.Mesh(projectileGeom, projectileMat);
+
+    // Cannon barrel
+    const barrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.2, 2, 16),
+        new THREE.MeshStandardMaterial({ color: 0x6b7280, metalness: 0.7, roughness: 0.3 })
+    );
+    barrel.position.set(0, 0.5, 0);
+    scene.add(barrel);
+
+    // Projectile
+    const projectile = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.4, metalness: 0.8, roughness: 0.2 })
+    );
     projectile.castShadow = true;
     scene.add(projectile);
-    
-    // Trail particles
-    const trailGeometry = new THREE.BufferGeometry();
-    const trailPositions = new Float32Array(300 * 3);
-    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
-    const trailMaterial = new THREE.PointsMaterial({ 
-        color: 0xf59e0b, 
-        size: 0.15,
-        transparent: true,
-        opacity: 0.6
-    });
-    const trailParticles = new THREE.Points(trailGeometry, trailMaterial);
-    scene.add(trailParticles);
 
-    // Trajectory line with gradient
-    const lineMaterial = new THREE.LineBasicMaterial({ 
-        color: 0x38bdf8, 
-        linewidth: 2,
-        transparent: true,
-        opacity: 0.8
-    });
+    // Trajectory line
     const lineGeometry = new THREE.BufferGeometry();
-    const trajectoryLine = new THREE.Line(lineGeometry, lineMaterial);
+    const trajectoryLine = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 }));
     scene.add(trajectoryLine);
 
-    // Velocity vector arrow
-    const velocityArrow = new THREE.ArrowHelper(
-        new THREE.Vector3(1, 1, 0).normalize(), 
-        new THREE.Vector3(), 
-        3, 
-        0x22d3ee, 
-        0.5, 
-        0.3
-    );
-    scene.add(velocityArrow);
-
-    // Range marker with animation
+    // Range marker
     const rangeMarker = new THREE.Mesh(
-        new THREE.TorusGeometry(0.5, 0.1, 16, 32),
+        new THREE.TorusGeometry(0.4, 0.08, 16, 32),
         new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xec4899, emissiveIntensity: 0.3 })
     );
     rangeMarker.rotation.x = Math.PI / 2;
     rangeMarker.position.y = 0.1;
     scene.add(rangeMarker);
-    
-    // Height indicator
-    const heightLine = new THREE.Line(
-        new THREE.BufferGeometry(),
-        new THREE.LineDashedMaterial({ color: 0x10b981, dashSize: 0.3, gapSize: 0.15 })
-    );
-    scene.add(heightLine);
-    
-    // Info display
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'sim-info-overlay';
-    infoDiv.innerHTML = '<div class="sim-info-box"></div>';
-    overlayEl.appendChild(infoDiv);
-    const infoBox = infoDiv.querySelector('.sim-info-box');
+
+    // Velocity arrow
+    const velocityArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 1, 0).normalize(), new THREE.Vector3(), 3, 0x22d3ee, 0.4, 0.25);
+    scene.add(velocityArrow);
+
+    // Camera for projectile
+    camera.position.set(8, 8, 18);
+    camera.lookAt(5, 2, 0);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-rocket"></i> Projectile Controls</div>
-            <label>Launch Angle: <span id="angleVal">45</span>°</label>
-            <input class="game-input" id="projAngle" type="range" min="10" max="80" value="45">
-            <label>Initial Velocity: <span id="velVal">25</span> m/s</label>
-            <input class="game-input" id="projVelocity" type="range" min="5" max="50" value="25">
-            <label>Gravity: <span id="gravVal">9.8</span> m/s²</label>
-            <input class="game-input" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
-            <label>Initial Height: <span id="heightVal">2</span> m</label>
-            <input class="game-input" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
-            <div class="sim-stats glass-premium" style="margin-top: 15px; padding: 12px; border-radius: 8px;">
-                <div><strong>Range:</strong> <span id="rangeVal">--</span> m</div>
-                <div><strong>Max Height:</strong> <span id="maxHVal">--</span> m</div>
-                <div><strong>Flight Time:</strong> <span id="flightVal">--</span> s</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-rocket"></i> 🎮 Projectile Controls</div>
+            <div class="sim-control-row">
+                <label>🎯 Angle</label>
+                <input class="sim-slider" id="projAngle" type="range" min="10" max="80" value="45">
+                <span class="sim-slider-val" id="angleVal">45°</span>
             </div>
-            <button class="btn-primary" id="resetProjBtn" style="margin-top: 10px; width: 100%;">
-                <i class="fas fa-redo"></i> Reset Animation
-            </button>
+            <div class="sim-control-row">
+                <label>💨 Velocity</label>
+                <input class="sim-slider" id="projVelocity" type="range" min="5" max="50" value="20">
+                <span class="sim-slider-val" id="velVal">20 m/s</span>
+            </div>
+            <div class="sim-control-row">
+                <label>🌍 Gravity</label>
+                <input class="sim-slider" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
+                <span class="sim-slider-val" id="gravVal">9.8 m/s²</span>
+            </div>
+            <div class="sim-control-row">
+                <label>📏 Height</label>
+                <input class="sim-slider" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
+                <span class="sim-slider-val" id="heightVal">2 m</span>
+            </div>
+            <div class="sim-stats-grid">
+                <div class="sim-stat-card"><div class="sim-stat-label">Range</div><div class="sim-stat-value" id="rangeVal">--</div><div class="sim-stat-unit">m</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Max Height</div><div class="sim-stat-value" id="maxHVal">--</div><div class="sim-stat-unit">m</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Flight Time</div><div class="sim-stat-value" id="flightVal">--</div><div class="sim-stat-unit">s</div></div>
+            </div>
+            <button class="btn-primary sim-action-btn" id="resetProjBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     `;
 
@@ -1349,14 +1328,12 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
 
     let time = 0;
     let flightTime = 1;
-    let trailIndex = 0;
-    let maxTrailPoints = 100;
 
     function updateLabels() {
-        controlsContainer.querySelector('#angleVal').textContent = angleInput.value;
-        controlsContainer.querySelector('#velVal').textContent = velocityInput.value;
-        controlsContainer.querySelector('#gravVal').textContent = gravityInput.value;
-        controlsContainer.querySelector('#heightVal').textContent = heightInput.value;
+        controlsContainer.querySelector('#angleVal').textContent = angleInput.value + '°';
+        controlsContainer.querySelector('#velVal').textContent = velocityInput.value + ' m/s';
+        controlsContainer.querySelector('#gravVal').textContent = gravityInput.value + ' m/s²';
+        controlsContainer.querySelector('#heightVal').textContent = heightInput.value + ' m';
     }
 
     function recompute() {
@@ -1364,32 +1341,36 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
         const v = parseFloat(velocityInput.value);
         const g = parseFloat(gravityInput.value);
         const h = parseFloat(heightInput.value);
-
         const vy = v * Math.sin(angle);
         const vx = v * Math.cos(angle);
         flightTime = (vy + Math.sqrt(vy * vy + 2 * g * h)) / g;
         const range = vx * flightTime;
         const maxHeight = h + (vy * vy) / (2 * g);
-        
-        // Update stats
-        controlsContainer.querySelector('#rangeVal').textContent = range.toFixed(2);
-        controlsContainer.querySelector('#maxHVal').textContent = maxHeight.toFixed(2);
+
+        controlsContainer.querySelector('#rangeVal').textContent = range.toFixed(1);
+        controlsContainer.querySelector('#maxHVal').textContent = maxHeight.toFixed(1);
         controlsContainer.querySelector('#flightVal').textContent = flightTime.toFixed(2);
-        
-        // Generate trajectory points
+
+        // Update barrel angle
+        barrel.rotation.z = angle;
+        barrel.position.set(Math.cos(angle) * 0.8, 0.4 + Math.sin(angle) * 0.8, 0);
+
+        // Trajectory points scaled to fit view
         const points = [];
-        const steps = 100;
-        for (let i = 0; i <= steps; i += 1) {
+        const steps = 120;
+        for (let i = 0; i <= steps; i++) {
             const t = (i / steps) * flightTime;
-            const x = vx * t;
-            const y = h + vy * t - 0.5 * g * t * t;
+            const x = vx * t * S;
+            const y = (h + vy * t - 0.5 * g * t * t) * S;
             points.push(new THREE.Vector3(x, Math.max(y, 0), 0));
         }
         lineGeometry.setFromPoints(points);
-        rangeMarker.position.set(vx * flightTime, 0.25, 0);
-        velocityArrow.setDirection(new THREE.Vector3(vx, vy, 0).normalize());
-        velocityArrow.setLength(2 + v / 10);
-        projectile.position.set(0, h, 0);
+        rangeMarker.position.set(range * S, 0.15, 0);
+
+        velocityArrow.position.set(0, h * S, 0);
+        velocityArrow.setDirection(new THREE.Vector3(Math.cos(angle), Math.sin(angle), 0));
+        velocityArrow.setLength(1.5 + v / 20);
+        projectile.position.set(0, h * S, 0);
         time = 0;
     }
 
@@ -1400,156 +1381,135 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
         const h = parseFloat(heightInput.value);
         const vx = v * Math.cos(angle);
         const vy = v * Math.sin(angle);
-        time += 0.02;
+        time += 0.016;
         if (time > flightTime) time = 0;
-        const x = vx * time;
-        const y = h + vy * time - 0.5 * g * time * time;
+        const x = vx * time * S;
+        const y = (h + vy * time - 0.5 * g * time * time) * S;
         projectile.position.set(x, Math.max(y, 0), 0);
+        rangeMarker.rotation.z += 0.03;
     }
 
-    angleInput.addEventListener('input', () => { updateLabels(); recompute(); });
-    velocityInput.addEventListener('input', () => { updateLabels(); recompute(); });
-    gravityInput.addEventListener('input', () => { updateLabels(); recompute(); });
-    heightInput.addEventListener('input', () => { updateLabels(); recompute(); });
-    resetBtn.addEventListener('click', () => { time = 0; trailIndex = 0; });
+    [angleInput, velocityInput, gravityInput, heightInput].forEach(inp => {
+        inp.addEventListener('input', () => { updateLabels(); recompute(); });
+    });
+    resetBtn.addEventListener('click', () => { time = 0; });
 
     updateLabels();
     recompute();
     engine.setUpdate(update);
-
-    overlayEl.innerHTML += `<span class="sim-badge">Trajectory</span><span class="sim-badge">Velocity Vector</span><span class="sim-badge">Real-time Physics</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🎯 Trajectory</span><span class="sim-badge">⚡ Real-time</span>`;
 
     return () => {
-        scene.remove(projectile, trajectoryLine, velocityArrow, rangeMarker, launcherBase, trailParticles, heightLine);
-        if (infoDiv.parentNode) infoDiv.parentNode.removeChild(infoDiv);
+        scene.remove(projectile, trajectoryLine, velocityArrow, rangeMarker, launcherBase, barrel);
     };
 }
 
 function initVectorAddSim(engine, controlsContainer, overlayEl) {
-    const { scene, camera, renderer } = engine;
+    const { scene } = engine;
     const origin = new THREE.Vector3(0, 0, 0);
-    const vectorA = new THREE.Vector3(4, 2, 0);
-    const vectorB = new THREE.Vector3(2, 4, 2);
+    let vectorA = new THREE.Vector3(4, 2, 0);
+    let vectorB = new THREE.Vector3(2, 4, 2);
 
-    const arrowA = new THREE.ArrowHelper(vectorA.clone().normalize(), origin, vectorA.length(), 0x22d3ee);
-    const arrowB = new THREE.ArrowHelper(vectorB.clone().normalize(), origin, vectorB.length(), 0xf97316);
-    const arrowR = new THREE.ArrowHelper(vectorA.clone().add(vectorB).normalize(), origin, vectorA.clone().add(vectorB).length(), 0x10b981);
+    const arrowA = new THREE.ArrowHelper(vectorA.clone().normalize(), origin, vectorA.length(), 0x22d3ee, 0.5, 0.3);
+    const arrowB = new THREE.ArrowHelper(vectorB.clone().normalize(), origin, vectorB.length(), 0xf97316, 0.5, 0.3);
+    const resultant = vectorA.clone().add(vectorB);
+    const arrowR = new THREE.ArrowHelper(resultant.clone().normalize(), origin, resultant.length(), 0x10b981, 0.5, 0.3);
     scene.add(arrowA, arrowB, arrowR);
 
-    const handleGeo = new THREE.SphereGeometry(0.25, 16, 16);
-    const handleMatA = new THREE.MeshStandardMaterial({ color: 0x22d3ee });
-    const handleMatB = new THREE.MeshStandardMaterial({ color: 0xf97316 });
-    const handleA = new THREE.Mesh(handleGeo, handleMatA);
-    const handleB = new THREE.Mesh(handleGeo, handleMatB);
-    scene.add(handleA, handleB);
-
-    const raycaster = new THREE.Raycaster();
-    const pointer = new THREE.Vector2();
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    let activeHandle = null;
-
-    function updateHandles() {
-        handleA.position.copy(vectorA);
-        handleB.position.copy(vectorB);
-        arrowA.setDirection(vectorA.clone().normalize());
-        arrowA.setLength(vectorA.length());
-        arrowB.setDirection(vectorB.clone().normalize());
-        arrowB.setLength(vectorB.length());
-        const resultant = vectorA.clone().add(vectorB);
-        arrowR.setDirection(resultant.clone().normalize());
-        arrowR.setLength(resultant.length());
-    }
-
-    function onPointerDown(event) {
-        const rect = renderer.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        const intersects = raycaster.intersectObjects([handleA, handleB]);
-        if (intersects.length > 0) {
-            activeHandle = intersects[0].object;
-        }
-    }
-
-    function onPointerMove(event) {
-        if (!activeHandle) return;
-        const rect = renderer.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        const pos = new THREE.Vector3();
-        raycaster.ray.intersectPlane(plane, pos);
-        if (activeHandle === handleA) {
-            vectorA.copy(pos);
-        } else if (activeHandle === handleB) {
-            vectorB.copy(pos);
-        }
-        updateHandles();
-        updateReadout();
-    }
-
-    function onPointerUp() {
-        activeHandle = null;
-    }
-
-    renderer.domElement.addEventListener('pointerdown', onPointerDown);
-    renderer.domElement.addEventListener('pointermove', onPointerMove);
-    renderer.domElement.addEventListener('pointerup', onPointerUp);
-    renderer.domElement.addEventListener('pointerleave', onPointerUp);
+    // Label spheres at tips
+    const tipA = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.3 }));
+    const tipB = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.3 }));
+    const tipR = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.3 }));
+    scene.add(tipA, tipB, tipR);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> Vectors</div>
-            <div id="vectorReadout"></div>
-            <p class="sim-status">Drag the vector tips in the plane to change direction and magnitude.</p>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 🎮 Vector A <span style="color:#22d3ee">■</span></div>
+            <div class="sim-control-row"><label>X</label><input class="sim-slider" id="vaX" type="range" min="-8" max="8" value="4" step="0.5"><span class="sim-slider-val" id="vaXVal">4</span></div>
+            <div class="sim-control-row"><label>Y</label><input class="sim-slider" id="vaY" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="vaYVal">2</span></div>
+            <div class="sim-control-row"><label>Z</label><input class="sim-slider" id="vaZ" type="range" min="-8" max="8" value="0" step="0.5"><span class="sim-slider-val" id="vaZVal">0</span></div>
+            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 🎮 Vector B <span style="color:#f97316">■</span></div>
+            <div class="sim-control-row"><label>X</label><input class="sim-slider" id="vbX" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="vbXVal">2</span></div>
+            <div class="sim-control-row"><label>Y</label><input class="sim-slider" id="vbY" type="range" min="-8" max="8" value="4" step="0.5"><span class="sim-slider-val" id="vbYVal">4</span></div>
+            <div class="sim-control-row"><label>Z</label><input class="sim-slider" id="vbZ" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="vbZVal">2</span></div>
+            <div class="sim-stats-grid">
+                <div class="sim-stat-card"><div class="sim-stat-label">|A|</div><div class="sim-stat-value" id="magA">--</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">|B|</div><div class="sim-stat-value" id="magB">--</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">|R|</div><div class="sim-stat-value" id="magR">--</div></div>
+            </div>
+            <div class="sim-status" id="vectorReadout" style="margin-top:8px;"></div>
         </div>
     `;
 
-    const readout = controlsContainer.querySelector('#vectorReadout');
-    function updateReadout() {
+    function updateVectors() {
+        vectorA.set(parseFloat(controlsContainer.querySelector('#vaX').value), parseFloat(controlsContainer.querySelector('#vaY').value), parseFloat(controlsContainer.querySelector('#vaZ').value));
+        vectorB.set(parseFloat(controlsContainer.querySelector('#vbX').value), parseFloat(controlsContainer.querySelector('#vbY').value), parseFloat(controlsContainer.querySelector('#vbZ').value));
         const res = vectorA.clone().add(vectorB);
-        readout.innerHTML = `
-            <div class="sim-status">A: (${vectorA.x.toFixed(1)}, ${vectorA.y.toFixed(1)}, ${vectorA.z.toFixed(1)})</div>
-            <div class="sim-status">B: (${vectorB.x.toFixed(1)}, ${vectorB.y.toFixed(1)}, ${vectorB.z.toFixed(1)})</div>
-            <div class="sim-status">Resultant: (${res.x.toFixed(1)}, ${res.y.toFixed(1)}, ${res.z.toFixed(1)})</div>
-        `;
+
+        controlsContainer.querySelector('#vaXVal').textContent = vectorA.x;
+        controlsContainer.querySelector('#vaYVal').textContent = vectorA.y;
+        controlsContainer.querySelector('#vaZVal').textContent = vectorA.z;
+        controlsContainer.querySelector('#vbXVal').textContent = vectorB.x;
+        controlsContainer.querySelector('#vbYVal').textContent = vectorB.y;
+        controlsContainer.querySelector('#vbZVal').textContent = vectorB.z;
+
+        if (vectorA.length() > 0.01) { arrowA.setDirection(vectorA.clone().normalize()); arrowA.setLength(vectorA.length(), 0.5, 0.3); }
+        if (vectorB.length() > 0.01) { arrowB.setDirection(vectorB.clone().normalize()); arrowB.setLength(vectorB.length(), 0.5, 0.3); }
+        if (res.length() > 0.01) { arrowR.setDirection(res.clone().normalize()); arrowR.setLength(res.length(), 0.5, 0.3); }
+
+        tipA.position.copy(vectorA);
+        tipB.position.copy(vectorB);
+        tipR.position.copy(res);
+
+        controlsContainer.querySelector('#magA').textContent = vectorA.length().toFixed(2);
+        controlsContainer.querySelector('#magB').textContent = vectorB.length().toFixed(2);
+        controlsContainer.querySelector('#magR').textContent = res.length().toFixed(2);
+        controlsContainer.querySelector('#vectorReadout').innerHTML = `<strong style="color:#10b981">R</strong> = (${res.x.toFixed(1)}, ${res.y.toFixed(1)}, ${res.z.toFixed(1)})`;
     }
 
-    updateHandles();
-    updateReadout();
-    overlayEl.innerHTML += `<span class="sim-badge">Drag Handles</span>`;
+    controlsContainer.querySelectorAll('input[type="range"]').forEach(inp => inp.addEventListener('input', updateVectors));
+    updateVectors();
+    overlayEl.innerHTML += `<span class="sim-badge">🧮 Input X,Y,Z</span><span class="sim-badge">📐 Resultant</span>`;
 
     return () => {
-        renderer.domElement.removeEventListener('pointerdown', onPointerDown);
-        renderer.domElement.removeEventListener('pointermove', onPointerMove);
-        renderer.domElement.removeEventListener('pointerup', onPointerUp);
-        renderer.domElement.removeEventListener('pointerleave', onPointerUp);
-        scene.remove(arrowA, arrowB, arrowR, handleA, handleB);
+        scene.remove(arrowA, arrowB, arrowR, tipA, tipB, tipR);
     };
 }
 
 function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
     const { scene } = engine;
-    const obj1 = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), new THREE.MeshStandardMaterial({ color: 0x22d3ee }));
-    const obj2 = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf97316 }));
-    scene.add(obj1, obj2);
 
-    const relArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 3, 0xec4899);
+    // Better objects: car-like boxes
+    const carA = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.6), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.15 }));
+    const carB = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.6), new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.15 }));
+    carA.position.y = 0.25;
+    carB.position.y = 0.25;
+    scene.add(carA, carB);
+
+    // Road lanes
+    const lane1 = new THREE.Mesh(new THREE.PlaneGeometry(30, 1.5), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
+    lane1.rotation.x = -Math.PI / 2; lane1.position.set(0, 0.01, 0);
+    const lane2 = new THREE.Mesh(new THREE.PlaneGeometry(30, 1.5), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
+    lane2.rotation.x = -Math.PI / 2; lane2.position.set(0, 0.01, 2.5);
+    scene.add(lane1, lane2);
+
+    const relArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 3, 0xec4899, 0.4, 0.25);
     scene.add(relArrow);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-sync-alt"></i> Relative Motion</div>
-            <label>Object A Velocity</label>
-            <input class="game-input" id="relVA" type="range" min="1" max="8" value="4">
-            <label>Object B Velocity</label>
-            <input class="game-input" id="relVB" type="range" min="1" max="8" value="6">
-            <label>Observer Frame</label>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-sync-alt"></i> 🎮 Relative Motion</div>
+            <div class="sim-control-row"><label>🔵 Obj A Vel</label><input class="sim-slider" id="relVA" type="range" min="0" max="8" value="3" step="0.5"><span class="sim-slider-val" id="relVAVal">3 m/s</span></div>
+            <div class="sim-control-row"><label>🟠 Obj B Vel</label><input class="sim-slider" id="relVB" type="range" min="0" max="8" value="5" step="0.5"><span class="sim-slider-val" id="relVBVal">5 m/s</span></div>
+            <label style="margin-top:8px;">Observer Frame</label>
             <select class="game-select" id="relFrame">
-                <option value="ground">Ground</option>
-                <option value="a">Object A</option>
-                <option value="b">Object B</option>
+                <option value="ground">🌍 Ground</option>
+                <option value="a">🔵 Object A</option>
+                <option value="b">🟠 Object B</option>
             </select>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card"><div class="sim-stat-label">Rel. Velocity</div><div class="sim-stat-value" id="relVelVal">--</div><div class="sim-stat-unit">m/s</div></div>
+            </div>
         </div>
     `;
 
@@ -1559,55 +1519,79 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
 
     let t = 0;
     function update() {
-        t += 0.02;
+        t += 0.016;
         const vA = parseFloat(vAInput.value);
         const vB = parseFloat(vBInput.value);
         const frame = frameSelect.value;
-        const posA = new THREE.Vector3(vA * t, 0, 0);
-        const posB = new THREE.Vector3(vB * t, 0, 3);
+
+        controlsContainer.querySelector('#relVAVal').textContent = vA + ' m/s';
+        controlsContainer.querySelector('#relVBVal').textContent = vB + ' m/s';
 
         let obsVel = 0;
         if (frame === 'a') obsVel = vA;
         if (frame === 'b') obsVel = vB;
 
-        obj1.position.set(posA.x - obsVel * t, 0, 0);
-        obj2.position.set(posB.x - obsVel * t, 0, 3);
+        // Wrap positions to stay in view (-12 to 12)
+        let xA = ((vA - obsVel) * t) % 24;
+        let xB = ((vB - obsVel) * t) % 24;
+        if (xA > 12) xA -= 24; if (xA < -12) xA += 24;
+        if (xB > 12) xB -= 24; if (xB < -12) xB += 24;
+
+        carA.position.x = xA;
+        carA.position.z = 0;
+        carB.position.x = xB;
+        carB.position.z = 2.5;
 
         const relVel = vB - vA;
-        relArrow.setDirection(new THREE.Vector3(relVel >= 0 ? 1 : -1, 0, 0));
-        relArrow.setLength(Math.abs(relVel) + 1);
-        relArrow.position.copy(obj1.position);
+        controlsContainer.querySelector('#relVelVal').textContent = relVel.toFixed(1);
+        if (Math.abs(relVel) > 0.01) {
+            relArrow.setDirection(new THREE.Vector3(relVel >= 0 ? 1 : -1, 0, 0));
+            relArrow.setLength(Math.min(5, Math.abs(relVel) * 0.8 + 0.5));
+        }
+        relArrow.position.set(carA.position.x, 1.2, carA.position.z);
     }
 
     engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">Frame Switching</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🔄 Frame Switching</span>`;
 
     return () => {
-        scene.remove(obj1, obj2, relArrow);
+        scene.remove(carA, carB, relArrow, lane1, lane2);
     };
 }
 
 function initLawsMotionSim(engine, controlsContainer, overlayEl) {
     const { scene } = engine;
+
+    // Surface
+    const surface = new THREE.Mesh(new THREE.BoxGeometry(20, 0.1, 3), new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 }));
+    surface.position.y = -0.05;
+    scene.add(surface);
+
     const block = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 0.6, 1.4),
-        new THREE.MeshStandardMaterial({ color: 0x8b5cf6 })
+        new THREE.BoxGeometry(1.2, 0.8, 1.0),
+        new THREE.MeshStandardMaterial({ color: 0x8b5cf6, emissive: 0x8b5cf6, emissiveIntensity: 0.1, metalness: 0.3 })
     );
-    block.position.y = 0.3;
+    block.position.y = 0.4;
+    block.castShadow = true;
     scene.add(block);
 
-    const accArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 2, 0x10b981);
-    scene.add(accArrow);
+    const forceArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 2, 0x22d3ee, 0.4, 0.25);
+    const frictionArrow = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(), 1, 0xef4444, 0.3, 0.2);
+    const accArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 2, 0x10b981, 0.4, 0.25);
+    scene.add(forceArrow, frictionArrow, accArrow);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-bolt"></i> Force Controls</div>
-            <label>Force (N)</label>
-            <input class="game-input" id="forceInput" type="range" min="-20" max="20" value="10">
-            <label>Mass (kg)</label>
-            <input class="game-input" id="massInput" type="range" min="1" max="10" value="4">
-            <label>Friction Coefficient</label>
-            <input class="game-input" id="frictionInput" type="range" min="0" max="0.9" value="0.2" step="0.05">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-bolt"></i> 🎮 Newton's Laws</div>
+            <div class="sim-control-row"><label>⬅➡ Force</label><input class="sim-slider" id="forceInput" type="range" min="-20" max="20" value="10"><span class="sim-slider-val" id="forceVal">10 N</span></div>
+            <div class="sim-control-row"><label>⚖️ Mass</label><input class="sim-slider" id="massInput" type="range" min="1" max="10" value="4"><span class="sim-slider-val" id="massVal">4 kg</span></div>
+            <div class="sim-control-row"><label>🧊 Friction μ</label><input class="sim-slider" id="frictionInput" type="range" min="0" max="0.9" value="0.2" step="0.05"><span class="sim-slider-val" id="fricVal">0.20</span></div>
+            <div class="sim-stats-grid">
+                <div class="sim-stat-card"><div class="sim-stat-label">Acceleration</div><div class="sim-stat-value" id="accVal">--</div><div class="sim-stat-unit">m/s²</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Velocity</div><div class="sim-stat-value" id="velDisplay">--</div><div class="sim-stat-unit">m/s</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Net Force</div><div class="sim-stat-value" id="netFVal">--</div><div class="sim-stat-unit">N</div></div>
+            </div>
+            <button class="btn-primary sim-action-btn" id="resetLawsBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     `;
 
@@ -1617,317 +1601,568 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
 
     let velocity = 0;
     let position = 0;
+
     function update() {
         const force = parseFloat(forceInput.value);
         const mass = parseFloat(massInput.value);
         const mu = parseFloat(frictionInput.value);
-        const friction = -Math.sign(velocity) * mu * mass * 9.8;
-        const netForce = force + friction;
-        const acceleration = netForce / mass;
 
-        velocity += acceleration * 0.02;
-        position += velocity * 0.02;
+        controlsContainer.querySelector('#forceVal').textContent = force + ' N';
+        controlsContainer.querySelector('#massVal').textContent = mass + ' kg';
+        controlsContainer.querySelector('#fricVal').textContent = mu.toFixed(2);
+
+        const frictionForce = velocity !== 0 ? -Math.sign(velocity) * mu * mass * 9.8 : (Math.abs(force) > mu * mass * 9.8 ? 0 : -force);
+        const netForce = force + (velocity !== 0 ? frictionForce : (Math.abs(force) > mu * mass * 9.8 ? 0 : 0));
+        const realNet = Math.abs(force) > mu * mass * 9.8 || Math.abs(velocity) > 0.01 ? force + frictionForce : 0;
+        const acceleration = realNet / mass;
+
+        velocity += acceleration * 0.016;
+        if (Math.abs(velocity) < 0.01 && Math.abs(force) <= mu * mass * 9.8) velocity = 0;
+        position += velocity * 0.016;
+
+        // Wrap to stay in view
         if (position > 8) position = -8;
         if (position < -8) position = 8;
         block.position.x = position;
 
-        accArrow.setDirection(new THREE.Vector3(acceleration >= 0 ? 1 : -1, 0, 0));
-        accArrow.setLength(Math.min(4, Math.abs(acceleration) + 1));
-        accArrow.position.set(block.position.x, 1.2, 0);
+        // Applied force arrow (blue)
+        if (Math.abs(force) > 0.1) {
+            forceArrow.visible = true;
+            forceArrow.setDirection(new THREE.Vector3(force >= 0 ? 1 : -1, 0, 0));
+            forceArrow.setLength(Math.min(4, Math.abs(force) / 5 + 0.5));
+            forceArrow.position.set(block.position.x, 0.8, 0);
+        } else { forceArrow.visible = false; }
+
+        // Friction arrow (red)
+        if (Math.abs(velocity) > 0.05 && mu > 0) {
+            frictionArrow.visible = true;
+            frictionArrow.setDirection(new THREE.Vector3(velocity > 0 ? -1 : 1, 0, 0));
+            frictionArrow.setLength(Math.min(3, mu * mass * 9.8 / 5 + 0.3));
+            frictionArrow.position.set(block.position.x, 0.3, 0);
+        } else { frictionArrow.visible = false; }
+
+        // Acceleration arrow (green)
+        if (Math.abs(acceleration) > 0.05) {
+            accArrow.visible = true;
+            accArrow.setDirection(new THREE.Vector3(acceleration >= 0 ? 1 : -1, 0, 0));
+            accArrow.setLength(Math.min(3, Math.abs(acceleration) * 0.4 + 0.5));
+            accArrow.position.set(block.position.x, 1.4, 0);
+        } else { accArrow.visible = false; }
+
+        controlsContainer.querySelector('#accVal').textContent = acceleration.toFixed(2);
+        controlsContainer.querySelector('#velDisplay').textContent = velocity.toFixed(2);
+        controlsContainer.querySelector('#netFVal').textContent = realNet.toFixed(1);
     }
 
+    controlsContainer.querySelector('#resetLawsBtn').addEventListener('click', () => { velocity = 0; position = 0; });
     engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">Forces</span><span class="sim-badge">Friction</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🔵 Applied</span><span class="sim-badge">🔴 Friction</span><span class="sim-badge">🟢 Accel</span>`;
 
     return () => {
-        scene.remove(block, accArrow);
+        scene.remove(block, forceArrow, frictionArrow, accArrow, surface);
     };
 }
 
 function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
-    const points = [
-        new THREE.Vector3(-8, 3, 0),
-        new THREE.Vector3(-4, 6, 2),
-        new THREE.Vector3(0, 2, -1),
-        new THREE.Vector3(4, 7, 1),
-        new THREE.Vector3(8, 3, 0)
+    const { scene, camera } = engine;
+    camera.position.set(0, 12, 22);
+    camera.lookAt(0, 4, 0);
+
+    // Track with realistic hills and drops
+    const trackPoints = [
+        new THREE.Vector3(-12, 10, 0),
+        new THREE.Vector3(-10, 10, 1),
+        new THREE.Vector3(-7, 3, 2),
+        new THREE.Vector3(-4, 8, 0),
+        new THREE.Vector3(-1, 2, -1),
+        new THREE.Vector3(2, 6, 1),
+        new THREE.Vector3(5, 1.5, 0),
+        new THREE.Vector3(8, 4, -1),
+        new THREE.Vector3(11, 1, 0),
+        new THREE.Vector3(12, 3, 1)
     ];
-    const curve = new THREE.CatmullRomCurve3(points);
-    const tubeGeometry = new THREE.TubeGeometry(curve, 100, 0.2, 8, false);
-    const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x22d3ee });
+    const curve = new THREE.CatmullRomCurve3(trackPoints, false, 'catmullrom', 0.5);
+
+    // Track supports (pillars)
+    const supportMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, metalness: 0.4 });
+    const supports = [];
+    for (let i = 0; i <= 1; i += 0.1) {
+        const p = curve.getPointAt(i);
+        if (p.y > 1) {
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, p.y, 8), supportMat);
+            pillar.position.set(p.x, p.y / 2, p.z);
+            scene.add(pillar);
+            supports.push(pillar);
+        }
+    }
+
+    // Track rails
+    const tubeGeometry = new THREE.TubeGeometry(curve, 200, 0.15, 8, false);
+    const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.3 });
     const track = new THREE.Mesh(tubeGeometry, tubeMaterial);
     scene.add(track);
 
-    const cart = new THREE.Mesh(new THREE.SphereGeometry(0.4, 24, 24), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
-    scene.add(cart);
+    // Cart
+    const cartBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.3, metalness: 0.5 }));
+    cartBody.castShadow = true;
+    scene.add(cartBody);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-chart-area"></i> Energy</div>
-            <canvas class="sim-graph" id="energyGraph"></canvas>
-            <div class="sim-status">Blue = Potential, Orange = Kinetic</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-chart-area"></i> 🎢 Energy Lab</div>
+            <canvas class="sim-graph" id="energyGraph" width="280" height="140"></canvas>
+            <div class="sim-stats-grid">
+                <div class="sim-stat-card" style="border-left:3px solid #38bdf8"><div class="sim-stat-label">PE</div><div class="sim-stat-value" id="peVal">--</div><div class="sim-stat-unit">J</div></div>
+                <div class="sim-stat-card" style="border-left:3px solid #f59e0b"><div class="sim-stat-label">KE</div><div class="sim-stat-value" id="keVal">--</div><div class="sim-stat-unit">J</div></div>
+                <div class="sim-stat-card" style="border-left:3px solid #10b981"><div class="sim-stat-label">Speed</div><div class="sim-stat-value" id="speedVal">--</div><div class="sim-stat-unit">m/s</div></div>
+            </div>
         </div>
     `;
     const graph = controlsContainer.querySelector('#energyGraph');
     const ctx = graph.getContext('2d');
 
-    let t = 0;
+    // Physics-based motion: cart slows at top, speeds at bottom
+    const g = 9.8;
+    const mass = 1;
+    const maxH = 10;
+    let arcPos = 0; // arc length position 0-1
+    let speed = 0;
+    const totalLen = curve.getLength();
+
     function update() {
-        t += 0.0015;
-        if (t > 1) t = 0;
-        const pos = curve.getPointAt(t);
-        cart.position.copy(pos);
-        const h0 = 7;
-        const h = pos.y;
-        const g = 9.8;
-        const v = Math.sqrt(Math.max(0.1, 2 * g * (h0 - h)));
-        drawEnergyGraph(h, v);
+        // Get current height and slope
+        const pos = curve.getPointAt(arcPos);
+        const tangent = curve.getTangentAt(arcPos);
+        const slopeAngle = Math.asin(Math.max(-1, Math.min(1, tangent.y)));
+
+        // a = -g * sin(slope) along the track
+        const accel = -g * Math.sin(slopeAngle);
+        speed += accel * 0.016;
+        speed *= 0.9995; // tiny friction
+
+        // Advance arc position
+        arcPos += (speed * 0.016) / totalLen;
+        if (arcPos > 0.99) { arcPos = 0.01; speed = 0.5; }
+        if (arcPos < 0.01) { arcPos = 0.99; speed = -0.5; }
+
+        const newPos = curve.getPointAt(Math.max(0.001, Math.min(0.999, arcPos)));
+        cartBody.position.copy(newPos);
+        cartBody.position.y += 0.25;
+
+        // Orient cart along track
+        const lookTarget = curve.getPointAt(Math.min(0.999, arcPos + 0.01));
+        cartBody.lookAt(lookTarget);
+
+        const h = newPos.y;
+        const pe = mass * g * h;
+        const ke = 0.5 * mass * speed * speed;
+
+        controlsContainer.querySelector('#peVal').textContent = pe.toFixed(1);
+        controlsContainer.querySelector('#keVal').textContent = ke.toFixed(1);
+        controlsContainer.querySelector('#speedVal').textContent = Math.abs(speed).toFixed(1);
+        drawEnergyGraph(pe, ke);
     }
 
-    function drawEnergyGraph(h, v) {
-        const w = graph.width = graph.clientWidth;
-        const hgt = graph.height = graph.clientHeight;
+    function drawEnergyGraph(pe, ke) {
+        const w = graph.width;
+        const hgt = graph.height;
         ctx.clearRect(0, 0, w, hgt);
-        const pe = h / 7;
-        const ke = Math.min(1, v / 12);
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.7)';
-        ctx.fillRect(0, hgt * (1 - pe), w * 0.4, hgt * pe);
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.7)';
-        ctx.fillRect(w * 0.6, hgt * (1 - ke), w * 0.4, hgt * ke);
+        const totalE = pe + ke || 1;
+        const peH = (pe / (mass * g * maxH)) * hgt * 0.85;
+        const keH = (ke / (mass * g * maxH)) * hgt * 0.85;
+
+        // PE bar
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.8)';
+        ctx.fillRect(w * 0.1, hgt - peH, w * 0.3, peH);
+        ctx.fillStyle = '#fff';
+        ctx.font = '11px sans-serif';
+        ctx.fillText('PE', w * 0.2, hgt - peH - 5);
+
+        // KE bar
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.8)';
+        ctx.fillRect(w * 0.55, hgt - keH, w * 0.3, keH);
+        ctx.fillStyle = '#fff';
+        ctx.fillText('KE', w * 0.65, hgt - keH - 5);
     }
+
+    // Start with initial speed from the top
+    speed = 2;
+    arcPos = 0.02;
 
     engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">Energy Graph</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🎢 Gravity</span><span class="sim-badge">⚡ Energy</span>`;
 
     return () => {
-        scene.remove(track, cart);
+        scene.remove(track, cartBody);
+        supports.forEach(s => scene.remove(s));
     };
 }
 
 function initOrbitalSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
-    const points = new THREE.BufferGeometry();
-    const material = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.08 });
-    const cloud = new THREE.Points(points, material);
-    scene.add(cloud);
+    const { scene, camera } = engine;
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, 0);
+
+    // Nucleus
+    const nucleus = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 })
+    );
+    scene.add(nucleus);
+
+    // Group for orbital shape
+    const orbitalGroup = new THREE.Group();
+    scene.add(orbitalGroup);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-atom"></i> Orbital Type</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-atom"></i> 🎮 Atomic Orbitals</div>
             <select class="game-select" id="orbitalType">
-                <option value="s">s orbital</option>
-                <option value="p">p orbital</option>
-                <option value="d">d orbital</option>
+                <option value="1s">1s</option>
+                <option value="2s">2s</option>
+                <option value="2p">2p (dumbbell)</option>
+                <option value="3d">3d (cloverleaf)</option>
             </select>
-            <label>Slice (Y)</label>
-            <input class="game-input" id="orbitalSlice" type="range" min="-4" max="4" value="4" step="0.2">
+            <div class="sim-control-row"><label>Opacity</label><input class="sim-slider" id="orbitalOpacity" type="range" min="10" max="80" value="40"><span class="sim-slider-val" id="opacVal">40%</span></div>
+            <div class="sim-status" id="orbitalInfo"></div>
         </div>
     `;
 
     const typeSelect = controlsContainer.querySelector('#orbitalType');
-    const sliceInput = controlsContainer.querySelector('#orbitalSlice');
+    const opacityInput = controlsContainer.querySelector('#orbitalOpacity');
+    const infoEl = controlsContainer.querySelector('#orbitalInfo');
 
-    function generatePoints(type) {
-        const vertices = [];
-        for (let i = 0; i < 4000; i += 1) {
-            let x = 0;
-            let y = 0;
-            let z = 0;
-            if (type === 's') {
-                const r = Math.abs(randNormal()) * 2.2;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                x = r * Math.sin(phi) * Math.cos(theta);
-                y = r * Math.sin(phi) * Math.sin(theta);
-                z = r * Math.cos(phi);
-            } else if (type === 'p') {
-                const r = Math.abs(randNormal()) * 2;
-                const sign = Math.random() > 0.5 ? 1 : -1;
-                x = r * sign;
-                y = randNormal();
-                z = randNormal();
-            } else {
-                const r = Math.abs(randNormal()) * 2;
-                const signX = Math.random() > 0.5 ? 1 : -1;
-                const signZ = Math.random() > 0.5 ? 1 : -1;
-                x = r * signX;
-                y = randNormal() * 0.6;
-                z = r * signZ;
-            }
-            vertices.push(x, y, z);
-        }
-        points.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        points.computeBoundingSphere();
+    function createLobe(radiusX, radiusY, radiusZ, color, position) {
+        const geom = new THREE.SphereGeometry(1, 32, 32);
+        geom.scale(radiusX, radiusY, radiusZ);
+        const opacity = parseFloat(opacityInput.value) / 100;
+        const mat = new THREE.MeshPhysicalMaterial({
+            color: color,
+            transparent: true,
+            opacity: opacity,
+            roughness: 0.3,
+            metalness: 0.1,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set(position[0], position[1], position[2]);
+        return mesh;
     }
 
-    function applySlice() {
-        const slice = parseFloat(sliceInput.value);
-        const positions = points.getAttribute('position');
-        for (let i = 0; i < positions.count; i += 1) {
-            const y = positions.getY(i);
-            positions.setY(i, Math.abs(y) > slice ? 9999 : y);
+    function buildOrbital(type) {
+        // Clear old
+        while (orbitalGroup.children.length) orbitalGroup.remove(orbitalGroup.children[0]);
+        let info = '';
+
+        if (type === '1s') {
+            orbitalGroup.add(createLobe(2, 2, 2, 0x8b5cf6, [0, 0, 0]));
+            info = '1s: Spherical, 1 node surface = 0';
+        } else if (type === '2s') {
+            orbitalGroup.add(createLobe(3, 3, 3, 0x8b5cf6, [0, 0, 0]));
+            orbitalGroup.add(createLobe(1.2, 1.2, 1.2, 0xc084fc, [0, 0, 0]));
+            info = '2s: Spherical with 1 radial node';
+        } else if (type === '2p') {
+            // Two lobes along Y axis (dumbbell)
+            orbitalGroup.add(createLobe(1.2, 2.5, 1.2, 0x22d3ee, [0, 2, 0]));
+            orbitalGroup.add(createLobe(1.2, 2.5, 1.2, 0xf97316, [0, -2, 0]));
+            info = '2p: Dumbbell shape, 1 angular node (plane)';
+        } else if (type === '3d') {
+            // Four lobes in XY plane (cloverleaf)
+            orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0x22d3ee, [2, 2, 0]));
+            orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0xf97316, [-2, -2, 0]));
+            orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0x22d3ee, [2, -2, 0]));
+            orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0xf97316, [-2, 2, 0]));
+            info = '3d: Cloverleaf, 2 angular nodal planes';
         }
-        positions.needsUpdate = true;
+        infoEl.textContent = info;
     }
 
-    typeSelect.addEventListener('change', () => {
-        generatePoints(typeSelect.value);
-        applySlice();
+    typeSelect.addEventListener('change', () => buildOrbital(typeSelect.value));
+    opacityInput.addEventListener('input', () => {
+        controlsContainer.querySelector('#opacVal').textContent = opacityInput.value + '%';
+        buildOrbital(typeSelect.value);
     });
-    sliceInput.addEventListener('input', applySlice);
 
-    generatePoints('s');
-    applySlice();
+    buildOrbital('1s');
 
-    overlayEl.innerHTML += `<span class="sim-badge">3D Orbitals</span>`;
+    // Gentle rotation
+    engine.setUpdate(() => { orbitalGroup.rotation.y += 0.005; });
+    overlayEl.innerHTML += `<span class="sim-badge">⚛️ Real Shapes</span>`;
 
     return () => {
-        scene.remove(cloud);
+        scene.remove(orbitalGroup, nucleus);
     };
 }
 
 function initVseprSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
-    const central = new THREE.Mesh(new THREE.SphereGeometry(0.4, 32, 32), new THREE.MeshStandardMaterial({ color: 0xec4899 }));
-    scene.add(central);
+    const { scene, camera } = engine;
+    camera.position.set(0, 6, 12);
+    camera.lookAt(0, 3, 0);
+
+    const molGroup = new THREE.Group();
+    molGroup.position.y = 3; // Raise above grid
+    scene.add(molGroup);
+
+    const central = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xec4899, emissiveIntensity: 0.2 }));
+    molGroup.add(central);
     const atoms = [];
+    const bonds = [];
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-project-diagram"></i> Geometry</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-project-diagram"></i> 🎮 VSEPR Geometry</div>
             <select class="game-select" id="vseprShape">
-                <option value="linear">Linear</option>
-                <option value="trigonal">Trigonal Planar</option>
-                <option value="tetra">Tetrahedral</option>
-                <option value="bipyramidal">Trigonal Bipyramidal</option>
-                <option value="octa">Octahedral</option>
+                <option value="linear">Linear (2 atoms)</option>
+                <option value="trigonal">Trigonal Planar (3)</option>
+                <option value="tetra" selected>Tetrahedral (4)</option>
+                <option value="bipyramidal">Trigonal Bipyramidal (5)</option>
+                <option value="octa">Octahedral (6)</option>
             </select>
-            <div class="sim-status" id="vseprInfo"></div>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card"><div class="sim-stat-label">Bond Angle</div><div class="sim-stat-value" id="vseprAngle">--</div><div class="sim-stat-unit">°</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Atoms</div><div class="sim-stat-value" id="vseprCount">--</div></div>
+            </div>
+            <div class="sim-status" id="vseprInfo" style="margin-top:8px;"></div>
         </div>
     `;
 
     const shapeSelect = controlsContainer.querySelector('#vseprShape');
+    const angleEl = controlsContainer.querySelector('#vseprAngle');
+    const countEl = controlsContainer.querySelector('#vseprCount');
     const infoEl = controlsContainer.querySelector('#vseprInfo');
 
     function setShape(shape) {
-        atoms.forEach(atom => scene.remove(atom));
+        atoms.forEach(a => molGroup.remove(a));
+        bonds.forEach(b => molGroup.remove(b));
         atoms.length = 0;
+        bonds.length = 0;
+
         const positions = [];
         let angleInfo = '';
+        let example = '';
+        const R = 3; // bond length
+
         if (shape === 'linear') {
-            positions.push([4, 0, 0], [-4, 0, 0]);
-            angleInfo = '180 degrees';
+            positions.push([R, 0, 0], [-R, 0, 0]);
+            angleInfo = '180'; example = 'e.g. CO₂, BeCl₂';
         } else if (shape === 'trigonal') {
-            positions.push([4, 0, 0], [-2, 0, 3.5], [-2, 0, -3.5]);
-            angleInfo = '120 degrees';
+            for (let i = 0; i < 3; i++) {
+                const a = (i * 2 * Math.PI) / 3;
+                positions.push([R * Math.cos(a), 0, R * Math.sin(a)]);
+            }
+            angleInfo = '120'; example = 'e.g. BF₃, AlCl₃';
         } else if (shape === 'tetra') {
-            positions.push([3, 3, 3], [-3, -3, 3], [-3, 3, -3], [3, -3, -3]);
-            angleInfo = '109.5 degrees';
+            // Tetrahedral vertices
+            positions.push([1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]);
+            positions.forEach(p => { p[0] *= R / 1.73; p[1] *= R / 1.73; p[2] *= R / 1.73; });
+            angleInfo = '109.5'; example = 'e.g. CH₄, NH₄⁺';
         } else if (shape === 'bipyramidal') {
-            positions.push([4, 0, 0], [-2, 0, 3.5], [-2, 0, -3.5], [0, 4, 0], [0, -4, 0]);
-            angleInfo = '90 and 120 degrees';
+            for (let i = 0; i < 3; i++) {
+                const a = (i * 2 * Math.PI) / 3;
+                positions.push([R * Math.cos(a), 0, R * Math.sin(a)]);
+            }
+            positions.push([0, R, 0], [0, -R, 0]);
+            angleInfo = '90/120'; example = 'e.g. PCl₅';
         } else {
-            positions.push([4, 0, 0], [-4, 0, 0], [0, 4, 0], [0, -4, 0], [0, 0, 4], [0, 0, -4]);
-            angleInfo = '90 degrees';
+            positions.push([R, 0, 0], [-R, 0, 0], [0, R, 0], [0, -R, 0], [0, 0, R], [0, 0, -R]);
+            angleInfo = '90'; example = 'e.g. SF₆';
         }
+
         positions.forEach(pos => {
-            const atom = new THREE.Mesh(new THREE.SphereGeometry(0.3, 24, 24), new THREE.MeshStandardMaterial({ color: 0x22d3ee }));
+            const atom = new THREE.Mesh(new THREE.SphereGeometry(0.35, 24, 24), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.15 }));
             atom.position.set(pos[0], pos[1], pos[2]);
             atoms.push(atom);
-            scene.add(atom);
+            molGroup.add(atom);
+
+            // Bond line from center to atom
+            const bondGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(pos[0], pos[1], pos[2])]);
+            const bond = new THREE.Line(bondGeom, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
+            bonds.push(bond);
+            molGroup.add(bond);
         });
-        infoEl.textContent = `Bond angles: ${angleInfo}`;
+
+        angleEl.textContent = angleInfo;
+        countEl.textContent = positions.length;
+        infoEl.textContent = example;
     }
 
     shapeSelect.addEventListener('change', () => setShape(shapeSelect.value));
-    setShape('linear');
-    overlayEl.innerHTML += `<span class="sim-badge">Bond Angles</span>`;
+    setShape('tetra');
+
+    // Slow rotation
+    engine.setUpdate(() => { molGroup.rotation.y += 0.005; });
+    overlayEl.innerHTML += `<span class="sim-badge">🔗 Bond Angles</span>`;
 
     return () => {
-        atoms.forEach(atom => scene.remove(atom));
-        scene.remove(central);
+        atoms.forEach(a => molGroup.remove(a));
+        bonds.forEach(b => molGroup.remove(b));
+        molGroup.remove(central);
+        scene.remove(molGroup);
     };
 }
 
 function initHybridSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
-    const sOrbital = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), new THREE.MeshStandardMaterial({ color: 0x8b5cf6, opacity: 0.6, transparent: true }));
-    const pOrbital1 = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0x22d3ee, opacity: 0.6, transparent: true }));
-    const pOrbital2 = pOrbital1.clone();
-    scene.add(sOrbital, pOrbital1, pOrbital2);
+    const { scene, camera } = engine;
+    camera.position.set(0, 5, 12);
+    camera.lookAt(0, 2, 0);
+
+    const hybridGroup = new THREE.Group();
+    hybridGroup.position.y = 2;
+    scene.add(hybridGroup);
+
+    // Nucleus
+    const nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.3 }));
+    hybridGroup.add(nucleus);
+
+    const lobes = [];
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-wave-square"></i> Hybridization</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-wave-square"></i> 🎮 Hybridization</div>
             <select class="game-select" id="hybridType">
-                <option value="sp">sp</option>
-                <option value="sp2">sp2</option>
-                <option value="sp3">sp3</option>
+                <option value="sp">sp (linear, 180°)</option>
+                <option value="sp2">sp² (trigonal, 120°)</option>
+                <option value="sp3" selected>sp³ (tetrahedral, 109.5°)</option>
             </select>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card"><div class="sim-stat-label">Type</div><div class="sim-stat-value" id="hybType">sp³</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Angle</div><div class="sim-stat-value" id="hybAngle">109.5°</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Orbitals</div><div class="sim-stat-value" id="hybCount">4</div></div>
+            </div>
+            <div class="sim-status" id="hybInfo" style="margin-top:8px;"></div>
         </div>
     `;
+
     const hybridSelect = controlsContainer.querySelector('#hybridType');
+    const typeEl = controlsContainer.querySelector('#hybType');
+    const angleEl = controlsContainer.querySelector('#hybAngle');
+    const countEl = controlsContainer.querySelector('#hybCount');
+    const infoEl = controlsContainer.querySelector('#hybInfo');
+
+    const colors = [0x8b5cf6, 0x22d3ee, 0xf97316, 0x10b981];
+
+    function createLobe(dir, color) {
+        // Elongated lobe shape using scaled sphere
+        const geom = new THREE.SphereGeometry(1, 24, 24);
+        geom.scale(0.6, 0.6, 2.0);
+
+        const mat = new THREE.MeshPhysicalMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.5,
+            roughness: 0.4,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+
+        // Point lobe in direction
+        const up = new THREE.Vector3(0, 0, 1);
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize());
+        mesh.quaternion.copy(quaternion);
+
+        // Offset center along direction
+        mesh.position.copy(dir.clone().normalize().multiplyScalar(1.5));
+
+        return mesh;
+    }
 
     function setHybrid(type) {
+        lobes.forEach(l => hybridGroup.remove(l));
+        lobes.length = 0;
+
+        const directions = [];
+        let angle = '', count = '', info = '';
+
         if (type === 'sp') {
-            pOrbital1.position.set(2, 0, 0);
-            pOrbital2.position.set(-2, 0, 0);
+            directions.push(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0));
+            angle = '180°'; count = '2'; info = 'Linear: 1 s + 1 p → 2 sp orbitals. e.g. BeCl₂, C₂H₂';
         } else if (type === 'sp2') {
-            pOrbital1.position.set(2, 0, 0);
-            pOrbital2.position.set(-1, 0, 1.7);
+            for (let i = 0; i < 3; i++) {
+                const a = (i * 2 * Math.PI) / 3;
+                directions.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)));
+            }
+            angle = '120°'; count = '3'; info = 'Trigonal: 1 s + 2 p → 3 sp² orbitals. e.g. BF₃, C₂H₄';
         } else {
-            pOrbital1.position.set(2, 0, 0);
-            pOrbital2.position.set(-1, 1.7, 1.7);
+            // Tetrahedral
+            directions.push(
+                new THREE.Vector3(1, 1, 1).normalize(),
+                new THREE.Vector3(-1, -1, 1).normalize(),
+                new THREE.Vector3(-1, 1, -1).normalize(),
+                new THREE.Vector3(1, -1, -1).normalize()
+            );
+            angle = '109.5°'; count = '4'; info = 'Tetrahedral: 1 s + 3 p → 4 sp³ orbitals. e.g. CH₄, NH₃';
         }
+
+        directions.forEach((dir, i) => {
+            const lobe = createLobe(dir, colors[i % colors.length]);
+            lobes.push(lobe);
+            hybridGroup.add(lobe);
+
+            // Bond line
+            const bondGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), dir.clone().multiplyScalar(3)]);
+            const bond = new THREE.Line(bondGeom, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }));
+            lobes.push(bond);
+            hybridGroup.add(bond);
+        });
+
+        typeEl.textContent = type;
+        angleEl.textContent = angle;
+        countEl.textContent = count;
+        infoEl.textContent = info;
     }
 
     hybridSelect.addEventListener('change', () => setHybrid(hybridSelect.value));
-    setHybrid('sp');
-    overlayEl.innerHTML += `<span class="sim-badge">Hybrid Orbitals</span>`;
+    setHybrid('sp3');
+
+    engine.setUpdate(() => { hybridGroup.rotation.y += 0.005; });
+    overlayEl.innerHTML += `<span class="sim-badge">🧬 Hybrid Orbitals</span>`;
 
     return () => {
-        scene.remove(sOrbital, pOrbital1, pOrbital2);
+        lobes.forEach(l => hybridGroup.remove(l));
+        hybridGroup.remove(nucleus);
+        scene.remove(hybridGroup);
     };
 }
 
 function initCoordinateSim(engine, controlsContainer, overlayEl) {
     const { scene } = engine;
-    const pointA = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0x22d3ee }));
-    const pointB = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf97316 }));
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+    const pointA = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.2 }));
+    const pointB = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.2 }));
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
     const lineGeom = new THREE.BufferGeometry();
     const line = new THREE.Line(lineGeom, lineMaterial);
-    scene.add(pointA, pointB, line);
+    const sectionPoint = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.2 }));
+    scene.add(pointA, pointB, line, sectionPoint);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-ruler-combined"></i> Points</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-ruler-combined"></i> 🎮 3D Coordinates</div>
+            <div class="game-section-title" style="font-size:0.85rem"><span style="color:#22d3ee">●</span> Point A</div>
+            <div class="sim-control-row"><label>X</label><input class="sim-slider" id="ax" type="range" min="-8" max="8" value="0" step="0.5"><span class="sim-slider-val" id="axVal">0</span></div>
+            <div class="sim-control-row"><label>Y</label><input class="sim-slider" id="ay" type="range" min="-8" max="8" value="0" step="0.5"><span class="sim-slider-val" id="ayVal">0</span></div>
+            <div class="sim-control-row"><label>Z</label><input class="sim-slider" id="az" type="range" min="-8" max="8" value="0" step="0.5"><span class="sim-slider-val" id="azVal">0</span></div>
+            <div class="game-section-title" style="font-size:0.85rem"><span style="color:#f97316">●</span> Point B</div>
+            <div class="sim-control-row"><label>X</label><input class="sim-slider" id="bx" type="range" min="-8" max="8" value="5" step="0.5"><span class="sim-slider-val" id="bxVal">5</span></div>
+            <div class="sim-control-row"><label>Y</label><input class="sim-slider" id="by" type="range" min="-8" max="8" value="3" step="0.5"><span class="sim-slider-val" id="byVal">3</span></div>
+            <div class="sim-control-row"><label>Z</label><input class="sim-slider" id="bz" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="bzVal">2</span></div>
+            <div class="game-section-title" style="font-size:0.85rem"><span style="color:#10b981">●</span> Section Ratio m:n</div>
             <div class="game-inline">
-                <input class="game-input" id="ax" value="0">
-                <input class="game-input" id="ay" value="0">
-                <input class="game-input" id="az" value="0">
+                <input class="game-input" id="ratioM" value="1" style="width:50%">
+                <input class="game-input" id="ratioN" value="1" style="width:50%">
             </div>
-            <div class="game-inline">
-                <input class="game-input" id="bx" value="5">
-                <input class="game-input" id="by" value="3">
-                <input class="game-input" id="bz" value="2">
+            <div class="sim-stats-grid" style="margin-top:8px;">
+                <div class="sim-stat-card"><div class="sim-stat-label">Distance</div><div class="sim-stat-value" id="distVal">--</div></div>
             </div>
-            <div class="game-section-title"><i class="fas fa-chart-line"></i> Section Ratio</div>
-            <div class="game-inline">
-                <input class="game-input" id="ratioM" value="1">
-                <input class="game-input" id="ratioN" value="1">
-            </div>
-            <div class="sim-status" id="coordInfo"></div>
+            <div class="sim-status" id="coordInfo" style="margin-top:4px;"></div>
         </div>
     `;
 
     const inputs = controlsContainer.querySelectorAll('input');
     const infoEl = controlsContainer.querySelector('#coordInfo');
-    const sectionPoint = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({ color: 0x10b981 }));
-    scene.add(sectionPoint);
 
-    function update() {
+    function updateCoords() {
         const ax = parseFloat(controlsContainer.querySelector('#ax').value);
         const ay = parseFloat(controlsContainer.querySelector('#ay').value);
         const az = parseFloat(controlsContainer.querySelector('#az').value);
@@ -1936,6 +2171,13 @@ function initCoordinateSim(engine, controlsContainer, overlayEl) {
         const bz = parseFloat(controlsContainer.querySelector('#bz').value);
         const m = parseFloat(controlsContainer.querySelector('#ratioM').value) || 1;
         const n = parseFloat(controlsContainer.querySelector('#ratioN').value) || 1;
+
+        controlsContainer.querySelector('#axVal').textContent = ax;
+        controlsContainer.querySelector('#ayVal').textContent = ay;
+        controlsContainer.querySelector('#azVal').textContent = az;
+        controlsContainer.querySelector('#bxVal').textContent = bx;
+        controlsContainer.querySelector('#byVal').textContent = by;
+        controlsContainer.querySelector('#bzVal').textContent = bz;
 
         pointA.position.set(ax, ay, az);
         pointB.position.set(bx, by, bz);
@@ -1947,12 +2189,13 @@ function initCoordinateSim(engine, controlsContainer, overlayEl) {
         sectionPoint.position.set(sx, sy, sz);
 
         const distance = pointA.position.distanceTo(pointB.position).toFixed(2);
-        infoEl.textContent = `Distance AB: ${distance}, Section Point: (${sx.toFixed(2)}, ${sy.toFixed(2)}, ${sz.toFixed(2)})`;
+        controlsContainer.querySelector('#distVal').textContent = distance;
+        infoEl.innerHTML = `Section: <strong style="color:#10b981">(${sx.toFixed(1)}, ${sy.toFixed(1)}, ${sz.toFixed(1)})</strong>`;
     }
 
-    inputs.forEach(input => input.addEventListener('input', update));
-    update();
-    overlayEl.innerHTML += `<span class="sim-badge">Section Formula</span>`;
+    inputs.forEach(input => input.addEventListener('input', updateCoords));
+    updateCoords();
+    overlayEl.innerHTML += `<span class="sim-badge">📐 Section Formula</span>`;
 
     return () => {
         scene.remove(pointA, pointB, line, sectionPoint);
@@ -1961,31 +2204,33 @@ function initCoordinateSim(engine, controlsContainer, overlayEl) {
 
 function initPlaneLineSim(engine, controlsContainer, overlayEl) {
     const { scene } = engine;
-    const planeMat = new THREE.MeshStandardMaterial({ color: 0x22d3ee, opacity: 0.3, transparent: true, side: THREE.DoubleSide });
-    const planeGeom = new THREE.PlaneGeometry(12, 12);
+    const planeMat = new THREE.MeshStandardMaterial({ color: 0x22d3ee, opacity: 0.25, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+    const planeGeom = new THREE.PlaneGeometry(14, 14);
     const planeMesh = new THREE.Mesh(planeGeom, planeMat);
     scene.add(planeMesh);
 
-    const lineMat = new THREE.LineBasicMaterial({ color: 0xf59e0b });
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 2 });
     const lineGeom = new THREE.BufferGeometry();
     const line = new THREE.Line(lineGeom, lineMat);
     scene.add(line);
 
+    // Intersection point marker
+    const intPoint = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 }));
+    intPoint.visible = false;
+    scene.add(intPoint);
+
     controlsContainer.innerHTML = `
-        <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-sliders-h"></i> Plane</div>
-            <label>Plane Normal Theta</label>
-            <input class="game-input" id="planeTheta" type="range" min="0" max="180" value="45">
-            <label>Plane Normal Phi</label>
-            <input class="game-input" id="planePhi" type="range" min="0" max="180" value="45">
-            <label>Plane Offset</label>
-            <input class="game-input" id="planeOffset" type="range" min="-3" max="3" value="0" step="0.2">
-            <div class="game-section-title"><i class="fas fa-grip-lines"></i> Line</div>
-            <label>Line Direction Theta</label>
-            <input class="game-input" id="lineTheta" type="range" min="0" max="180" value="60">
-            <label>Line Direction Phi</label>
-            <input class="game-input" id="linePhi" type="range" min="0" max="180" value="60">
-            <div class="sim-status" id="planeInfo"></div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-sliders-h"></i> 🎮 Plane & Line</div>
+            <div class="sim-control-row"><label>Plane θ</label><input class="sim-slider" id="planeTheta" type="range" min="0" max="180" value="45"><span class="sim-slider-val" id="pThetaVal">45°</span></div>
+            <div class="sim-control-row"><label>Plane φ</label><input class="sim-slider" id="planePhi" type="range" min="0" max="180" value="45"><span class="sim-slider-val" id="pPhiVal">45°</span></div>
+            <div class="sim-control-row"><label>Offset</label><input class="sim-slider" id="planeOffset" type="range" min="-3" max="3" value="0" step="0.2"><span class="sim-slider-val" id="pOffVal">0</span></div>
+            <div class="game-section-title" style="margin-top:8px"><i class="fas fa-grip-lines"></i> Line</div>
+            <div class="sim-control-row"><label>Line θ</label><input class="sim-slider" id="lineTheta" type="range" min="0" max="180" value="60"><span class="sim-slider-val" id="lThetaVal">60°</span></div>
+            <div class="sim-control-row"><label>Line φ</label><input class="sim-slider" id="linePhi" type="range" min="0" max="180" value="60"><span class="sim-slider-val" id="lPhiVal">60°</span></div>
+            <div class="sim-stats-grid" style="margin-top:8px;">
+                <div class="sim-stat-card"><div class="sim-stat-label">Status</div><div class="sim-stat-value" id="planeInfo" style="font-size:0.75rem">--</div></div>
+            </div>
         </div>
     `;
 
@@ -1996,40 +2241,46 @@ function initPlaneLineSim(engine, controlsContainer, overlayEl) {
         const theta = THREE.MathUtils.degToRad(parseFloat(controlsContainer.querySelector('#planeTheta').value));
         const phi = THREE.MathUtils.degToRad(parseFloat(controlsContainer.querySelector('#planePhi').value));
         const offset = parseFloat(controlsContainer.querySelector('#planeOffset').value);
-        const normal = new THREE.Vector3(
-            Math.sin(phi) * Math.cos(theta),
-            Math.cos(phi),
-            Math.sin(phi) * Math.sin(theta)
-        );
+
+        controlsContainer.querySelector('#pThetaVal').textContent = controlsContainer.querySelector('#planeTheta').value + '°';
+        controlsContainer.querySelector('#pPhiVal').textContent = controlsContainer.querySelector('#planePhi').value + '°';
+        controlsContainer.querySelector('#pOffVal').textContent = offset;
+        controlsContainer.querySelector('#lThetaVal').textContent = controlsContainer.querySelector('#lineTheta').value + '°';
+        controlsContainer.querySelector('#lPhiVal').textContent = controlsContainer.querySelector('#linePhi').value + '°';
+
+        const normal = new THREE.Vector3(Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta));
         planeMesh.position.copy(normal.clone().multiplyScalar(offset));
-        planeMesh.lookAt(normal);
+        planeMesh.lookAt(planeMesh.position.clone().add(normal));
 
         const lTheta = THREE.MathUtils.degToRad(parseFloat(controlsContainer.querySelector('#lineTheta').value));
         const lPhi = THREE.MathUtils.degToRad(parseFloat(controlsContainer.querySelector('#linePhi').value));
-        const lineDir = new THREE.Vector3(
-            Math.sin(lPhi) * Math.cos(lTheta),
-            Math.cos(lPhi),
-            Math.sin(lPhi) * Math.sin(lTheta)
-        ).normalize();
-
-        const p0 = new THREE.Vector3(-6, 0, -6);
-        const p1 = p0.clone().add(lineDir.clone().multiplyScalar(12));
+        const lineDir = new THREE.Vector3(Math.sin(lPhi) * Math.cos(lTheta), Math.cos(lPhi), Math.sin(lPhi) * Math.sin(lTheta)).normalize();
+        const p0 = lineDir.clone().multiplyScalar(-8);
+        const p1 = lineDir.clone().multiplyScalar(8);
         lineGeom.setFromPoints([p0, p1]);
 
         const denom = normal.dot(lineDir);
         if (Math.abs(denom) < 0.01) {
-            infoEl.textContent = 'Line is parallel to the plane.';
+            infoEl.textContent = 'Parallel';
+            infoEl.style.color = '#f59e0b';
+            intPoint.visible = false;
         } else {
-            infoEl.textContent = 'Line intersects the plane.';
+            // Calculate intersection
+            const t = (offset - normal.dot(p0)) / normal.dot(lineDir);
+            const ip = p0.clone().add(lineDir.clone().multiplyScalar(t));
+            intPoint.position.copy(ip);
+            intPoint.visible = true;
+            infoEl.textContent = 'Intersects';
+            infoEl.style.color = '#10b981';
         }
     }
 
     inputs.forEach(input => input.addEventListener('input', update));
     update();
-    overlayEl.innerHTML += `<span class="sim-badge">Intersection Check</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🔴 Intersection</span>`;
 
     return () => {
-        scene.remove(planeMesh, line);
+        scene.remove(planeMesh, line, intPoint);
     };
 }
 

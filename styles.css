@@ -11405,6 +11405,194 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+/* ========== Gamified Simulator Controls ========== */
+.sim-controls-panel {
+    background: linear-gradient(145deg, rgba(15, 20, 40, 0.95), rgba(20, 10, 50, 0.9)) !important;
+    border: 1px solid rgba(139, 92, 246, 0.35) !important;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.sim-controls-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #8b5cf6, #22d3ee, #f59e0b, #8b5cf6);
+    background-size: 200% 100%;
+    animation: shimmer-bar 3s linear infinite;
+}
+
+@keyframes shimmer-bar {
+    0% { background-position: 0% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.sim-control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.sim-control-row label {
+    min-width: 80px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    letter-spacing: 0.3px;
+}
+
+.sim-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.3), rgba(34, 211, 238, 0.3));
+    outline: none;
+    cursor: pointer;
+}
+
+.sim-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.sim-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 14px rgba(139, 92, 246, 0.7);
+}
+
+.sim-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+    cursor: grab;
+}
+
+.sim-slider-val {
+    min-width: 52px;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #22d3ee;
+    font-family: 'Courier New', monospace;
+    background: rgba(34, 211, 238, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(34, 211, 238, 0.15);
+}
+
+.sim-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.sim-stat-card {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(34, 211, 238, 0.05));
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sim-stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+    animation: card-shine 4s ease-in-out infinite;
+}
+
+@keyframes card-shine {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
+}
+
+.sim-stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+
+.sim-stat-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #f1f5f9;
+    font-family: 'Courier New', monospace;
+}
+
+.sim-stat-unit {
+    font-size: 0.65rem;
+    color: #64748b;
+}
+
+.sim-action-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid rgba(139, 92, 246, 0.4) !important;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(34, 211, 238, 0.1)) !important;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+    transition: all 0.2s;
+}
+
+.sim-action-btn:hover {
+    box-shadow: 0 0 22px rgba(139, 92, 246, 0.3);
+    transform: translateY(-1px);
+}
+
+.game-canvas-panel {
+    border: 1px solid rgba(139, 92, 246, 0.25) !important;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.08), inset 0 0 60px rgba(0, 0, 0, 0.3);
+}
+
+.sim-badge {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(34, 211, 238, 0.25));
+    border: 1px solid rgba(139, 92, 246, 0.5);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.3), 0 0 6px rgba(34, 211, 238, 0.15);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    animation: badge-pulse 3s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 2px 12px rgba(139, 92, 246, 0.3), 0 0 6px rgba(34, 211, 238, 0.15); }
+    50% { box-shadow: 0 2px 18px rgba(139, 92, 246, 0.5), 0 0 12px rgba(34, 211, 238, 0.25); }
+}
+
 @media (max-width: 1024px) {
     .games-hero {
         grid-template-columns: 1fr;
