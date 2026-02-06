@@ -196,23 +196,51 @@ function cleanupGamePlay() {
     GAME_STATE.currentGame = null;
 }
 
-async function callOpenRouter(prompt, temperature = 0.6, maxTokens = 1000) {
+async function callOpenRouter(prompt, temperature = 0.6, maxTokens = 2000) {
+    console.log('🎮 Games AI request:', prompt.substring(0, 100) + '...');
+    
     const response = await fetch('/api/openrouter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             model: 'z-ai/glm-4.5-air:free',
             messages: [{ role: 'user', content: prompt }],
-            temperature,
-            max_tokens: maxTokens
+            temperature
         })
     });
 
     if (!response.ok) {
+        console.error('❌ AI request failed:', response.status);
         throw new Error('AI request failed');
     }
+    
     const data = await response.json();
-    return data.choices[0].message.content.trim();
+    console.log('📡 Games AI response:', data);
+    
+    // GLM-4.5-air puts response in reasoning field, not content field
+    const messageData = data.choices?.[0]?.message;
+    let aiResponse = '';
+    
+    // Try content field first
+    if (messageData?.content && messageData.content.trim()) {
+        aiResponse = messageData.content.trim();
+        console.log('📝 Using content field');
+    }
+    // Fallback to reasoning field (GLM-4.5-air)
+    else if (messageData?.reasoning) {
+        aiResponse = messageData.reasoning.trim();
+        console.log('📝 Using reasoning field');
+        
+        // Try to extract JSON from reasoning
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/g);
+        if (jsonMatch) {
+            aiResponse = jsonMatch[jsonMatch.length - 1]; // Get last JSON object
+            console.log('📝 Extracted JSON from reasoning');
+        }
+    }
+    
+    console.log('🤖 Final AI response:', aiResponse.substring(0, 200) + '...');
+    return aiResponse;
 }
 
 function safeJsonParse(text) {
@@ -1037,36 +1065,108 @@ function renderSimulators(container) {
 }
 
 function createSimEngine(container) {
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    // Ensure container has proper dimensions
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 520;
+    
+    console.log('🎨 Creating sim engine with dimensions:', width, 'x', height);
+    
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
-    renderer.setClearColor(0x070b1a, 1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x0a0a1a, 1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // Ensure canvas is visible
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x070b1a, 15, 80);
+    scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
+    
+    // Add beautiful gradient background
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = 512;
+    bgCanvas.height = 512;
+    const bgCtx = bgCanvas.getContext('2d');
+    const gradient = bgCtx.createRadialGradient(256, 256, 0, 256, 256, 400);
+    gradient.addColorStop(0, '#1a1a2e');
+    gradient.addColorStop(0.5, '#16213e');
+    gradient.addColorStop(1, '#0a0a1a');
+    bgCtx.fillStyle = gradient;
+    bgCtx.fillRect(0, 0, 512, 512);
+    const bgTexture = new THREE.CanvasTexture(bgCanvas);
+    scene.background = bgTexture;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
-    camera.position.set(12, 12, 18);
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 500);
+    camera.position.set(10, 8, 15);
+    camera.lookAt(0, 0, 0);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
+    controls.minDistance = 5;
+    controls.maxDistance = 60;
+    controls.maxPolarAngle = Math.PI * 0.85;
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x2c2c44, 0.6);
+    // Enhanced lighting for realistic look
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
+    
+    const hemi = new THREE.HemisphereLight(0x88ccff, 0x444422, 0.5);
     scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(10, 20, 10);
+    
+    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+    dir.position.set(15, 25, 15);
+    dir.castShadow = true;
+    dir.shadow.mapSize.width = 2048;
+    dir.shadow.mapSize.height = 2048;
+    dir.shadow.camera.near = 0.5;
+    dir.shadow.camera.far = 100;
+    dir.shadow.camera.left = -30;
+    dir.shadow.camera.right = 30;
+    dir.shadow.camera.top = 30;
+    dir.shadow.camera.bottom = -30;
     scene.add(dir);
-    const point = new THREE.PointLight(0x8b5cf6, 0.6);
-    point.position.set(-10, 10, 10);
-    scene.add(point);
+    
+    const point1 = new THREE.PointLight(0x8b5cf6, 0.8, 50);
+    point1.position.set(-10, 10, 10);
+    scene.add(point1);
+    
+    const point2 = new THREE.PointLight(0x22d3ee, 0.6, 50);
+    point2.position.set(10, 5, -10);
+    scene.add(point2);
 
-    const grid = new THREE.GridHelper(40, 40, 0x334155, 0x1f2937);
-    grid.position.y = -0.01;
+    // Create a beautiful floor/ground
+    const floorGeometry = new THREE.PlaneGeometry(80, 80);
+    const floorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a2e,
+        roughness: 0.8,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.9
+    });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.02;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Grid with better styling
+    const grid = new THREE.GridHelper(40, 40, 0x4a5568, 0x2d3748);
+    grid.position.y = 0;
+    grid.material.opacity = 0.4;
+    grid.material.transparent = true;
     scene.add(grid);
+    
+    // Add subtle axis lines
+    const axisHelper = new THREE.AxesHelper(5);
+    axisHelper.position.y = 0.01;
+    scene.add(axisHelper);
 
     let updateFn = null;
     let frameId = null;
@@ -1078,15 +1178,20 @@ function createSimEngine(container) {
         renderer.render(scene, camera);
     }
     animate();
+    
+    console.log('✅ Sim engine started, rendering...');
 
     function onResize() {
-        const w = container.clientWidth;
-        const h = container.clientHeight;
+        const w = container.clientWidth || 800;
+        const h = container.clientHeight || 520;
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
     }
     window.addEventListener('resize', onResize);
+    
+    // Trigger initial resize after a short delay
+    setTimeout(onResize, 100);
 
     return {
         scene,
@@ -1104,38 +1209,106 @@ function createSimEngine(container) {
 
 function initProjectileSim(engine, controlsContainer, overlayEl) {
     const { scene } = engine;
-    const projectile = new THREE.Mesh(
-        new THREE.SphereGeometry(0.35, 32, 32),
-        new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0x2b1900 })
+    
+    // Create launcher platform
+    const launcherBase = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, 0.3, 1.5),
+        new THREE.MeshStandardMaterial({ color: 0x4a5568, metalness: 0.5, roughness: 0.5 })
     );
+    launcherBase.position.set(-0.5, 0.15, 0);
+    launcherBase.castShadow = true;
+    scene.add(launcherBase);
+    
+    // Projectile with glow effect
+    const projectileGeom = new THREE.SphereGeometry(0.4, 32, 32);
+    const projectileMat = new THREE.MeshStandardMaterial({ 
+        color: 0xf59e0b, 
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.3,
+        metalness: 0.8,
+        roughness: 0.2
+    });
+    const projectile = new THREE.Mesh(projectileGeom, projectileMat);
+    projectile.castShadow = true;
     scene.add(projectile);
+    
+    // Trail particles
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailPositions = new Float32Array(300 * 3);
+    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    const trailMaterial = new THREE.PointsMaterial({ 
+        color: 0xf59e0b, 
+        size: 0.15,
+        transparent: true,
+        opacity: 0.6
+    });
+    const trailParticles = new THREE.Points(trailGeometry, trailMaterial);
+    scene.add(trailParticles);
 
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+    // Trajectory line with gradient
+    const lineMaterial = new THREE.LineBasicMaterial({ 
+        color: 0x38bdf8, 
+        linewidth: 2,
+        transparent: true,
+        opacity: 0.8
+    });
     const lineGeometry = new THREE.BufferGeometry();
     const trajectoryLine = new THREE.Line(lineGeometry, lineMaterial);
     scene.add(trajectoryLine);
 
-    const velocityArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 1, 0).normalize(), new THREE.Vector3(), 2, 0x22d3ee);
+    // Velocity vector arrow
+    const velocityArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 1, 0).normalize(), 
+        new THREE.Vector3(), 
+        3, 
+        0x22d3ee, 
+        0.5, 
+        0.3
+    );
     scene.add(velocityArrow);
 
+    // Range marker with animation
     const rangeMarker = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.2, 0.2, 0.5, 16),
-        new THREE.MeshStandardMaterial({ color: 0xec4899 })
+        new THREE.TorusGeometry(0.5, 0.1, 16, 32),
+        new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xec4899, emissiveIntensity: 0.3 })
     );
-    rangeMarker.position.y = 0.25;
+    rangeMarker.rotation.x = Math.PI / 2;
+    rangeMarker.position.y = 0.1;
     scene.add(rangeMarker);
+    
+    // Height indicator
+    const heightLine = new THREE.Line(
+        new THREE.BufferGeometry(),
+        new THREE.LineDashedMaterial({ color: 0x10b981, dashSize: 0.3, gapSize: 0.15 })
+    );
+    scene.add(heightLine);
+    
+    // Info display
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'sim-info-overlay';
+    infoDiv.innerHTML = '<div class="sim-info-box"></div>';
+    overlayEl.appendChild(infoDiv);
+    const infoBox = infoDiv.querySelector('.sim-info-box');
 
     controlsContainer.innerHTML = `
         <div class="game-panel">
-            <div class="game-section-title"><i class="fas fa-bullseye"></i> Controls</div>
-            <label>Angle (deg)</label>
-            <input class="game-input" id="projAngle" type="range" min="15" max="75" value="45">
-            <label>Velocity (m/s)</label>
+            <div class="game-section-title"><i class="fas fa-rocket"></i> Projectile Controls</div>
+            <label>Launch Angle: <span id="angleVal">45</span>°</label>
+            <input class="game-input" id="projAngle" type="range" min="10" max="80" value="45">
+            <label>Initial Velocity: <span id="velVal">25</span> m/s</label>
             <input class="game-input" id="projVelocity" type="range" min="5" max="50" value="25">
-            <label>Gravity (m/s^2)</label>
-            <input class="game-input" id="projGravity" type="range" min="2" max="20" value="9.8" step="0.1">
-            <label>Height (m)</label>
+            <label>Gravity: <span id="gravVal">9.8</span> m/s²</label>
+            <input class="game-input" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
+            <label>Initial Height: <span id="heightVal">2</span> m</label>
             <input class="game-input" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
+            <div class="sim-stats glass-premium" style="margin-top: 15px; padding: 12px; border-radius: 8px;">
+                <div><strong>Range:</strong> <span id="rangeVal">--</span> m</div>
+                <div><strong>Max Height:</strong> <span id="maxHVal">--</span> m</div>
+                <div><strong>Flight Time:</strong> <span id="flightVal">--</span> s</div>
+            </div>
+            <button class="btn-primary" id="resetProjBtn" style="margin-top: 10px; width: 100%;">
+                <i class="fas fa-redo"></i> Reset Animation
+            </button>
         </div>
     `;
 
@@ -1143,9 +1316,19 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     const velocityInput = controlsContainer.querySelector('#projVelocity');
     const gravityInput = controlsContainer.querySelector('#projGravity');
     const heightInput = controlsContainer.querySelector('#projHeight');
+    const resetBtn = controlsContainer.querySelector('#resetProjBtn');
 
     let time = 0;
     let flightTime = 1;
+    let trailIndex = 0;
+    let maxTrailPoints = 100;
+
+    function updateLabels() {
+        controlsContainer.querySelector('#angleVal').textContent = angleInput.value;
+        controlsContainer.querySelector('#velVal').textContent = velocityInput.value;
+        controlsContainer.querySelector('#gravVal').textContent = gravityInput.value;
+        controlsContainer.querySelector('#heightVal').textContent = heightInput.value;
+    }
 
     function recompute() {
         const angle = THREE.MathUtils.degToRad(parseFloat(angleInput.value));
@@ -1156,8 +1339,17 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
         const vy = v * Math.sin(angle);
         const vx = v * Math.cos(angle);
         flightTime = (vy + Math.sqrt(vy * vy + 2 * g * h)) / g;
+        const range = vx * flightTime;
+        const maxHeight = h + (vy * vy) / (2 * g);
+        
+        // Update stats
+        controlsContainer.querySelector('#rangeVal').textContent = range.toFixed(2);
+        controlsContainer.querySelector('#maxHVal').textContent = maxHeight.toFixed(2);
+        controlsContainer.querySelector('#flightVal').textContent = flightTime.toFixed(2);
+        
+        // Generate trajectory points
         const points = [];
-        const steps = 80;
+        const steps = 100;
         for (let i = 0; i <= steps; i += 1) {
             const t = (i / steps) * flightTime;
             const x = vx * t;
@@ -1186,18 +1378,21 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
         projectile.position.set(x, Math.max(y, 0), 0);
     }
 
-    angleInput.addEventListener('input', recompute);
-    velocityInput.addEventListener('input', recompute);
-    gravityInput.addEventListener('input', recompute);
-    heightInput.addEventListener('input', recompute);
+    angleInput.addEventListener('input', () => { updateLabels(); recompute(); });
+    velocityInput.addEventListener('input', () => { updateLabels(); recompute(); });
+    gravityInput.addEventListener('input', () => { updateLabels(); recompute(); });
+    heightInput.addEventListener('input', () => { updateLabels(); recompute(); });
+    resetBtn.addEventListener('click', () => { time = 0; trailIndex = 0; });
 
+    updateLabels();
     recompute();
     engine.setUpdate(update);
 
-    overlayEl.innerHTML += `<span class="sim-badge">Trajectory</span><span class="sim-badge">Velocity Vector</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">Trajectory</span><span class="sim-badge">Velocity Vector</span><span class="sim-badge">Real-time Physics</span>`;
 
     return () => {
-        scene.remove(projectile, trajectoryLine, velocityArrow, rangeMarker);
+        scene.remove(projectile, trajectoryLine, velocityArrow, rangeMarker, launcherBase, trailParticles, heightLine);
+        if (infoDiv.parentNode) infoDiv.parentNode.removeChild(infoDiv);
     };
 }
 
