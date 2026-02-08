@@ -1,68 +1,152 @@
 // =================================================================
-// EDUVERSE AUTHENTICATION WITH INSFORGE
+// EDUVERSE AUTHENTICATION WITH INSFORGE REST API
 // =================================================================
 
-import insforge from './insforge-client.js';
+const BASE_URL = 'https://aw63n46k.us-west.insforge.app';
 
 // =================================================================
-// OAUTH AUTHENTICATION
+// OAUTH AUTHENTICATION WITH PKCE
 // =================================================================
+
+// Helper for SHA256 hashing (for PKCE)
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    return hashBuffer;
+}
+
+// Base64 URL encode
+function base64URLEncode(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+}
+
+// Generate random code verifier for PKCE
+function generateCodeVerifier() {
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return base64URLEncode(array);
+}
 
 export async function signInWithGoogle() {
     try {
-        // Get current page origin for redirect
-        const redirectUrl = `${window.location.origin}/landing.html`;
+        // Generate PKCE parameters
+        const codeVerifier = generateCodeVerifier();
+        const codeChallenge = base64URLEncode(await sha256(codeVerifier));
         
-        // Wait for insforge to be initialized
-        await waitForInsforge();
+        // Store code verifier for later exchange
+        sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+        sessionStorage.setItem('oauth_provider', 'google');
         
-        await insforge.auth.signInWithOAuth({
-            provider: 'google',
-            redirectTo: redirectUrl
-        });
+        // Get OAuth URL
+        const redirectUri = `${window.location.origin}/landing.html`;
+        const response = await fetch(
+            `${BASE_URL}/api/auth/oauth/google?redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${codeChallenge}`
+        );
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to initiate OAuth');
+        }
+        
+        const { authUrl } = await response.json();
+        window.location.href = authUrl;
     } catch (error) {
         console.error('Google sign-in error:', error);
-        showError('Failed to sign in with Google. Please try again.');
+        showError('Failed to sign in with Google: ' + error.message);
     }
 }
 
 export async function signInWithGithub() {
     try {
-        // Get current page origin for redirect
-        const redirectUrl = `${window.location.origin}/landing.html`;
+        // Generate PKCE parameters
+        const codeVerifier = generateCodeVerifier();
+        const codeChallenge = base64URLEncode(await sha256(codeVerifier));
         
-        // Wait for insforge to be initialized
-        await waitForInsforge();
+        // Store code verifier for later exchange
+        sessionStorage.setItem('oauth_code_verifier', codeVerifier);
+        sessionStorage.setItem('oauth_provider', 'github');
         
-        await insforge.auth.signInWithOAuth({
-            provider: 'github',
-            redirectTo: redirectUrl
-        });
+        // Get OAuth URL
+        const redirectUri = `${window.location.origin}/landing.html`;
+        const response = await fetch(
+            `${BASE_URL}/api/auth/oauth/github?redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${codeChallenge}`
+        );
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to initiate OAuth');
+        }
+        
+        const { authUrl } = await response.json();
+        window.location.href = authUrl;
     } catch (error) {
         console.error('GitHub sign-in error:', error);
-        showError('Failed to sign in with GitHub. Please try again.');
+        showError('Failed to sign in with GitHub: ' + error.message);
     }
 }
 
-// Helper to wait for insforge client to be ready
-function waitForInsforge() {
-    return new Promise((resolve) => {
-        if (window.insforge) {
-            resolve();
-        } else {
-            const checkInterval = setInterval(() => {
-                if (window.insforge) {
-                    clearInterval(checkInterval);
-                    resolve();
-                }
-            }, 100);
-            // Timeout after 5 seconds
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                resolve();
-            }, 5000);
+// Handle OAuth callback
+export async function handleOAuthCallback() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const insforgeCode = urlParams.get('insforge_code');
+    
+    if (!insforgeCode) return null;
+    
+    try {
+        const codeVerifier = sessionStorage.getItem('oauth_code_verifier');
+        if (!codeVerifier) {
+            throw new Error('OAuth state not found');
         }
-    });
+        
+        // Exchange code for tokens
+        const response = await fetch(`${BASE_URL}/api/auth/oauth/exchange`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                code: insforgeCode,
+                code_verifier: codeVerifier
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to exchange OAuth code');
+        }
+        
+        const { user, accessToken, csrfToken } = await response.json();
+        
+        // Store tokens
+        localStorage.setItem('access_token', accessToken);
+        if (csrfToken) {
+            localStorage.setItem('csrf_token', csrfToken);
+        }
+        
+        // Clear OAuth state
+        sessionStorage.removeItem('oauth_code_verifier');
+        sessionStorage.removeItem('oauth_provider');
+        
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Check and setup profile
+        await checkAndSetupProfile(user);
+        
+        return user;
+    } catch (error) {
+        console.error('OAuth callback error:', error);
+        showError('Failed to complete sign-in: ' + error.message);
+        sessionStorage.removeItem('oauth_code_verifier');
+        sessionStorage.removeItem('oauth_provider');
+        return null;
+    }
 }
 
 // =================================================================
@@ -71,28 +155,37 @@ function waitForInsforge() {
 
 export async function handleEmailSignup(email, password) {
     try {
-        // Wait for insforge to be initialized
-        await waitForInsforge();
-        
-        const { data, error } = await insforge.auth.signUp({
-            email: email,
-            password: password
+        const response = await fetch(`${BASE_URL}/api/auth/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
 
-        if (error) {
+        if (!response.ok) {
+            const error = await response.json();
             showError(error.message || 'Signup failed. Please try again.');
             return false;
         }
 
-        if (data?.requireEmailVerification) {
-            showSuccess('Verification email sent! Please check your inbox.');
-            // In production, redirect to email verification page
+        const { user, accessToken, requireEmailVerification } = await response.json();
+
+        if (requireEmailVerification) {
+            showSuccess('Verification email sent! Please check your inbox and verify your email before logging in.');
+            // Close signup modal, show login modal
+            closeModals();
+            setTimeout(() => {
+                if (typeof showLogin === 'function') showLogin();
+            }, 2000);
             return false;
         }
 
-        if (data?.accessToken) {
-            // User signed up successfully
-            await checkAndSetupProfile(data.user);
+        if (accessToken) {
+            // Store token
+            localStorage.setItem('access_token', accessToken);
+            
+            // User signed up successfully without email verification
+            showSuccess('Account created successfully!');
+            await checkAndSetupProfile(user);
             return true;
         }
 
@@ -106,22 +199,29 @@ export async function handleEmailSignup(email, password) {
 
 export async function handleEmailLogin(email, password) {
     try {
-        // Wait for insforge to be initialized
-        await waitForInsforge();
-        
-        const { data, error } = await insforge.auth.signInWithPassword({
-            email: email,
-            password: password
+        const response = await fetch(`${BASE_URL}/api/auth/sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
 
-        if (error) {
+        if (!response.ok) {
+            const error = await response.json();
             showError(error.message || 'Invalid email or password.');
             return false;
         }
 
-        if (data?.accessToken) {
+        const { user, accessToken, csrfToken } = await response.json();
+
+        if (accessToken) {
+            // Store tokens
+            localStorage.setItem('access_token', accessToken);
+            if (csrfToken) {
+                localStorage.setItem('csrf_token', csrfToken);
+            }
+            
             showSuccess('Welcome back!');
-            await checkAndSetupProfile(data.user);
+            await checkAndSetupProfile(user);
             return true;
         }
 
@@ -139,18 +239,31 @@ export async function handleEmailLogin(email, password) {
 
 async function checkAndSetupProfile(user) {
     try {
+        const accessToken = localStorage.getItem('access_token');
+        
         // Check if user already has a profile
-        const result = await insforge.db
-            .from('user_profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .execute();
+        const response = await fetch(
+            `${BASE_URL}/rest/v1/user_profiles?user_id=eq.${user.id}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
 
-        if (result.error) {
-            console.error('Error checking profile:', result.error);
+        if (!response.ok) {
+            console.error('Error checking profile:', await response.text());
+            // On error, still redirect to dashboard
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+            return;
         }
 
-        if (!result.data || result.data.length === 0) {
+        const profiles = await response.json();
+
+        if (!profiles || profiles.length === 0) {
             // First time user - show profile setup modal
             showProfileSetupModal(user);
         } else {
@@ -170,17 +283,28 @@ async function checkAndSetupProfile(user) {
 
 export async function createUserProfile(userId, displayName, handle) {
     try {
-        const { data, error } = await insforge.db
-            .from('user_profiles')
-            .insert([{
+        const accessToken = localStorage.getItem('access_token');
+        
+        const response = await fetch(`${BASE_URL}/rest/v1/user_profiles`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
                 user_id: userId,
                 display_name: displayName,
-                handle: handle.toLowerCase()
-            }]);
+                handle: handle.toLowerCase(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+        });
 
-        if (error) {
+        if (!response.ok) {
+            const errorText = await response.text();
             // Check if handle already exists
-            if (error.message && error.message.includes('unique')) {
+            if (errorText.includes('unique') || errorText.includes('duplicate')) {
                 showError('This handle is already taken. Please choose another.');
                 return false;
             }
@@ -217,13 +341,21 @@ function showProfileSetupModal(user) {
 
 export async function getCurrentUser() {
     try {
-        const { data, error } = await insforge.auth.getCurrentSession();
+        const accessToken = localStorage.getItem('access_token');
+        if (!accessToken) return null;
+
+        const response = await fetch(`${BASE_URL}/api/auth/sessions/current`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
         
-        if (error || !data.session) {
+        if (!response.ok) {
             return null;
         }
         
-        return data.session.user;
+        const { user } = await response.json();
+        return user;
     } catch (error) {
         console.error('Error getting current user:', error);
         return null;
@@ -232,10 +364,17 @@ export async function getCurrentUser() {
 
 export async function signOut() {
     try {
-        await insforge.auth.signOut();
+        await fetch(`${BASE_URL}/api/auth/logout`, {
+            method: 'POST'
+        });
+        
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('csrf_token');
+        
         window.location.href = 'landing.html';
     } catch (error) {
         console.error('Sign out error:', error);
+        window.location.href = 'landing.html';
     }
 }
 
@@ -390,19 +529,10 @@ notificationStyles.textContent = `
 document.head.appendChild(notificationStyles);
 
 // =================================================================
-// HANDLE OAUTH CALLBACK
+// INITIALIZATION
 // =================================================================
 
-export async function handleAuthCallback() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('auth') === 'callback') {
-        // OAuth callback - check session
-        const user = await getCurrentUser();
-        if (user) {
-            await checkAndSetupProfile(user);
-        }
-        
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
+// Check for OAuth callback on page load
+if (window.location.pathname.includes('landing.html')) {
+    handleOAuthCallback();
 }
