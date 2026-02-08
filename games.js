@@ -971,29 +971,32 @@ const SIMULATORS = {
 function renderSimulators(container) {
     container.innerHTML = `
         <div class="game-play-layout">
-            <div class="game-panel" id="simControlPanel">
-                <div class="game-section-title"><i class="fas fa-layer-group"></i> Categories</div>
+            <div class="game-panel gamified-sidebar gamified-dark" id="simControlPanel">
+                <div class="game-section-title gamified-header"><i class="fas fa-layer-group"></i> 🎯 Categories</div>
                 <div class="sim-category-grid">
-                    <div class="sim-category-card" data-category="physics">
+                    <div class="sim-category-card gamified-category" data-category="physics">
+                        <div class="category-icon">⚡</div>
                         <h3>Physics</h3>
                         <p class="sim-status">5 simulators</p>
                     </div>
-                    <div class="sim-category-card" data-category="chemistry">
+                    <div class="sim-category-card gamified-category" data-category="chemistry">
+                        <div class="category-icon">🧪</div>
                         <h3>Chemistry</h3>
                         <p class="sim-status">3 simulators</p>
                     </div>
-                    <div class="sim-category-card" data-category="maths">
+                    <div class="sim-category-card gamified-category" data-category="maths">
+                        <div class="category-icon">📐</div>
                         <h3>Maths</h3>
                         <p class="sim-status">2 simulators</p>
                     </div>
                 </div>
-                <div class="game-section-title"><i class="fas fa-cube"></i> Simulator List</div>
-                <div class="sim-list" id="simList"></div>
-                <div class="sim-status" id="simDescription">Select a category to load simulators.</div>
+                <div class="game-section-title gamified-header" style="margin-top: 16px;"><i class="fas fa-cube"></i> 📋 Simulator List</div>
+                <div class="sim-list gamified-list" id="simList"></div>
+                <div class="sim-status gamified-status" id="simDescription">Select a category to load simulators.</div>
             </div>
-            <div class="game-panel">
-                <div class="game-section-title"><i class="fas fa-vr-cardboard"></i> Simulation View</div>
-                <div class="game-canvas-panel" id="simCanvasPanel">
+            <div class="game-panel gamified-dark">
+                <div class="game-section-title gamified-header"><i class="fas fa-vr-cardboard"></i> 🎮 Simulation View</div>
+                <div class="game-canvas-panel gamified-viewport" id="simCanvasPanel">
                     <div class="sim-canvas-overlay" id="simOverlay"></div>
                 </div>
                 <div id="simUIControls"></div>
@@ -1012,13 +1015,21 @@ function renderSimulators(container) {
 
     function loadCategory(category) {
         const sims = SIMULATORS[category] || [];
+        const icons = {
+            physics: '⚡',
+            chemistry: '🧪',
+            maths: '📐'
+        };
         listEl.innerHTML = sims.map(sim => `
-            <div class="sim-list-item" data-sim="${sim.id}">
-                <strong>${sim.title}</strong>
-                <div class="sim-status">${sim.summary}</div>
+            <div class="sim-list-item gamified-list-item" data-sim="${sim.id}">
+                <div class="sim-item-icon">${icons[category] || '🎯'}</div>
+                <div class="sim-item-content">
+                    <strong class="sim-item-title">${sim.title}</strong>
+                    <div class="sim-status">${sim.summary}</div>
+                </div>
             </div>
         `).join('');
-        descriptionEl.textContent = `Loaded ${category} simulators.`;
+        descriptionEl.innerHTML = `<strong style="color: #8b5cf6;">✅ Loaded</strong> ${category} simulators.`;
         listEl.querySelectorAll('.sim-list-item').forEach(item => {
             item.addEventListener('click', () => {
                 loadSimulator(item.getAttribute('data-sim'));

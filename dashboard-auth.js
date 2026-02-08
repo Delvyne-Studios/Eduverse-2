@@ -4,6 +4,17 @@
 
 import { getCurrentUser } from './auth-handler.js';
 
+const BASE_URL = 'https://aw63n46k.us-west.insforge.app';
+
+// Global checkAuth function for inline script usage
+window.checkAuth = async function() {
+    const result = await checkDashboardAuth();
+    if (!result) {
+        return false;
+    }
+    return true;
+};
+
 // Check authentication before loading dashboard
 async function checkDashboardAuth() {
     try {
@@ -36,16 +47,27 @@ async function checkDashboardAuth() {
 // Load user profile from database using fetch
 async function loadUserProfile(userId) {
     try {
+        const accessToken = localStorage.getItem('access_token');
+        if (!accessToken) {
+            console.log('No access token found');
+            return;
+        }
+        
         const response = await fetch(
-            `https://aw63n46k.us-west.insforge.app/rest/v1/user_profiles?user_id=eq.${userId}`,
+            `${BASE_URL}/rest/v1/user_profiles?user_id=eq.${userId}`,
             {
                 headers: {
+                    'Authorization': `Bearer ${accessToken}`,
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NDQ3NDF9.bV1F7m9HL8EX-F7IjasCsDYB3C9iZxi6u9-fDI_Npb4',
                     'Content-Type': 'application/json'
-                },
-                credentials: 'include'
+                }
             }
         );
+        
+        if (!response.ok) {
+            console.log('Profile not found, user may not have completed setup');
+            return;
+        }
         
         const profiles = await response.json();
         
@@ -77,7 +99,11 @@ function updateDashboardUI(profile) {
     });
 }
 
-// Initialize authentication check
-checkDashboardAuth();
+// Initialize authentication check when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkDashboardAuth);
+} else {
+    checkDashboardAuth();
+}
 
 export { checkDashboardAuth, loadUserProfile };
