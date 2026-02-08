@@ -1038,7 +1038,8 @@ function renderSimulators(container) {
 
     function loadSimulator(simId) {
         resetSimulationArea();
-        simEngine = createSimEngine(canvasPanel);
+        const hideAxes = ['orbitals', 'vsepr', 'hybrid'].includes(simId); // Hide axes for chemistry sims
+        simEngine = createSimEngine(canvasPanel, hideAxes);
         overlayEl.innerHTML = `<span class="sim-badge">${simId.replace('-', ' ')}</span>`;
         switch (simId) {
             case 'projectile':
@@ -1085,7 +1086,7 @@ function renderSimulators(container) {
     };
 }
 
-function createSimEngine(container) {
+function createSimEngine(container, hideAxes = false) {
     // Clear container first
     container.innerHTML = '';
     
@@ -1192,10 +1193,13 @@ function createSimEngine(container) {
     grid.material.transparent = true;
     scene.add(grid);
     
-    // Add subtle axis lines
-    const axisHelper = new THREE.AxesHelper(5);
-    axisHelper.position.y = 0.01;
-    scene.add(axisHelper);
+    // Add subtle axis lines (hide for chemistry sims)
+    let axisHelper = null;
+    if (!hideAxes) {
+        axisHelper = new THREE.AxesHelper(5);
+        axisHelper.position.y = 0.01;
+        scene.add(axisHelper);
+    }
 
     let updateFn = null;
     let frameId = null;
@@ -1839,53 +1843,76 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
 
 function initOrbitalSim(engine, controlsContainer, overlayEl) {
     const { scene, camera } = engine;
-    camera.position.set(0, 5, 10);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 8, 12);
+    camera.lookAt(0, 4, 0);
 
-    // Nucleus
+    // Nucleus - elevated above ground
     const nucleus = new THREE.Mesh(
-        new THREE.SphereGeometry(0.25, 32, 32),
-        new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 })
+        new THREE.SphereGeometry(0.35, 32, 32),
+        new THREE.MeshStandardMaterial({ 
+            color: 0xef4444, 
+            emissive: 0xef4444, 
+            emissiveIntensity: 0.7,
+            metalness: 0.5,
+            roughness: 0.2
+        })
     );
+    nucleus.position.y = 4; // Always 4 units above ground
     scene.add(nucleus);
 
-    // Group for orbital shape
+    // Group for orbital shape - elevated
     const orbitalGroup = new THREE.Group();
+    orbitalGroup.position.y = 4; // Keep orbitals above ground
     scene.add(orbitalGroup);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-atom"></i> 🎮 Atomic Orbitals</div>
-            <select class="game-select" id="orbitalType">
-                <option value="1s">1s</option>
-                <option value="2s">2s</option>
-                <option value="2p">2p (dumbbell)</option>
-                <option value="3d">3d (cloverleaf)</option>
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-atom"></i> 🎮 Atomic Orbitals</div>
+            <select class="game-select gamified-select" id="orbitalType">
+                <option value="1s">1s - Spherical</option>
+                <option value="2s">2s - Larger Sphere</option>
+                <option value="2p">2p - Dumbbell</option>
+                <option value="3d">3d - Cloverleaf</option>
             </select>
-            <div class="sim-control-row"><label>Opacity</label><input class="sim-slider" id="orbitalOpacity" type="range" min="10" max="80" value="40"><span class="sim-slider-val" id="opacVal">40%</span></div>
-            <div class="sim-status" id="orbitalInfo"></div>
+            <div class="sim-control-row gamified-control">
+                <label>💎 Opacity</label>
+                <input class="sim-slider gamified-slider" id="orbitalOpacity" type="range" min="20" max="85" value="50">
+                <span class="sim-slider-val gamified-value" id="opacVal">50%</span>
+            </div>
+            <div class="sim-control-row gamified-control">
+                <label>✨ Detail Level</label>
+                <input class="sim-slider gamified-slider" id="orbitalDetail" type="range" min="16" max="64" value="48" step="8">
+                <span class="sim-slider-val gamified-value" id="detailVal">48</span>
+            </div>
+            <div class="sim-status gamified-result" id="orbitalInfo"></div>
         </div>
     `;
 
     const typeSelect = controlsContainer.querySelector('#orbitalType');
     const opacityInput = controlsContainer.querySelector('#orbitalOpacity');
+    const detailInput = controlsContainer.querySelector('#orbitalDetail');
     const infoEl = controlsContainer.querySelector('#orbitalInfo');
 
     function createLobe(radiusX, radiusY, radiusZ, color, position) {
-        const geom = new THREE.SphereGeometry(1, 32, 32);
+        const detail = parseInt(detailInput.value);
+        const geom = new THREE.SphereGeometry(1, detail, detail);
         geom.scale(radiusX, radiusY, radiusZ);
         const opacity = parseFloat(opacityInput.value) / 100;
         const mat = new THREE.MeshPhysicalMaterial({
             color: color,
             transparent: true,
             opacity: opacity,
-            roughness: 0.3,
-            metalness: 0.1,
+            roughness: 0.2,
+            metalness: 0.3,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.2,
             side: THREE.DoubleSide,
-            depthWrite: false
+            depthWrite: false,
+            envMapIntensity: 1.0
         });
         const mesh = new THREE.Mesh(geom, mat);
         mesh.position.set(position[0], position[1], position[2]);
+        mesh.renderOrder = 999; // Render on top
         return mesh;
     }
 
@@ -1922,12 +1949,16 @@ function initOrbitalSim(engine, controlsContainer, overlayEl) {
         controlsContainer.querySelector('#opacVal').textContent = opacityInput.value + '%';
         buildOrbital(typeSelect.value);
     });
+    detailInput.addEventListener('input', () => {
+        controlsContainer.querySelector('#detailVal').textContent = detailInput.value;
+        buildOrbital(typeSelect.value);
+    });
 
     buildOrbital('1s');
 
-    // Gentle rotation
-    engine.setUpdate(() => { orbitalGroup.rotation.y += 0.005; });
-    overlayEl.innerHTML += `<span class="sim-badge">⚛️ Real Shapes</span>`;
+    // Gentle rotation for better 3D view
+    engine.setUpdate(() => { orbitalGroup.rotation.y += 0.008; });
+    overlayEl.innerHTML += `<span class="sim-badge">⚛️ Quantum Orbitals</span><span class="sim-badge">💎 HD Rendering</span>`;
 
     return () => {
         scene.remove(orbitalGroup, nucleus);
@@ -1936,33 +1967,42 @@ function initOrbitalSim(engine, controlsContainer, overlayEl) {
 
 function initVseprSim(engine, controlsContainer, overlayEl) {
     const { scene, camera } = engine;
-    camera.position.set(0, 6, 12);
-    camera.lookAt(0, 3, 0);
+    camera.position.set(0, 8, 15);
+    camera.lookAt(0, 5, 0);
 
     const molGroup = new THREE.Group();
-    molGroup.position.y = 3; // Raise above grid
+    molGroup.position.y = 5; // Elevated above grid
     scene.add(molGroup);
 
-    const central = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xec4899, emissiveIntensity: 0.2 }));
+    const central = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 32, 32), 
+        new THREE.MeshStandardMaterial({ 
+            color: 0xec4899, 
+            emissive: 0xec4899, 
+            emissiveIntensity: 0.3,
+            metalness: 0.4,
+            roughness: 0.3
+        })
+    );
     molGroup.add(central);
     const atoms = [];
     const bonds = [];
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-project-diagram"></i> 🎮 VSEPR Geometry</div>
-            <select class="game-select" id="vseprShape">
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-project-diagram"></i> 🎮 VSEPR Geometry</div>
+            <select class="game-select gamified-select" id="vseprShape">
                 <option value="linear">Linear (2 atoms)</option>
                 <option value="trigonal">Trigonal Planar (3)</option>
                 <option value="tetra" selected>Tetrahedral (4)</option>
                 <option value="bipyramidal">Trigonal Bipyramidal (5)</option>
                 <option value="octa">Octahedral (6)</option>
             </select>
-            <div class="sim-stats-grid" style="margin-top:10px;">
-                <div class="sim-stat-card"><div class="sim-stat-label">Bond Angle</div><div class="sim-stat-value" id="vseprAngle">--</div><div class="sim-stat-unit">°</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">Atoms</div><div class="sim-stat-value" id="vseprCount">--</div></div>
+            <div class="sim-stats-grid gamified-stats" style="margin-top:10px;">
+                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Bond Angle</div><div class="sim-stat-value" id="vseprAngle">--</div><div class="sim-stat-unit">°</div></div>
+                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Atoms</div><div class="sim-stat-value" id="vseprCount">--</div></div>
             </div>
-            <div class="sim-status" id="vseprInfo" style="margin-top:8px;"></div>
+            <div class="sim-status gamified-result" id="vseprInfo" style="margin-top:12px;"></div>
         </div>
     `;
 
