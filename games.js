@@ -1289,34 +1289,35 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     camera.lookAt(5, 2, 0);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-rocket"></i> 🎮 Projectile Controls</div>
-            <div class="sim-control-row">
-                <label>🎯 Angle</label>
-                <input class="sim-slider" id="projAngle" type="range" min="10" max="80" value="45">
-                <span class="sim-slider-val" id="angleVal">45°</span>
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-rocket"></i> 🎮 Projectile Controls</div>
+            <div class="sim-control-row gamified-control">
+                <label>🎯 Launch Angle</label>
+                <input class="sim-slider gamified-slider" id="projAngle" type="range" min="10" max="80" value="45">
+                <span class="sim-slider-val gamified-value" id="angleVal">45°</span>
             </div>
-            <div class="sim-control-row">
-                <label>💨 Velocity</label>
-                <input class="sim-slider" id="projVelocity" type="range" min="5" max="50" value="20">
-                <span class="sim-slider-val" id="velVal">20 m/s</span>
+            <div class="sim-control-row gamified-control">
+                <label>💨 Initial Velocity</label>
+                <input class="sim-slider gamified-slider" id="projVelocity" type="range" min="5" max="50" value="20">
+                <span class="sim-slider-val gamified-value" id="velVal">20 m/s</span>
             </div>
-            <div class="sim-control-row">
+            <div class="sim-control-row gamified-control">
                 <label>🌍 Gravity</label>
-                <input class="sim-slider" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
-                <span class="sim-slider-val" id="gravVal">9.8 m/s²</span>
+                <input class="sim-slider gamified-slider" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
+                <span class="sim-slider-val gamified-value" id="gravVal">9.8 m/s²</span>
             </div>
-            <div class="sim-control-row">
-                <label>📏 Height</label>
-                <input class="sim-slider" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
-                <span class="sim-slider-val" id="heightVal">2 m</span>
+            <div class="sim-control-row gamified-control">
+                <label>📏 Launch Height</label>
+                <input class="sim-slider gamified-slider" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
+                <span class="sim-slider-val gamified-value" id="heightVal">2 m</span>
             </div>
-            <div class="sim-stats-grid">
-                <div class="sim-stat-card"><div class="sim-stat-label">Range</div><div class="sim-stat-value" id="rangeVal">--</div><div class="sim-stat-unit">m</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">Max Height</div><div class="sim-stat-value" id="maxHVal">--</div><div class="sim-stat-unit">m</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">Flight Time</div><div class="sim-stat-value" id="flightVal">--</div><div class="sim-stat-unit">s</div></div>
+            <div class="sim-stats-grid gamified-stats">
+                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Range</div><div class="sim-stat-value" id="rangeVal">--</div><div class="sim-stat-unit">m</div></div>
+                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Max Height</div><div class="sim-stat-value" id="maxHVal">--</div><div class="sim-stat-unit">m</div></div>
+                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Flight Time</div><div class="sim-stat-value" id="flightVal">--</div><div class="sim-stat-unit">s</div></div>
             </div>
-            <button class="btn-primary sim-action-btn" id="resetProjBtn"><i class="fas fa-redo"></i> Reset</button>
+            <button class="btn-primary sim-action-btn gamified-btn" id="launchProjBtn"><i class="fas fa-space-shuttle"></i> Launch</button>
+            <button class="btn-secondary sim-action-btn gamified-btn" id="resetProjBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     `;
 
@@ -1324,10 +1325,13 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     const velocityInput = controlsContainer.querySelector('#projVelocity');
     const gravityInput = controlsContainer.querySelector('#projGravity');
     const heightInput = controlsContainer.querySelector('#projHeight');
+    const launchBtn = controlsContainer.querySelector('#launchProjBtn');
     const resetBtn = controlsContainer.querySelector('#resetProjBtn');
 
     let time = 0;
     let flightTime = 1;
+    let isLaunched = false;
+    let animationSpeed = 1.0;
 
     function updateLabels() {
         controlsContainer.querySelector('#angleVal').textContent = angleInput.value + '°';
@@ -1375,24 +1379,59 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     }
 
     function update() {
+        if (!isLaunched) return;
+        
         const angle = THREE.MathUtils.degToRad(parseFloat(angleInput.value));
         const v = parseFloat(velocityInput.value);
         const g = parseFloat(gravityInput.value);
         const h = parseFloat(heightInput.value);
         const vx = v * Math.cos(angle);
         const vy = v * Math.sin(angle);
-        time += 0.016;
-        if (time > flightTime) time = 0;
+        
+        // Realistic physics with proper gravity!
+        time += 0.016 * animationSpeed;
+        
+        if (time > flightTime) {
+            time = 0; // Loop animation
+            projectile.position.set(0, h * S, 0);
+        }
+        
         const x = vx * time * S;
         const y = (h + vy * time - 0.5 * g * time * time) * S;
-        projectile.position.set(x, Math.max(y, 0), 0);
+        
+        // Keep projectile above ground
+        if (y >= 0) {
+            projectile.position.set(x, y, 0);
+        } else {
+            projectile.position.set(x, 0, 0);
+        }
+        
         rangeMarker.rotation.z += 0.03;
     }
 
     [angleInput, velocityInput, gravityInput, heightInput].forEach(inp => {
-        inp.addEventListener('input', () => { updateLabels(); recompute(); });
+        inp.addEventListener('input', () => { 
+            updateLabels(); 
+            recompute();
+            if (!isLaunched) {
+                // Update projectile position at launch point when adjusting
+                projectile.position.set(0, parseFloat(heightInput.value) * S, 0);
+            }
+        });
     });
-    resetBtn.addEventListener('click', () => { time = 0; });
+    
+    launchBtn.addEventListener('click', () => { 
+        isLaunched = true;
+        time = 0;
+        launchBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+    });
+    
+    resetBtn.addEventListener('click', () => { 
+        isLaunched = false;
+        time = 0;
+        projectile.position.set(0, parseFloat(heightInput.value) * S, 0);
+        launchBtn.innerHTML = '<i class="fas fa-space-shuttle"></i> Launch';
+    });
 
     updateLabels();
     recompute();
@@ -1472,7 +1511,7 @@ function initVectorAddSim(engine, controlsContainer, overlayEl) {
     overlayEl.innerHTML += `<span class="sim-badge">🧮 Input X,Y,Z</span><span class="sim-badge">📐 Resultant</span>`;
 
     return () => {
-        scene.remove(arrowA, arrowB, arrowR, tipA, tipB, tipR);
+        scene.remove(arrowA, arrowB, arrowR, tipA, tipB, tipR, parallelogramLine1, parallelogramLine2);
     };
 }
 
