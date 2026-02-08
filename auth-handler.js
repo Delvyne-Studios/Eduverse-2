@@ -10,9 +10,15 @@ import insforge from './insforge-client.js';
 
 export async function signInWithGoogle() {
     try {
+        // Get current page origin for redirect
+        const redirectUrl = `${window.location.origin}/landing.html`;
+        
+        // Wait for insforge to be initialized
+        await waitForInsforge();
+        
         await insforge.auth.signInWithOAuth({
             provider: 'google',
-            redirectTo: window.location.origin + '/landing.html?auth=callback'
+            redirectTo: redirectUrl
         });
     } catch (error) {
         console.error('Google sign-in error:', error);
@@ -22,14 +28,41 @@ export async function signInWithGoogle() {
 
 export async function signInWithGithub() {
     try {
+        // Get current page origin for redirect
+        const redirectUrl = `${window.location.origin}/landing.html`;
+        
+        // Wait for insforge to be initialized
+        await waitForInsforge();
+        
         await insforge.auth.signInWithOAuth({
             provider: 'github',
-            redirectTo: window.location.origin + '/landing.html?auth=callback'
+            redirectTo: redirectUrl
         });
     } catch (error) {
         console.error('GitHub sign-in error:', error);
         showError('Failed to sign in with GitHub. Please try again.');
     }
+}
+
+// Helper to wait for insforge client to be ready
+function waitForInsforge() {
+    return new Promise((resolve) => {
+        if (window.insforge) {
+            resolve();
+        } else {
+            const checkInterval = setInterval(() => {
+                if (window.insforge) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve();
+            }, 5000);
+        }
+    });
 }
 
 // =================================================================
@@ -38,6 +71,9 @@ export async function signInWithGithub() {
 
 export async function handleEmailSignup(email, password) {
     try {
+        // Wait for insforge to be initialized
+        await waitForInsforge();
+        
         const { data, error } = await insforge.auth.signUp({
             email: email,
             password: password
@@ -70,6 +106,9 @@ export async function handleEmailSignup(email, password) {
 
 export async function handleEmailLogin(email, password) {
     try {
+        // Wait for insforge to be initialized
+        await waitForInsforge();
+        
         const { data, error } = await insforge.auth.signInWithPassword({
             email: email,
             password: password
