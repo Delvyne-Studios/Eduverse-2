@@ -1531,45 +1531,179 @@ function initVectorAddSim(engine, controlsContainer, overlayEl) {
 }
 
 function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
+    const { scene, camera } = engine;
+    
+    // Position camera for better view
+    camera.position.set(0, 8, 16);
+    camera.lookAt(0, 1, 0);
 
-    // Better objects: car-like boxes
-    const carA = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.6), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.15 }));
-    const carB = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.6), new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.15 }));
-    carA.position.y = 0.25;
-    carB.position.y = 0.25;
-    scene.add(carA, carB);
+    // Create detailed train (Object A)
+    const trainGroup = new THREE.Group();
+    // Train body
+    const trainBody = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1.2, 1.0),
+        new THREE.MeshStandardMaterial({ 
+            color: 0x22d3ee, 
+            emissive: 0x22d3ee, 
+            emissiveIntensity: 0.2,
+            metalness: 0.7,
+            roughness: 0.3 
+        })
+    );
+    trainBody.position.y = 0.6;
+    trainGroup.add(trainBody);
+    
+    // Train front (cabin)
+    const trainFront = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.8, 0.9),
+        new THREE.MeshStandardMaterial({ 
+            color: 0x0ea5e9, 
+            metalness: 0.8, 
+            roughness: 0.2 
+        })
+    );
+    trainFront.position.set(1.5, 0.8, 0);
+    trainGroup.add(trainFront);
+    
+    // Train wheels
+    for (let i = 0; i < 4; i++) {
+        const wheel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.18, 0.15, 16),
+            new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.1 })
+        );
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(-0.8 + i * 0.8, 0.18, 0.6);
+        trainGroup.add(wheel);
+    }
+    trainGroup.position.y = 0;
+    trainGroup.position.z = -2;
+    scene.add(trainGroup);
 
-    // Road lanes
-    const lane1 = new THREE.Mesh(new THREE.PlaneGeometry(30, 1.5), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
-    lane1.rotation.x = -Math.PI / 2; lane1.position.set(0, 0.01, 0);
-    const lane2 = new THREE.Mesh(new THREE.PlaneGeometry(30, 1.5), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 }));
-    lane2.rotation.x = -Math.PI / 2; lane2.position.set(0, 0.01, 2.5);
-    scene.add(lane1, lane2);
+    // Create detailed car (Object B)
+    const carGroup = new THREE.Group();
+    // Car body
+    const carBody = new THREE.Mesh(
+        new THREE.BoxGeometry(1.8, 0.7, 1.0),
+        new THREE.MeshStandardMaterial({ 
+            color: 0xf97316, 
+            emissive: 0xf97316, 
+            emissiveIntensity: 0.2,
+            metalness: 0.8,
+            roughness: 0.2 
+        })
+    );
+    carBody.position.y = 0.5;
+    carGroup.add(carBody);
+    
+    // Car top (roof)
+    const carRoof = new THREE.Mesh(
+        new THREE.BoxGeometry(1.0, 0.5, 0.95),
+        new THREE.MeshStandardMaterial({ 
+            color: 0xea580c, 
+            metalness: 0.7, 
+            roughness: 0.3 
+        })
+    );
+    carRoof.position.set(-0.2, 0.95, 0);
+    carGroup.add(carRoof);
+    
+    // Car wheels
+    for (let i = 0; i < 4; i++) {
+        const wheel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.15, 0.15, 0.12, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 })
+        );
+        wheel.rotation.z = Math.PI / 2;
+        const xPos = i < 2 ? -0.6 : 0.6;
+        const zPos = i % 2 === 0 ? 0.55 : -0.55;
+        wheel.position.set(xPos, 0.15, zPos);
+        carGroup.add(wheel);
+    }
+    carGroup.position.y = 0;
+    carGroup.position.z = 2;
+    scene.add(carGroup);
 
-    const relArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 3, 0xec4899, 0.4, 0.25);
+    // Enhanced road with lane markings
+    const roadGeometry = new THREE.PlaneGeometry(40, 5.5);
+    const roadMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1e293b, 
+        roughness: 0.95,
+        metalness: 0.05
+    });
+    const road = new THREE.Mesh(roadGeometry, roadMaterial);
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0.005;
+    road.receiveShadow = true;
+    scene.add(road);
+    
+    // Lane dividers (dashed lines)
+    for (let i = -15; i < 15; i += 2) {
+        const dash = new THREE.Mesh(
+            new THREE.PlaneGeometry(1, 0.15),
+            new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
+        );
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(i, 0.02, 0);
+        scene.add(dash);
+    }
+    
+    // Center line
+    const centerLine = new THREE.Mesh(
+        new THREE.PlaneGeometry(40, 0.1),
+        new THREE.MeshBasicMaterial({ color: 0xfef3c7 })
+    );
+    centerLine.rotation.x = -Math.PI / 2;
+    centerLine.position.y = 0.015;
+    scene.add(centerLine);
+
+    // Relative velocity arrow
+    const relArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0), 
+        new THREE.Vector3(), 
+        3, 
+        0xec4899, 
+        0.5, 
+        0.35
+    );
+    relArrow.position.y = 2;
     scene.add(relArrow);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-sync-alt"></i> 🎮 Relative Motion</div>
-            <div class="sim-control-row"><label>🔵 Obj A Vel</label><input class="sim-slider" id="relVA" type="range" min="0" max="8" value="3" step="0.5"><span class="sim-slider-val" id="relVAVal">3 m/s</span></div>
-            <div class="sim-control-row"><label>🟠 Obj B Vel</label><input class="sim-slider" id="relVB" type="range" min="0" max="8" value="5" step="0.5"><span class="sim-slider-val" id="relVBVal">5 m/s</span></div>
-            <label style="margin-top:8px;">Observer Frame</label>
-            <select class="game-select" id="relFrame">
-                <option value="ground">🌍 Ground</option>
-                <option value="a">🔵 Object A</option>
-                <option value="b">🟠 Object B</option>
-            </select>
-            <div class="sim-stats-grid" style="margin-top:10px;">
-                <div class="sim-stat-card"><div class="sim-stat-label">Rel. Velocity</div><div class="sim-stat-value" id="relVelVal">--</div><div class="sim-stat-unit">m/s</div></div>
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-sync-alt"></i> 🎮 Relative Motion</div>
+            <div class="sim-control-row gamified-control">
+                <label>🚂 Train Speed</label>
+                <input class="sim-slider gamified-slider" id="relVA" type="range" min="0" max="10" value="4" step="0.5">
+                <span class="sim-slider-val gamified-value" id="relVAVal">4 m/s</span>
             </div>
+            <div class="sim-control-row gamified-control">
+                <label>🚗 Car Speed</label>
+                <input class="sim-slider gamified-slider" id="relVB" type="range" min="0" max="10" value="6" step="0.5">
+                <span class="sim-slider-val gamified-value" id="relVBVal">6 m/s</span>
+            </div>
+            <div class="sim-control-row gamified-control" style="margin-top: 12px;">
+                <label style="min-width: 100%;">👁️ Observer Frame</label>
+                <select class="game-select gamified-select" id="relFrame" style="width: 100%; margin-top: 8px;">
+                    <option value="ground">🌍 Ground (Stationary)</option>
+                    <option value="a">🚂 Train Reference</option>
+                    <option value="b">🚗 Car Reference</option>
+                </select>
+            </div>
+            <div class="sim-stats-grid gamified-stats" style="margin-top:12px;">
+                <div class="sim-stat-card gamified-stat">
+                    <div class="sim-stat-label">Relative Velocity</div>
+                    <div class="sim-stat-value" id="relVelVal">--</div>
+                    <div class="sim-stat-unit">m/s</div>
+                </div>
+            </div>
+            <div class="sim-status gamified-result" id="relInfo" style="margin-top: 12px;"></div>
         </div>
     `;
 
     const vAInput = controlsContainer.querySelector('#relVA');
     const vBInput = controlsContainer.querySelector('#relVB');
     const frameSelect = controlsContainer.querySelector('#relFrame');
+    const relInfoEl = controlsContainer.querySelector('#relInfo');
 
     let t = 0;
     function update() {
@@ -1582,22 +1716,52 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
         controlsContainer.querySelector('#relVBVal').textContent = vB + ' m/s';
 
         let obsVel = 0;
-        if (frame === 'a') obsVel = vA;
-        if (frame === 'b') obsVel = vB;
+        let frameLabel = 'Ground';
+        if (frame === 'a') { obsVel = vA; frameLabel = 'Train'; }
+        if (frame === 'b') { obsVel = vB; frameLabel = 'Car'; }
 
-        // Wrap positions to stay in view (-12 to 12)
-        let xA = ((vA - obsVel) * t) % 24;
-        let xB = ((vB - obsVel) * t) % 24;
-        if (xA > 12) xA -= 24; if (xA < -12) xA += 24;
-        if (xB > 12) xB -= 24; if (xB < -12) xB += 24;
+        // Wrap positions to stay in view (-15 to 15)
+        let xA = ((vA - obsVel) * t) % 30;
+        let xB = ((vB - obsVel) * t) % 30;
+        if (xA > 15) xA -= 30; if (xA < -15) xA += 30;
+        if (xB > 15) xB -= 30; if (xB < -15) xB += 30;
 
-        carA.position.x = xA;
-        carA.position.z = 0;
-        carB.position.x = xB;
-        carB.position.z = 2.5;
+        trainGroup.position.x = xA;
+        trainGroup.position.z = -2;
+        carGroup.position.x = xB;
+        carGroup.position.z = 2;
 
         const relVel = vB - vA;
         controlsContainer.querySelector('#relVelVal').textContent = relVel.toFixed(1);
+        
+        // Update arrow
+        if (Math.abs(relVel) > 0.01) {
+            const direction = relVel >= 0 ? 1 : -1;
+            relArrow.setDirection(new THREE.Vector3(direction, 0, 0));
+            relArrow.setLength(Math.min(6, Math.abs(relVel) * 0.7 + 0.8));
+            relArrow.position.set(trainGroup.position.x, 2, -2);
+            relArrow.visible = true;
+        } else {
+            relArrow.visible = false;
+        }
+        
+        // Update info
+        if (relVel > 0) {
+            relInfoEl.innerHTML = `<strong style="color: #22d3ee;">🚗 Car</strong> is moving <strong style="color: #10b981;">faster</strong> than <strong style="color: #f97316;">🚂 Train</strong> in ${frameLabel} frame`;
+        } else if (relVel < 0) {
+            relInfoEl.innerHTML = `<strong style="color: #f97316;">🚂 Train</strong> is moving <strong style="color: #10b981;">faster</strong> than <strong style="color: #22d3ee;">🚗 Car</strong> in ${frameLabel} frame`;
+        } else {
+            relInfoEl.innerHTML = `<strong style="color: #fbbf24;">Both moving at same speed!</strong>`;
+        }
+    }
+
+    engine.setUpdate(update);
+    overlayEl.innerHTML += `<span class="sim-badge">🚂 Train & Car</span><span class="sim-badge">🔄 Frame Switching</span>`;
+
+    return () => {
+        scene.remove(trainGroup, carGroup, road, centerLine, relArrow);
+    };
+}
         if (Math.abs(relVel) > 0.01) {
             relArrow.setDirection(new THREE.Vector3(relVel >= 0 ? 1 : -1, 0, 0));
             relArrow.setLength(Math.min(5, Math.abs(relVel) * 0.8 + 0.5));
@@ -1614,44 +1778,128 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
 }
 
 function initLawsMotionSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
+    const { scene, camera } = engine;
+    
+    // Better camera angle
+    camera.position.set(0, 5, 14);
+    camera.lookAt(0, 1, 0);
 
-    // Surface
-    const surface = new THREE.Mesh(new THREE.BoxGeometry(20, 0.1, 3), new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 }));
-    surface.position.y = -0.05;
-    scene.add(surface);
-
-    const block = new THREE.Mesh(
-        new THREE.BoxGeometry(1.2, 0.8, 1.0),
-        new THREE.MeshStandardMaterial({ color: 0x8b5cf6, emissive: 0x8b5cf6, emissiveIntensity: 0.1, metalness: 0.3 })
+    // Enhanced surface with texture-like appearance
+    const surface = new THREE.Mesh(
+        new THREE.BoxGeometry(24, 0.3, 4), 
+        new THREE.MeshStandardMaterial({ 
+            color: 0x334155, 
+            roughness: 0.95,
+            metalness: 0.05 
+        })
     );
-    block.position.y = 0.4;
-    block.castShadow = true;
-    scene.add(block);
+    surface.position.y = -0.15;
+    surface.receiveShadow = true;
+    scene.add(surface);
+    
+    // Add grid lines on surface for depth
+    const gridHelper = new THREE.GridHelper(24, 24, 0x475569, 0x475569);
+    gridHelper.position.y = 0.02;
+    gridHelper.rotation.y = Math.PI / 2;
+    scene.add(gridHelper);
 
-    const forceArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 2, 0x22d3ee, 0.4, 0.25);
-    const frictionArrow = new THREE.ArrowHelper(new THREE.Vector3(-1, 0, 0), new THREE.Vector3(), 1, 0xef4444, 0.3, 0.2);
-    const accArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 2, 0x10b981, 0.4, 0.25);
+    // Detailed block with labels
+    const blockGroup = new THREE.Group();
+    
+    // Main block body
+    const blockBody = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5, 1.0, 1.2),
+        new THREE.MeshStandardMaterial({ 
+            color: 0x8b5cf6, 
+            emissive: 0x8b5cf6, 
+            emissiveIntensity: 0.25, 
+            metalness: 0.4,
+            roughness: 0.6 
+        })
+    );
+    blockBody.castShadow = true;
+    blockGroup.add(blockBody);
+    
+    // Block edges for detail
+    const edgeGeometry = new THREE.EdgesGeometry(blockBody.geometry);
+    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.3, transparent: true });
+    const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+    blockGroup.add(edges);
+    
+    blockGroup.position.y = 0.5;
+    scene.add(blockGroup);
+
+    // Enhanced force arrows with labels
+    const forceArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0), 
+        new THREE.Vector3(), 
+        2.5, 
+        0x22d3ee, 
+        0.5, 
+        0.4
+    );
+    const frictionArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(-1, 0, 0), 
+        new THREE.Vector3(), 
+        1.5, 
+        0xef4444, 
+        0.4, 
+        0.3
+    );
+    const accArrow = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0), 
+        new THREE.Vector3(), 
+        2.5, 
+        0x10b981, 
+        0.5, 
+        0.4
+    );
     scene.add(forceArrow, frictionArrow, accArrow);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-bolt"></i> 🎮 Newton's Laws</div>
-            <div class="sim-control-row"><label>⬅➡ Force</label><input class="sim-slider" id="forceInput" type="range" min="-20" max="20" value="10"><span class="sim-slider-val" id="forceVal">10 N</span></div>
-            <div class="sim-control-row"><label>⚖️ Mass</label><input class="sim-slider" id="massInput" type="range" min="1" max="10" value="4"><span class="sim-slider-val" id="massVal">4 kg</span></div>
-            <div class="sim-control-row"><label>🧊 Friction μ</label><input class="sim-slider" id="frictionInput" type="range" min="0" max="0.9" value="0.2" step="0.05"><span class="sim-slider-val" id="fricVal">0.20</span></div>
-            <div class="sim-stats-grid">
-                <div class="sim-stat-card"><div class="sim-stat-label">Acceleration</div><div class="sim-stat-value" id="accVal">--</div><div class="sim-stat-unit">m/s²</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">Velocity</div><div class="sim-stat-value" id="velDisplay">--</div><div class="sim-stat-unit">m/s</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">Net Force</div><div class="sim-stat-value" id="netFVal">--</div><div class="sim-stat-unit">N</div></div>
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-bolt"></i> ⚖️ Newton's Laws</div>
+            <div class="sim-control-row gamified-control">
+                <label>⬅➡ Applied Force</label>
+                <input class="sim-slider gamified-slider" id="forceInput" type="range" min="-20" max="20" value="10">
+                <span class="sim-slider-val gamified-value" id="forceVal">10 N</span>
             </div>
-            <button class="btn-primary sim-action-btn" id="resetLawsBtn"><i class="fas fa-redo"></i> Reset</button>
+            <div class="sim-control-row gamified-control">
+                <label>⚖️ Mass</label>
+                <input class="sim-slider gamified-slider" id="massInput" type="range" min="1" max="10" value="4">
+                <span class="sim-slider-val gamified-value" id="massVal">4 kg</span>
+            </div>
+            <div class="sim-control-row gamified-control">
+                <label>🧊 Friction Coefficient (μ)</label>
+                <input class="sim-slider gamified-slider" id="frictionInput" type="range" min="0" max="0.9" value="0.2" step="0.05">
+                <span class="sim-slider-val gamified-value" id="fricVal">0.20</span>
+            </div>
+            <div class="sim-stats-grid gamified-stats">
+                <div class="sim-stat-card gamified-stat">
+                    <div class="sim-stat-label">🟢 Acceleration</div>
+                    <div class="sim-stat-value" id="accVal">--</div>
+                    <div class="sim-stat-unit">m/s²</div>
+                </div>
+                <div class="sim-stat-card gamified-stat">
+                    <div class="sim-stat-label">💨 Velocity</div>
+                    <div class="sim-stat-value" id="velDisplay">--</div>
+                    <div class="sim-stat-unit">m/s</div>
+                </div>
+                <div class="sim-stat-card gamified-stat">
+                    <div class="sim-stat-label">⚡ Net Force</div>
+                    <div class="sim-stat-value" id="netFVal">--</div>
+                    <div class="sim-stat-unit">N</div>
+                </div>
+            </div>
+            <div class="sim-status gamified-result" id="lawsInfo" style="margin-top: 12px;"></div>
+            <button class="btn-primary sim-action-btn gamified-btn" id="resetLawsBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     `;
 
     const forceInput = controlsContainer.querySelector('#forceInput');
     const massInput = controlsContainer.querySelector('#massInput');
     const frictionInput = controlsContainer.querySelector('#frictionInput');
+    const lawsInfoEl = controlsContainer.querySelector('#lawsInfo');
 
     let velocity = 0;
     let position = 0;
@@ -1665,8 +1913,8 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
         controlsContainer.querySelector('#massVal').textContent = mass + ' kg';
         controlsContainer.querySelector('#fricVal').textContent = mu.toFixed(2);
 
+        // Calculate friction force
         const frictionForce = velocity !== 0 ? -Math.sign(velocity) * mu * mass * 9.8 : (Math.abs(force) > mu * mass * 9.8 ? 0 : -force);
-        const netForce = force + (velocity !== 0 ? frictionForce : (Math.abs(force) > mu * mass * 9.8 ? 0 : 0));
         const realNet = Math.abs(force) > mu * mass * 9.8 || Math.abs(velocity) > 0.01 ? force + frictionForce : 0;
         const acceleration = realNet / mass;
 
@@ -1675,114 +1923,225 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
         position += velocity * 0.016;
 
         // Wrap to stay in view
-        if (position > 8) position = -8;
-        if (position < -8) position = 8;
-        block.position.x = position;
+        if (position > 10) position = -10;
+        if (position < -10) position = 10;
+        blockGroup.position.x = position;
 
-        // Applied force arrow (blue)
+        // Applied force arrow (cyan)
         if (Math.abs(force) > 0.1) {
             forceArrow.visible = true;
             forceArrow.setDirection(new THREE.Vector3(force >= 0 ? 1 : -1, 0, 0));
-            forceArrow.setLength(Math.min(4, Math.abs(force) / 5 + 0.5));
-            forceArrow.position.set(block.position.x, 0.8, 0);
+            forceArrow.setLength(Math.min(5, Math.abs(force) / 4.5 + 0.5));
+            forceArrow.position.set(blockGroup.position.x, 1.2, 0);
         } else { forceArrow.visible = false; }
 
         // Friction arrow (red)
         if (Math.abs(velocity) > 0.05 && mu > 0) {
             frictionArrow.visible = true;
             frictionArrow.setDirection(new THREE.Vector3(velocity > 0 ? -1 : 1, 0, 0));
-            frictionArrow.setLength(Math.min(3, mu * mass * 9.8 / 5 + 0.3));
-            frictionArrow.position.set(block.position.x, 0.3, 0);
+            frictionArrow.setLength(Math.min(3.5, mu * mass * 9.8 / 5 + 0.3));
+            frictionArrow.position.set(blockGroup.position.x, 0.3, 0);
         } else { frictionArrow.visible = false; }
 
         // Acceleration arrow (green)
         if (Math.abs(acceleration) > 0.05) {
             accArrow.visible = true;
             accArrow.setDirection(new THREE.Vector3(acceleration >= 0 ? 1 : -1, 0, 0));
-            accArrow.setLength(Math.min(3, Math.abs(acceleration) * 0.4 + 0.5));
-            accArrow.position.set(block.position.x, 1.4, 0);
+            accArrow.setLength(Math.min(3.5, Math.abs(acceleration) * 0.45 + 0.5));
+            accArrow.position.set(blockGroup.position.x, 1.8, 0);
         } else { accArrow.visible = false; }
 
         controlsContainer.querySelector('#accVal').textContent = acceleration.toFixed(2);
         controlsContainer.querySelector('#velDisplay').textContent = velocity.toFixed(2);
         controlsContainer.querySelector('#netFVal').textContent = realNet.toFixed(1);
+        
+        // Status message
+        if (Math.abs(velocity) < 0.01) {
+            if (Math.abs(force) <= mu * mass * 9.8) {
+                lawsInfoEl.innerHTML = `<strong style="color: #ef4444;">⚠️ Static Friction</strong> prevents motion (max ${(mu * mass * 9.8).toFixed(1)} N)`;
+            } else {
+                lawsInfoEl.innerHTML = `<strong style="color: #10b981;">✓ Ready to move!</strong> Force exceeds friction`;
+            }
+        } else {
+            const direction = velocity > 0 ? 'right →' : '← left';
+            lawsInfoEl.innerHTML = `<strong style="color: #22d3ee;">Moving ${direction}</strong> with kinetic friction`;
+        }
     }
 
-    controlsContainer.querySelector('#resetLawsBtn').addEventListener('click', () => { velocity = 0; position = 0; });
+    controlsContainer.querySelector('#resetLawsBtn').addEventListener('click', () => { 
+        velocity = 0; 
+        position = 0; 
+        blockGroup.position.x = 0;
+    });
+    
     engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">🔵 Applied</span><span class="sim-badge">🔴 Friction</span><span class="sim-badge">🟢 Accel</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🔵 Applied Force</span><span class="sim-badge">🔴 Friction</span><span class="sim-badge">🟢 Acceleration</span>`;
 
     return () => {
-        scene.remove(block, forceArrow, frictionArrow, accArrow, surface);
+        scene.remove(blockGroup, forceArrow, frictionArrow, accArrow, surface, gridHelper);
     };
 }
 
 function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
     const { scene, camera } = engine;
-    camera.position.set(0, 12, 22);
-    camera.lookAt(0, 4, 0);
+    camera.position.set(0, 14, 26);
+    camera.lookAt(0, 5, 0);
 
-    // Track with realistic hills and drops
+    // Enhanced track with more dramatic curves
     const trackPoints = [
-        new THREE.Vector3(-12, 10, 0),
-        new THREE.Vector3(-10, 10, 1),
-        new THREE.Vector3(-7, 3, 2),
-        new THREE.Vector3(-4, 8, 0),
-        new THREE.Vector3(-1, 2, -1),
-        new THREE.Vector3(2, 6, 1),
-        new THREE.Vector3(5, 1.5, 0),
-        new THREE.Vector3(8, 4, -1),
-        new THREE.Vector3(11, 1, 0),
-        new THREE.Vector3(12, 3, 1)
+        new THREE.Vector3(-14, 12, 0),
+        new THREE.Vector3(-12, 12, 1),
+        new THREE.Vector3(-8, 2.5, 2),
+        new THREE.Vector3(-5, 10, 0),
+        new THREE.Vector3(-2, 1.8, -1),
+        new THREE.Vector3(1, 8, 1),
+        new THREE.Vector3(4, 1.2, 0),
+        new THREE.Vector3(7, 6, -1),
+        new THREE.Vector3(10, 2, 0),
+        new THREE.Vector3(12, 5, 1),
+        new THREE.Vector3(14, 3, 0)
     ];
-    const curve = new THREE.CatmullRomCurve3(trackPoints, false, 'catmullrom', 0.5);
+    const curve = new THREE.CatmullRomCurve3(trackPoints, false, 'catmullrom', 0.4);
 
-    // Track supports (pillars)
-    const supportMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, metalness: 0.4 });
+    // Ground platform
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(32, 32),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.95 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Track supports with realistic structure
+    const supportMat = new THREE.MeshStandardMaterial({ 
+        color: 0x64748b, 
+        metalness: 0.7, 
+        roughness: 0.4 
+    });
     const supports = [];
-    for (let i = 0; i <= 1; i += 0.1) {
+    for (let i = 0; i <= 1; i += 0.08) {
         const p = curve.getPointAt(i);
-        if (p.y > 1) {
-            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, p.y, 8), supportMat);
+        if (p.y > 1.5) {
+            // Main pillar
+            const pillar = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12, 0.15, p.y, 8), 
+                supportMat
+            );
             pillar.position.set(p.x, p.y / 2, p.z);
+            pillar.castShadow = true;
             scene.add(pillar);
             supports.push(pillar);
+            
+            // Support base
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.25, 0.3, 0.3, 8),
+                supportMat
+            );
+            base.position.set(p.x, 0.15, p.z);
+            scene.add(base);
+            supports.push(base);
         }
     }
 
-    // Track rails
-    const tubeGeometry = new THREE.TubeGeometry(curve, 200, 0.15, 8, false);
-    const tubeMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.6, roughness: 0.3 });
-    const track = new THREE.Mesh(tubeGeometry, tubeMaterial);
-    scene.add(track);
+    // Track rails (dual rails for realism)
+    const tubeGeometry1 = new THREE.TubeGeometry(curve, 240, 0.12, 12, false);
+    const tubeMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x38bdf8, 
+        metalness: 0.8, 
+        roughness: 0.2,
+        emissive: 0x38bdf8,
+        emissiveIntensity: 0.1
+    });
+    const track1 = new THREE.Mesh(tubeGeometry1, tubeMaterial);
+    track1.castShadow = true;
+    scene.add(track1);
 
-    // Cart
-    const cartBody = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.3, metalness: 0.5 }));
+    // Detailed cart
+    const cartGroup = new THREE.Group();
+    
+    // Cart body
+    const cartBody = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.6, 0.7), 
+        new THREE.MeshStandardMaterial({ 
+            color: 0xf59e0b, 
+            emissive: 0xf59e0b, 
+            emissiveIntensity: 0.4, 
+            metalness: 0.6,
+            roughness: 0.3
+        })
+    );
     cartBody.castShadow = true;
-    scene.add(cartBody);
+    cartGroup.add(cartBody);
+    
+    // Cart roof
+    const cartRoof = new THREE.Mesh(
+        new THREE.BoxGeometry(1.0, 0.2, 0.65),
+        new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.7 })
+    );
+    cartRoof.position.y = 0.4;
+    cartGroup.add(cartRoof);
+    
+    // Cart wheels
+    for (let i = 0; i < 4; i++) {
+        const wheel = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12),
+            new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9 })
+        );
+        wheel.rotation.z = Math.PI / 2;
+        const xPos = i < 2 ? -0.5 : 0.5;
+        const zPos = i % 2 === 0 ? 0.4 : -0.4;
+        wheel.position.set(xPos, -0.4, zPos);
+        cartGroup.add(wheel);
+    }
+    
+    scene.add(cartGroup);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-chart-area"></i> 🎢 Energy Lab</div>
-            <canvas class="sim-graph" id="energyGraph" width="280" height="140"></canvas>
-            <div class="sim-stats-grid">
-                <div class="sim-stat-card" style="border-left:3px solid #38bdf8"><div class="sim-stat-label">PE</div><div class="sim-stat-value" id="peVal">--</div><div class="sim-stat-unit">J</div></div>
-                <div class="sim-stat-card" style="border-left:3px solid #f59e0b"><div class="sim-stat-label">KE</div><div class="sim-stat-value" id="keVal">--</div><div class="sim-stat-unit">J</div></div>
-                <div class="sim-stat-card" style="border-left:3px solid #10b981"><div class="sim-stat-label">Speed</div><div class="sim-stat-value" id="speedVal">--</div><div class="sim-stat-unit">m/s</div></div>
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-chart-area"></i> 🎢 Energy Conservation</div>
+            <canvas class="sim-graph" id="energyGraph" width="300" height="160" style="border-radius: 8px; background: #0f1419;"></canvas>
+            <div class="sim-stats-grid gamified-stats" style="margin-top: 12px;">
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #38bdf8">
+                    <div class="sim-stat-label">⛰️ Potential Energy</div>
+                    <div class="sim-stat-value" id="peVal">--</div>
+                    <div class="sim-stat-unit">J</div>
+                </div>
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #f59e0b">
+                    <div class="sim-stat-label">⚡ Kinetic Energy</div>
+                    <div class="sim-stat-value" id="keVal">--</div>
+                    <div class="sim-stat-unit">J</div>
+                </div>
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #10b981">
+                    <div class="sim-stat-label">💨 Speed</div>
+                    <div class="sim-stat-value" id="speedVal">--</div>
+                    <div class="sim-stat-unit">m/s</div>
+                </div>
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #a855f7">
+                    <div class="sim-stat-label">🎯 Total Energy</div>
+                    <div class="sim-stat-value" id="totalEVal">--</div>
+                    <div class="sim-stat-unit">J</div>
+                </div>
             </div>
+            <div class="sim-status gamified-result" id="coasterInfo" style="margin-top: 12px;"></div>
+            <button class="btn-primary sim-action-btn gamified-btn" id="resetCoasterBtn"><i class="fas fa-redo"></i> Restart</button>
         </div>
     `;
+    
     const graph = controlsContainer.querySelector('#energyGraph');
     const ctx = graph.getContext('2d');
+    const coasterInfoEl = controlsContainer.querySelector('#coasterInfo');
 
-    // Physics-based motion: cart slows at top, speeds at bottom
+    // Physics-based motion
     const g = 9.8;
-    const mass = 1;
-    const maxH = 10;
-    let arcPos = 0; // arc length position 0-1
+    const mass = 1.5;
+    const maxH = 12;
+    let arcPos = 0;
     let speed = 0;
     const totalLen = curve.getLength();
 
+    const peHistory = [];
+    const keHistory = [];
+    
     function update() {
         // Get current height and slope
         const pos = curve.getPointAt(arcPos);
@@ -1792,62 +2151,142 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
         // a = -g * sin(slope) along the track
         const accel = -g * Math.sin(slopeAngle);
         speed += accel * 0.016;
-        speed *= 0.9995; // tiny friction
+        speed *= 0.9992; // minimal friction
 
         // Advance arc position
         arcPos += (speed * 0.016) / totalLen;
-        if (arcPos > 0.99) { arcPos = 0.01; speed = 0.5; }
-        if (arcPos < 0.01) { arcPos = 0.99; speed = -0.5; }
+        if (arcPos > 0.99) { arcPos = 0.01; speed = 1.0; }
+        if (arcPos < 0.01) { arcPos = 0.99; speed = -1.0; }
 
         const newPos = curve.getPointAt(Math.max(0.001, Math.min(0.999, arcPos)));
-        cartBody.position.copy(newPos);
-        cartBody.position.y += 0.25;
+        cartGroup.position.copy(newPos);
+        cartGroup.position.y += 0.3;
 
         // Orient cart along track
         const lookTarget = curve.getPointAt(Math.min(0.999, arcPos + 0.01));
-        cartBody.lookAt(lookTarget);
+        cartGroup.lookAt(lookTarget);
+        
+        // Rotate wheels based on speed
+        cartGroup.children.forEach((child, i) => {
+            if (i >= 3) { // wheels are last 4 children
+                child.rotation.x += speed * 0.1;
+            }
+        });
 
         const h = newPos.y;
         const pe = mass * g * h;
         const ke = 0.5 * mass * speed * speed;
+        const totalE = pe + ke;
 
         controlsContainer.querySelector('#peVal').textContent = pe.toFixed(1);
         controlsContainer.querySelector('#keVal').textContent = ke.toFixed(1);
-        controlsContainer.querySelector('#speedVal').textContent = Math.abs(speed).toFixed(1);
-        drawEnergyGraph(pe, ke);
+        controlsContainer.querySelector('#speedVal').textContent = Math.abs(speed).toFixed(2);
+        controlsContainer.querySelector('#totalEVal').textContent = totalE.toFixed(1);
+        
+        // Store energy history for graph
+        peHistory.push(pe);
+        keHistory.push(ke);
+        if (peHistory.length > 60) {
+            peHistory.shift();
+            keHistory.shift();
+        }
+        
+        // Status message
+        if (h > 8) {
+            coasterInfoEl.innerHTML = `<strong style="color: #38bdf8;">⛰️ High altitude!</strong> Maximum potential energy`;
+        } else if (h < 3 && Math.abs(speed) > 4) {
+            coasterInfoEl.innerHTML = `<strong style="color: #f59e0b;">⚡ Maximum speed!</strong> Kinetic energy peak`;
+        } else if (Math.abs(speed) < 2) {
+            coasterInfoEl.innerHTML = `<strong style="color: #fbbf24;">🔄 Converting...</strong> PE → KE transition`;
+        } else {
+            coasterInfoEl.innerHTML = `<strong style="color: #10b981;">✓ Energy conserved:</strong> ${totalE.toFixed(1)} J`;
+        }
+        
+        drawEnergyGraph(peHistory, keHistory);
     }
 
-    function drawEnergyGraph(pe, ke) {
+    function drawEnergyGraph(peHist, keHist) {
         const w = graph.width;
         const hgt = graph.height;
-        ctx.clearRect(0, 0, w, hgt);
-        const totalE = pe + ke || 1;
-        const peH = (pe / (mass * g * maxH)) * hgt * 0.85;
-        const keH = (ke / (mass * g * maxH)) * hgt * 0.85;
-
-        // PE bar
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.8)';
-        ctx.fillRect(w * 0.1, hgt - peH, w * 0.3, peH);
+        
+        // Clear with dark background
+        ctx.fillStyle = '#0f1419';
+        ctx.fillRect(0, 0, w, hgt);
+        
+        // Draw grid lines
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+            const y = (hgt / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+        
+        // Title
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('Energy Over Time', 10, 15);
+        
+        if (peHist.length < 2) return;
+        
+        const maxE = Math.max(...peHist, ...keHist, 1);
+        const step = w / (peHist.length - 1);
+        
+        // Draw PE line
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        peHist.forEach((pe, i) => {
+            const x = i * step;
+            const y = hgt - 10 - ((pe / maxE) * (hgt - 30));
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Draw KE line
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        keHist.forEach((ke, i) => {
+            const x = i * step;
+            const y = hgt - 10 - ((ke / maxE) * (hgt - 30));
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Legend
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(10, hgt - 30, 15, 8);
         ctx.fillStyle = '#fff';
-        ctx.font = '11px sans-serif';
-        ctx.fillText('PE', w * 0.2, hgt - peH - 5);
-
-        // KE bar
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.8)';
-        ctx.fillRect(w * 0.55, hgt - keH, w * 0.3, keH);
+        ctx.font = '10px sans-serif';
+        ctx.fillText('PE', 30, hgt - 22);
+        
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(60, hgt - 30, 15, 8);
         ctx.fillStyle = '#fff';
-        ctx.fillText('KE', w * 0.65, hgt - keH - 5);
+        ctx.fillText('KE', 80, hgt - 22);
     }
 
     // Start with initial speed from the top
-    speed = 2;
+    speed = 2.5;
     arcPos = 0.02;
+    
+    controlsContainer.querySelector('#resetCoasterBtn').addEventListener('click', () => {
+        speed = 2.5;
+        arcPos = 0.02;
+        peHistory.length = 0;
+        keHistory.length = 0;
+    });
 
     engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">🎢 Gravity</span><span class="sim-badge">⚡ Energy</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🎢 Realistic Physics</span><span class="sim-badge">⚡ Energy Conservation</span>`;
 
     return () => {
-        scene.remove(track, cartBody);
+        scene.remove(track1, cartGroup, ground);
         supports.forEach(s => scene.remove(s));
     };
 }
