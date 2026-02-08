@@ -101,16 +101,17 @@ export async function handleEmailLogin(email, password) {
 async function checkAndSetupProfile(user) {
     try {
         // Check if user already has a profile
-        const { data: profiles, error } = await insforge.db
+        const result = await insforge.db
             .from('user_profiles')
             .select('*')
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .execute();
 
-        if (error) {
-            console.error('Error checking profile:', error);
+        if (result.error) {
+            console.error('Error checking profile:', result.error);
         }
 
-        if (!profiles || profiles.length === 0) {
+        if (!result.data || result.data.length === 0) {
             // First time user - show profile setup modal
             showProfileSetupModal(user);
         } else {

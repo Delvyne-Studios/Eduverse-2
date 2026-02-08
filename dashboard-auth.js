@@ -33,7 +33,7 @@ async function checkDashboardAuth() {
     }
 }
 
-// Load user profile from database
+// Load user profile from database using fetch
 async function loadUserProfile(userId) {
     try {
         const response = await fetch(
@@ -42,7 +42,8 @@ async function loadUserProfile(userId) {
                 headers: {
                     'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3OC0xMjM0LTU2NzgtOTBhYi1jZGVmMTIzNDU2NzgiLCJlbWFpbCI6ImFub25AaW5zZm9yZ2UuY29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1NDQ3NDF9.bV1F7m9HL8EX-F7IjasCsDYB3C9iZxi6u9-fDI_Npb4',
                     'Content-Type': 'application/json'
-                }
+                },
+                credentials: 'include'
             }
         );
         
