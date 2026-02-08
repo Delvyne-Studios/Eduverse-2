@@ -971,32 +971,32 @@ const SIMULATORS = {
 function renderSimulators(container) {
     container.innerHTML = `
         <div class="game-play-layout">
-            <div class="game-panel gamified-sidebar gamified-dark" id="simControlPanel">
-                <div class="game-section-title gamified-header"><i class="fas fa-layer-group"></i> 🎯 Categories</div>
+            <div class="game-panel" id="simControlPanel">
+                <div class="game-section-title"><i class="fas fa-layer-group"></i> 🎯 Categories</div>
                 <div class="sim-category-grid">
-                    <div class="sim-category-card gamified-category" data-category="physics">
+                    <div class="sim-category-card" data-category="physics">
                         <div class="category-icon">⚡</div>
                         <h3>Physics</h3>
                         <p class="sim-status">5 simulators</p>
                     </div>
-                    <div class="sim-category-card gamified-category" data-category="chemistry">
+                    <div class="sim-category-card" data-category="chemistry">
                         <div class="category-icon">🧪</div>
                         <h3>Chemistry</h3>
                         <p class="sim-status">3 simulators</p>
                     </div>
-                    <div class="sim-category-card gamified-category" data-category="maths">
+                    <div class="sim-category-card" data-category="maths">
                         <div class="category-icon">📐</div>
                         <h3>Maths</h3>
                         <p class="sim-status">2 simulators</p>
                     </div>
                 </div>
-                <div class="game-section-title gamified-header" style="margin-top: 16px;"><i class="fas fa-cube"></i> 📋 Simulator List</div>
-                <div class="sim-list gamified-list" id="simList"></div>
-                <div class="sim-status gamified-status" id="simDescription">Select a category to load simulators.</div>
+                <div class="game-section-title" style="margin-top: 16px;"><i class="fas fa-cube"></i> 📋 Simulator List</div>
+                <div class="sim-list" id="simList"></div>
+                <div class="sim-status" id="simDescription">Select a category to load simulators.</div>
             </div>
-            <div class="game-panel gamified-dark">
-                <div class="game-section-title gamified-header"><i class="fas fa-vr-cardboard"></i> 🎮 Simulation View</div>
-                <div class="game-canvas-panel gamified-viewport" id="simCanvasPanel">
+            <div class="game-panel">
+                <div class="game-section-title"><i class="fas fa-vr-cardboard"></i> 🎮 Simulation View</div>
+                <div class="game-canvas-panel" id="simCanvasPanel">
                     <div class="sim-canvas-overlay" id="simOverlay"></div>
                 </div>
                 <div id="simUIControls"></div>
@@ -1021,7 +1021,7 @@ function renderSimulators(container) {
             maths: '📐'
         };
         listEl.innerHTML = sims.map(sim => `
-            <div class="sim-list-item gamified-list-item" data-sim="${sim.id}">
+            <div class="sim-list-item" data-sim="${sim.id}">
                 <div class="sim-item-icon">${icons[category] || '🎯'}</div>
                 <div class="sim-item-content">
                     <strong class="sim-item-title">${sim.title}</strong>
@@ -1304,35 +1304,35 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     camera.lookAt(5, 2, 0);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-rocket"></i> 🎮 Projectile Controls</div>
-            <div class="sim-control-row gamified-control">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-rocket"></i> 🎮 Projectile Controls</div>
+            <div class="sim-control-row">
                 <label>🎯 Launch Angle</label>
-                <input class="sim-slider gamified-slider" id="projAngle" type="range" min="10" max="80" value="45">
-                <span class="sim-slider-val gamified-value" id="angleVal">45°</span>
+                <input class="sim-slider" id="projAngle" type="range" min="10" max="80" value="45">
+                <span class="sim-slider-val" id="angleVal">45°</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>💨 Initial Velocity</label>
-                <input class="sim-slider gamified-slider" id="projVelocity" type="range" min="5" max="50" value="20">
-                <span class="sim-slider-val gamified-value" id="velVal">20 m/s</span>
+                <input class="sim-slider" id="projVelocity" type="range" min="5" max="50" value="20">
+                <span class="sim-slider-val" id="velVal">20 m/s</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>🌍 Gravity</label>
-                <input class="sim-slider gamified-slider" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
-                <span class="sim-slider-val gamified-value" id="gravVal">9.8 m/s²</span>
+                <input class="sim-slider" id="projGravity" type="range" min="1" max="20" value="9.8" step="0.1">
+                <span class="sim-slider-val" id="gravVal">9.8 m/s²</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>📏 Launch Height</label>
-                <input class="sim-slider gamified-slider" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
-                <span class="sim-slider-val gamified-value" id="heightVal">2 m</span>
+                <input class="sim-slider" id="projHeight" type="range" min="0" max="10" value="2" step="0.5">
+                <span class="sim-slider-val" id="heightVal">2 m</span>
             </div>
-            <div class="sim-stats-grid gamified-stats">
-                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Range</div><div class="sim-stat-value" id="rangeVal">--</div><div class="sim-stat-unit">m</div></div>
-                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Max Height</div><div class="sim-stat-value" id="maxHVal">--</div><div class="sim-stat-unit">m</div></div>
-                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Flight Time</div><div class="sim-stat-value" id="flightVal">--</div><div class="sim-stat-unit">s</div></div>
+            <div class="sim-stats-grid">
+                <div class="sim-stat-card"><div class="sim-stat-label">Range</div><div class="sim-stat-value" id="rangeVal">--</div><div class="sim-stat-unit">m</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Max Height</div><div class="sim-stat-value" id="maxHVal">--</div><div class="sim-stat-unit">m</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Flight Time</div><div class="sim-stat-value" id="flightVal">--</div><div class="sim-stat-unit">s</div></div>
             </div>
-            <button class="btn-primary sim-action-btn gamified-btn" id="launchProjBtn"><i class="fas fa-space-shuttle"></i> Launch</button>
-            <button class="btn-secondary sim-action-btn gamified-btn" id="resetProjBtn"><i class="fas fa-redo"></i> Reset</button>
+            <button class="btn-primary sim-action-btn" id="launchProjBtn"><i class="fas fa-space-shuttle"></i> Launch</button>
+            <button class="btn-secondary sim-action-btn" id="resetProjBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     `;
 
@@ -1548,56 +1548,56 @@ function initVectorAddSim(engine, controlsContainer, overlayEl) {
     scene.add(originSphere);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-arrows-alt"></i> 📐 Vector A <span style="color:#22d3ee">●</span></div>
-            <div class="sim-control-row gamified-control">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 📐 Vector A <span style="color:#22d3ee">●</span></div>
+            <div class="sim-control-row">
                 <label>X Component</label>
-                <input class="sim-slider gamified-slider" id="vaX" type="range" min="-8" max="8" value="4" step="0.5">
-                <span class="sim-slider-val gamified-value" id="vaXVal">4.0</span>
+                <input class="sim-slider" id="vaX" type="range" min="-8" max="8" value="4" step="0.5">
+                <span class="sim-slider-val" id="vaXVal">4.0</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>Y Component</label>
-                <input class="sim-slider gamified-slider" id="vaY" type="range" min="-8" max="8" value="2" step="0.5">
-                <span class="sim-slider-val gamified-value" id="vaYVal">2.0</span>
+                <input class="sim-slider" id="vaY" type="range" min="-8" max="8" value="2" step="0.5">
+                <span class="sim-slider-val" id="vaYVal">2.0</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>Z Component</label>
-                <input class="sim-slider gamified-slider" id="vaZ" type="range" min="-8" max="8" value="1" step="0.5">
-                <span class="sim-slider-val gamified-value" id="vaZVal">1.0</span>
+                <input class="sim-slider" id="vaZ" type="range" min="-8" max="8" value="1" step="0.5">
+                <span class="sim-slider-val" id="vaZVal">1.0</span>
             </div>
             
-            <div class="game-section-title gamified-header" style="margin-top:12px;"><i class="fas fa-arrows-alt"></i> 📐 Vector B <span style="color:#f97316">●</span></div>
-            <div class="sim-control-row gamified-control">
+            <div class="game-section-title" style="margin-top:12px;"><i class="fas fa-arrows-alt"></i> 📐 Vector B <span style="color:#f97316">●</span></div>
+            <div class="sim-control-row">
                 <label>X Component</label>
-                <input class="sim-slider gamified-slider" id="vbX" type="range" min="-8" max="8" value="2" step="0.5">
-                <span class="sim-slider-val gamified-value" id="vbXVal">2.0</span>
+                <input class="sim-slider" id="vbX" type="range" min="-8" max="8" value="2" step="0.5">
+                <span class="sim-slider-val" id="vbXVal">2.0</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>Y Component</label>
-                <input class="sim-slider gamified-slider" id="vbY" type="range" min="-8" max="8" value="3" step="0.5">
-                <span class="sim-slider-val gamified-value" id="vbYVal">3.0</span>
+                <input class="sim-slider" id="vbY" type="range" min="-8" max="8" value="3" step="0.5">
+                <span class="sim-slider-val" id="vbYVal">3.0</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>Z Component</label>
-                <input class="sim-slider gamified-slider" id="vbZ" type="range" min="-8" max="8" value="2" step="0.5">
-                <span class="sim-slider-val gamified-value" id="vbZVal">2.0</span>
+                <input class="sim-slider" id="vbZ" type="range" min="-8" max="8" value="2" step="0.5">
+                <span class="sim-slider-val" id="vbZVal">2.0</span>
             </div>
             
-            <div class="sim-stats-grid gamified-stats" style="margin-top:12px;">
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #22d3ee">
+            <div class="sim-stats-grid" style="margin-top:12px;">
+                <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
                     <div class="sim-stat-label">|A| Magnitude</div>
                     <div class="sim-stat-value" id="magA">--</div>
                 </div>
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #f97316">
+                <div class="sim-stat-card" style="border-left:3px solid #f97316">
                     <div class="sim-stat-label">|B| Magnitude</div>
                     <div class="sim-stat-value" id="magB">--</div>
                 </div>
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #10b981">
+                <div class="sim-stat-card" style="border-left:3px solid #10b981">
                     <div class="sim-stat-label">|R| Resultant</div>
                     <div class="sim-stat-value" id="magR">--</div>
                 </div>
             </div>
-            <div class="sim-status gamified-result" id="vectorReadout" style="margin-top:12px;"></div>
+            <div class="sim-status" id="vectorReadout" style="margin-top:12px;"></div>
         </div>
     `;
 
@@ -1816,34 +1816,34 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
     scene.add(relArrow);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-sync-alt"></i> 🎮 Relative Motion</div>
-            <div class="sim-control-row gamified-control">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-sync-alt"></i> 🎮 Relative Motion</div>
+            <div class="sim-control-row">
                 <label>🚂 Train Speed</label>
-                <input class="sim-slider gamified-slider" id="relVA" type="range" min="0" max="10" value="4" step="0.5">
-                <span class="sim-slider-val gamified-value" id="relVAVal">4 m/s</span>
+                <input class="sim-slider" id="relVA" type="range" min="0" max="10" value="4" step="0.5">
+                <span class="sim-slider-val" id="relVAVal">4 m/s</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>🚗 Car Speed</label>
-                <input class="sim-slider gamified-slider" id="relVB" type="range" min="0" max="10" value="6" step="0.5">
-                <span class="sim-slider-val gamified-value" id="relVBVal">6 m/s</span>
+                <input class="sim-slider" id="relVB" type="range" min="0" max="10" value="6" step="0.5">
+                <span class="sim-slider-val" id="relVBVal">6 m/s</span>
             </div>
-            <div class="sim-control-row gamified-control" style="margin-top: 12px;">
+            <div class="sim-control-row" style="margin-top: 12px;">
                 <label style="min-width: 100%;">👁️ Observer Frame</label>
-                <select class="game-select gamified-select" id="relFrame" style="width: 100%; margin-top: 8px;">
+                <select class="game-select" id="relFrame" style="width: 100%; margin-top: 8px;">
                     <option value="ground">🌍 Ground (Stationary)</option>
                     <option value="a">🚂 Train Reference</option>
                     <option value="b">🚗 Car Reference</option>
                 </select>
             </div>
-            <div class="sim-stats-grid gamified-stats" style="margin-top:12px;">
-                <div class="sim-stat-card gamified-stat">
+            <div class="sim-stats-grid" style="margin-top:12px;">
+                <div class="sim-stat-card">
                     <div class="sim-stat-label">Relative Velocity</div>
                     <div class="sim-stat-value" id="relVelVal">--</div>
                     <div class="sim-stat-unit">m/s</div>
                 </div>
             </div>
-            <div class="sim-status gamified-result" id="relInfo" style="margin-top: 12px;"></div>
+            <div class="sim-status" id="relInfo" style="margin-top: 12px;"></div>
         </div>
     `;
 
@@ -1990,42 +1990,42 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
     scene.add(forceArrow, frictionArrow, accArrow);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-bolt"></i> ⚖️ Newton's Laws</div>
-            <div class="sim-control-row gamified-control">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-bolt"></i> ⚖️ Newton's Laws</div>
+            <div class="sim-control-row">
                 <label>⬅➡ Applied Force</label>
-                <input class="sim-slider gamified-slider" id="forceInput" type="range" min="-20" max="20" value="10">
-                <span class="sim-slider-val gamified-value" id="forceVal">10 N</span>
+                <input class="sim-slider" id="forceInput" type="range" min="-20" max="20" value="10">
+                <span class="sim-slider-val" id="forceVal">10 N</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>⚖️ Mass</label>
-                <input class="sim-slider gamified-slider" id="massInput" type="range" min="1" max="10" value="4">
-                <span class="sim-slider-val gamified-value" id="massVal">4 kg</span>
+                <input class="sim-slider" id="massInput" type="range" min="1" max="10" value="4">
+                <span class="sim-slider-val" id="massVal">4 kg</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>🧊 Friction Coefficient (μ)</label>
-                <input class="sim-slider gamified-slider" id="frictionInput" type="range" min="0" max="0.9" value="0.2" step="0.05">
-                <span class="sim-slider-val gamified-value" id="fricVal">0.20</span>
+                <input class="sim-slider" id="frictionInput" type="range" min="0" max="0.9" value="0.2" step="0.05">
+                <span class="sim-slider-val" id="fricVal">0.20</span>
             </div>
-            <div class="sim-stats-grid gamified-stats">
-                <div class="sim-stat-card gamified-stat">
+            <div class="sim-stats-grid">
+                <div class="sim-stat-card">
                     <div class="sim-stat-label">🟢 Acceleration</div>
                     <div class="sim-stat-value" id="accVal">--</div>
                     <div class="sim-stat-unit">m/s²</div>
                 </div>
-                <div class="sim-stat-card gamified-stat">
+                <div class="sim-stat-card">
                     <div class="sim-stat-label">💨 Velocity</div>
                     <div class="sim-stat-value" id="velDisplay">--</div>
                     <div class="sim-stat-unit">m/s</div>
                 </div>
-                <div class="sim-stat-card gamified-stat">
+                <div class="sim-stat-card">
                     <div class="sim-stat-label">⚡ Net Force</div>
                     <div class="sim-stat-value" id="netFVal">--</div>
                     <div class="sim-stat-unit">N</div>
                 </div>
             </div>
-            <div class="sim-status gamified-result" id="lawsInfo" style="margin-top: 12px;"></div>
-            <button class="btn-primary sim-action-btn gamified-btn" id="resetLawsBtn"><i class="fas fa-redo"></i> Reset</button>
+            <div class="sim-status" id="lawsInfo" style="margin-top: 12px;"></div>
+            <button class="btn-primary sim-action-btn" id="resetLawsBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     `;
 
@@ -2230,33 +2230,33 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
     scene.add(cartGroup);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-chart-area"></i> 🎢 Energy Conservation</div>
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-chart-area"></i> 🎢 Energy Conservation</div>
             <canvas class="sim-graph" id="energyGraph" width="300" height="160" style="border-radius: 8px; background: #0f1419;"></canvas>
-            <div class="sim-stats-grid gamified-stats" style="margin-top: 12px;">
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #38bdf8">
+            <div class="sim-stats-grid" style="margin-top: 12px;">
+                <div class="sim-stat-card" style="border-left:3px solid #38bdf8">
                     <div class="sim-stat-label">⛰️ Potential Energy</div>
                     <div class="sim-stat-value" id="peVal">--</div>
                     <div class="sim-stat-unit">J</div>
                 </div>
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #f59e0b">
+                <div class="sim-stat-card" style="border-left:3px solid #f59e0b">
                     <div class="sim-stat-label">⚡ Kinetic Energy</div>
                     <div class="sim-stat-value" id="keVal">--</div>
                     <div class="sim-stat-unit">J</div>
                 </div>
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #10b981">
+                <div class="sim-stat-card" style="border-left:3px solid #10b981">
                     <div class="sim-stat-label">💨 Speed</div>
                     <div class="sim-stat-value" id="speedVal">--</div>
                     <div class="sim-stat-unit">m/s</div>
                 </div>
-                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #a855f7">
+                <div class="sim-stat-card" style="border-left:3px solid #a855f7">
                     <div class="sim-stat-label">🎯 Total Energy</div>
                     <div class="sim-stat-value" id="totalEVal">--</div>
                     <div class="sim-stat-unit">J</div>
                 </div>
             </div>
-            <div class="sim-status gamified-result" id="coasterInfo" style="margin-top: 12px;"></div>
-            <button class="btn-primary sim-action-btn gamified-btn" id="resetCoasterBtn"><i class="fas fa-redo"></i> Restart</button>
+            <div class="sim-status" id="coasterInfo" style="margin-top: 12px;"></div>
+            <button class="btn-primary sim-action-btn" id="resetCoasterBtn"><i class="fas fa-redo"></i> Restart</button>
         </div>
     `;
     
@@ -2449,25 +2449,25 @@ function initOrbitalSim(engine, controlsContainer, overlayEl) {
     scene.add(orbitalGroup);
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-atom"></i> 🎮 Atomic Orbitals</div>
-            <select class="game-select gamified-select" id="orbitalType">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-atom"></i> 🎮 Atomic Orbitals</div>
+            <select class="game-select" id="orbitalType">
                 <option value="1s">1s - Spherical</option>
                 <option value="2s">2s - Larger Sphere</option>
                 <option value="2p">2p - Dumbbell</option>
                 <option value="3d">3d - Cloverleaf</option>
             </select>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>💎 Opacity</label>
-                <input class="sim-slider gamified-slider" id="orbitalOpacity" type="range" min="20" max="85" value="50">
-                <span class="sim-slider-val gamified-value" id="opacVal">50%</span>
+                <input class="sim-slider" id="orbitalOpacity" type="range" min="20" max="85" value="50">
+                <span class="sim-slider-val" id="opacVal">50%</span>
             </div>
-            <div class="sim-control-row gamified-control">
+            <div class="sim-control-row">
                 <label>✨ Detail Level</label>
-                <input class="sim-slider gamified-slider" id="orbitalDetail" type="range" min="16" max="64" value="48" step="8">
-                <span class="sim-slider-val gamified-value" id="detailVal">48</span>
+                <input class="sim-slider" id="orbitalDetail" type="range" min="16" max="64" value="48" step="8">
+                <span class="sim-slider-val" id="detailVal">48</span>
             </div>
-            <div class="sim-status gamified-result" id="orbitalInfo"></div>
+            <div class="sim-status" id="orbitalInfo"></div>
         </div>
     `;
 
@@ -2572,20 +2572,20 @@ function initVseprSim(engine, controlsContainer, overlayEl) {
     const bonds = [];
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel gamified-dark">
-            <div class="game-section-title gamified-header"><i class="fas fa-project-diagram"></i> 🎮 VSEPR Geometry</div>
-            <select class="game-select gamified-select" id="vseprShape">
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-project-diagram"></i> 🎮 VSEPR Geometry</div>
+            <select class="game-select" id="vseprShape">
                 <option value="linear">Linear (2 atoms)</option>
                 <option value="trigonal">Trigonal Planar (3)</option>
                 <option value="tetra" selected>Tetrahedral (4)</option>
                 <option value="bipyramidal">Trigonal Bipyramidal (5)</option>
                 <option value="octa">Octahedral (6)</option>
             </select>
-            <div class="sim-stats-grid gamified-stats" style="margin-top:10px;">
-                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Bond Angle</div><div class="sim-stat-value" id="vseprAngle">--</div><div class="sim-stat-unit">°</div></div>
-                <div class="sim-stat-card gamified-stat"><div class="sim-stat-label">Atoms</div><div class="sim-stat-value" id="vseprCount">--</div></div>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card"><div class="sim-stat-label">Bond Angle</div><div class="sim-stat-value" id="vseprAngle">--</div><div class="sim-stat-unit">°</div></div>
+                <div class="sim-stat-card"><div class="sim-stat-label">Atoms</div><div class="sim-stat-value" id="vseprCount">--</div></div>
             </div>
-            <div class="sim-status gamified-result" id="vseprInfo" style="margin-top:12px;"></div>
+            <div class="sim-status" id="vseprInfo" style="margin-top:12px;"></div>
         </div>
     `;
 
@@ -2953,6 +2953,10 @@ function randNormal() {
     while (v === 0) v = Math.random();
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
+
+// Expose to global scope (module doesn't auto-export to window)
+window.closeGameDetail = closeGameDetail;
+window.closeGamePlay = closeGamePlay;
 
 // Boot
 if (document.readyState === 'loading') {

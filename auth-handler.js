@@ -351,13 +351,17 @@ export async function getCurrentUser() {
         });
         
         if (!response.ok) {
+            // Clear stale tokens on 401
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('csrf_token');
+            }
             return null;
         }
         
         const { user } = await response.json();
         return user;
     } catch (error) {
-        console.error('Error getting current user:', error);
         return null;
     }
 }

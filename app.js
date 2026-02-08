@@ -3,6 +3,67 @@
 // Premium Animations & Visual Effects
 // =================================================================
 
+// Auto-hide Navbar on Scroll
+(function() {
+    const navbar = document.getElementById('mainNavbar');
+    const hoverZone = document.getElementById('navHoverZone');
+    if (!navbar) return;
+    
+    let lastScrollY = 0;
+    let scrollTimeout;
+    let isHovering = false;
+    
+    // Show navbar on hover zone
+    if (hoverZone) {
+        hoverZone.addEventListener('mouseenter', () => {
+            isHovering = true;
+            navbar.classList.remove('nav-hidden');
+        });
+    }
+    
+    navbar.addEventListener('mouseenter', () => {
+        isHovering = true;
+        navbar.classList.remove('nav-hidden');
+    });
+    
+    navbar.addEventListener('mouseleave', () => {
+        isHovering = false;
+        // Re-hide after mouse leaves if scrolled down
+        if (window.scrollY > 120) {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (!isHovering) navbar.classList.add('nav-hidden');
+            }, 800);
+        }
+    });
+    
+    window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        
+        if (currentScrollY > 120 && currentScrollY > lastScrollY) {
+            // Scrolling down - hide
+            if (!isHovering) {
+                navbar.classList.add('nav-hidden');
+            }
+        } else if (currentScrollY < lastScrollY - 5) {
+            // Scrolling up - show
+            navbar.classList.remove('nav-hidden');
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (currentScrollY > 120 && !isHovering) {
+                    navbar.classList.add('nav-hidden');
+                }
+            }, 2500);
+        }
+        
+        if (currentScrollY <= 20) {
+            navbar.classList.remove('nav-hidden');
+        }
+        
+        lastScrollY = currentScrollY;
+    }, { passive: true });
+})();
+
 // Theme Management - Cycles through 6 themes
 let currentTheme = localStorage.getItem('theme') || 'dark';
 document.documentElement.setAttribute('data-theme', currentTheme);

@@ -33,8 +33,11 @@
     <div class="gradient-orb orb-2"></div>
     <div class="gradient-orb orb-3"></div>
 
+    <!-- Nav Hover Zone for auto-show -->
+    <div class="nav-hover-zone" id="navHoverZone"></div>
+
     <!-- Navigation Bar -->
-    <nav class="navbar glass-premium">
+    <nav class="navbar glass-premium" id="mainNavbar">
         <div class="nav-container">
             <div class="nav-brand glow-text">
                 <div class="logo-icon">
@@ -63,10 +66,6 @@
                 <a href="#" class="nav-link" data-page="study-session">
                     <i class="fas fa-clock"></i>
                     <span>Study Session</span>
-                </a>
-                <a href="#" class="nav-link" data-page="study-material">
-                    <i class="fas fa-book"></i>
-                    <span>Study Material</span>
                 </a>
                 <a href="#" class="nav-link" data-page="social">
                     <i class="fas fa-users"></i>
@@ -242,9 +241,9 @@
                             <i class="fas fa-calculator"></i>
                             <span>Calculator</span>
                         </button>
-                        <button class="action-btn glass-btn" data-page="study-material">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Notes</span>
+                        <button class="action-btn glass-btn" data-page="games">
+                            <i class="fas fa-gamepad"></i>
+                            <span>Games</span>
                         </button>
                     </div>
                 </div>
@@ -1851,46 +1850,7 @@
                 </div>
             </div>
 
-        <!-- STUDY MATERIAL PAGE -->
-        <div class="page" id="study-material-page">
-            <div class="page-header">
-                <h1 class="page-title"><i class="fas fa-book"></i> Study Material</h1>
-                <p class="page-subtitle">NCERT Chemistry Class 11 - Chapter-wise Notes</p>
-            </div>
 
-            <div class="material-layout">
-                <div class="material-sidebar glass-premium">
-                    <h3><i class="fas fa-flask"></i> Chemistry Chapters</h3>
-                    <div class="chapter-list" id="chapter-list">
-                        <!-- Chapters will be loaded dynamically from database -->
-                    </div>
-                </div>
-
-                <div class="notes-viewer" id="notes-viewer">
-                    <div class="notes-placeholder">
-                        <i class="fas fa-book-open"></i>
-                        <h3>Select a chapter to view notes</h3>
-                        <p>Click on any chapter from the left sidebar to view detailed NCERT notes</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fullscreen Notes Modal -->
-            <div class="notes-fullscreen" id="notes-fullscreen" style="display: none;">
-                <div class="notes-fullscreen-header">
-                    <div class="notes-title-section">
-                        <i class="fas fa-flask"></i>
-                        <h2 id="fullscreen-chapter-title">Chapter Name</h2>
-                    </div>
-                    <button class="close-fullscreen-btn" onclick="closeNotesFullscreen()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="notes-fullscreen-content" id="fullscreen-notes-content">
-                    <!-- Notes content will be loaded here -->
-                </div>
-            </div>
-        </div>
 
         <!-- SOCIAL PAGE -->
         <div class="page" id="social-page">
@@ -2214,7 +2174,7 @@
     <script src="app.js"></script>
     <script src="chat-assistant.js"></script>
     <script src="study-session.js"></script>
-    <script src="study-material.js"></script>
+
     <script src="tools.js"></script>
     <script type="importmap">
     {
