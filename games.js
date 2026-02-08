@@ -1459,74 +1459,221 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
 }
 
 function initVectorAddSim(engine, controlsContainer, overlayEl) {
-    const { scene } = engine;
+    const { scene, camera } = engine;
+    
+    // Better camera position
+    camera.position.set(8, 6, 10);
+    camera.lookAt(0, 2, 0);
+    
     const origin = new THREE.Vector3(0, 0, 0);
-    let vectorA = new THREE.Vector3(4, 2, 0);
-    let vectorB = new THREE.Vector3(2, 4, 2);
+    let vectorA = new THREE.Vector3(4, 2, 1);
+    let vectorB = new THREE.Vector3(2, 3, 2);
 
-    const arrowA = new THREE.ArrowHelper(vectorA.clone().normalize(), origin, vectorA.length(), 0x22d3ee, 0.5, 0.3);
-    const arrowB = new THREE.ArrowHelper(vectorB.clone().normalize(), origin, vectorB.length(), 0xf97316, 0.5, 0.3);
+    // Vector A starts from origin
+    const arrowA = new THREE.ArrowHelper(
+        vectorA.clone().normalize(), 
+        origin, 
+        vectorA.length(), 
+        0x22d3ee, 
+        0.6, 
+        0.4
+    );
+    scene.add(arrowA);
+    
+    // Vector B starts from tip of A (tail-to-tip method!)
+    const arrowB = new THREE.ArrowHelper(
+        vectorB.clone().normalize(), 
+        vectorA.clone(), 
+        vectorB.length(), 
+        0xf97316, 
+        0.6, 
+        0.4
+    );
+    scene.add(arrowB);
+    
+    // Resultant arrow from origin to final tip
     const resultant = vectorA.clone().add(vectorB);
-    const arrowR = new THREE.ArrowHelper(resultant.clone().normalize(), origin, resultant.length(), 0x10b981, 0.5, 0.3);
-    scene.add(arrowA, arrowB, arrowR);
+    const arrowR = new THREE.ArrowHelper(
+        resultant.clone().normalize(), 
+        origin, 
+        resultant.length(), 
+        0x10b981, 
+        0.7, 
+        0.5
+    );
+    scene.add(arrowR);
+    
+    // Dashed line showing parallelogram for visualization
+    const dashedMaterial = new THREE.LineDashedMaterial({ 
+        color: 0x64748b, 
+        dashSize: 0.3, 
+        gapSize: 0.15,
+        opacity: 0.6,
+        transparent: true
+    });
+    
+    // Dashed line from origin to B
+    const dashedGeom1 = new THREE.BufferGeometry().setFromPoints([origin, vectorB.clone()]);
+    const dashedLine1 = new THREE.Line(dashedGeom1, dashedMaterial);
+    dashedLine1.computeLineDistances();
+    scene.add(dashedLine1);
+    
+    // Dashed line from tip of A to final tip (parallel to B from origin)
+    const dashedGeom2 = new THREE.BufferGeometry().setFromPoints([vectorA.clone(), resultant.clone()]);
+    const dashedLine2 = new THREE.Line(dashedGeom2, dashedMaterial);
+    dashedLine2.computeLineDistances();
+    scene.add(dashedLine2);
 
-    // Label spheres at tips
-    const tipA = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.3 }));
-    const tipB = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.3 }));
-    const tipR = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.3 }));
+    // Tip markers for visual clarity
+    const createTipMarker = (color) => new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 16, 16), 
+        new THREE.MeshStandardMaterial({ 
+            color, 
+            emissive: color, 
+            emissiveIntensity: 0.4,
+            metalness: 0.6
+        })
+    );
+    
+    const tipA = createTipMarker(0x22d3ee);
+    const tipB = createTipMarker(0xf97316);
+    const tipR = createTipMarker(0x10b981);
     scene.add(tipA, tipB, tipR);
 
+    // Origin marker
+    const originSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xfbbf24, emissiveIntensity: 0.5 })
+    );
+    scene.add(originSphere);
+
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 🎮 Vector A <span style="color:#22d3ee">■</span></div>
-            <div class="sim-control-row"><label>X</label><input class="sim-slider" id="vaX" type="range" min="-8" max="8" value="4" step="0.5"><span class="sim-slider-val" id="vaXVal">4</span></div>
-            <div class="sim-control-row"><label>Y</label><input class="sim-slider" id="vaY" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="vaYVal">2</span></div>
-            <div class="sim-control-row"><label>Z</label><input class="sim-slider" id="vaZ" type="range" min="-8" max="8" value="0" step="0.5"><span class="sim-slider-val" id="vaZVal">0</span></div>
-            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 🎮 Vector B <span style="color:#f97316">■</span></div>
-            <div class="sim-control-row"><label>X</label><input class="sim-slider" id="vbX" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="vbXVal">2</span></div>
-            <div class="sim-control-row"><label>Y</label><input class="sim-slider" id="vbY" type="range" min="-8" max="8" value="4" step="0.5"><span class="sim-slider-val" id="vbYVal">4</span></div>
-            <div class="sim-control-row"><label>Z</label><input class="sim-slider" id="vbZ" type="range" min="-8" max="8" value="2" step="0.5"><span class="sim-slider-val" id="vbZVal">2</span></div>
-            <div class="sim-stats-grid">
-                <div class="sim-stat-card"><div class="sim-stat-label">|A|</div><div class="sim-stat-value" id="magA">--</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">|B|</div><div class="sim-stat-value" id="magB">--</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">|R|</div><div class="sim-stat-value" id="magR">--</div></div>
+        <div class="game-panel sim-controls-panel gamified-dark">
+            <div class="game-section-title gamified-header"><i class="fas fa-arrows-alt"></i> 📐 Vector A <span style="color:#22d3ee">●</span></div>
+            <div class="sim-control-row gamified-control">
+                <label>X Component</label>
+                <input class="sim-slider gamified-slider" id="vaX" type="range" min="-8" max="8" value="4" step="0.5">
+                <span class="sim-slider-val gamified-value" id="vaXVal">4.0</span>
             </div>
-            <div class="sim-status" id="vectorReadout" style="margin-top:8px;"></div>
+            <div class="sim-control-row gamified-control">
+                <label>Y Component</label>
+                <input class="sim-slider gamified-slider" id="vaY" type="range" min="-8" max="8" value="2" step="0.5">
+                <span class="sim-slider-val gamified-value" id="vaYVal">2.0</span>
+            </div>
+            <div class="sim-control-row gamified-control">
+                <label>Z Component</label>
+                <input class="sim-slider gamified-slider" id="vaZ" type="range" min="-8" max="8" value="1" step="0.5">
+                <span class="sim-slider-val gamified-value" id="vaZVal">1.0</span>
+            </div>
+            
+            <div class="game-section-title gamified-header" style="margin-top:12px;"><i class="fas fa-arrows-alt"></i> 📐 Vector B <span style="color:#f97316">●</span></div>
+            <div class="sim-control-row gamified-control">
+                <label>X Component</label>
+                <input class="sim-slider gamified-slider" id="vbX" type="range" min="-8" max="8" value="2" step="0.5">
+                <span class="sim-slider-val gamified-value" id="vbXVal">2.0</span>
+            </div>
+            <div class="sim-control-row gamified-control">
+                <label>Y Component</label>
+                <input class="sim-slider gamified-slider" id="vbY" type="range" min="-8" max="8" value="3" step="0.5">
+                <span class="sim-slider-val gamified-value" id="vbYVal">3.0</span>
+            </div>
+            <div class="sim-control-row gamified-control">
+                <label>Z Component</label>
+                <input class="sim-slider gamified-slider" id="vbZ" type="range" min="-8" max="8" value="2" step="0.5">
+                <span class="sim-slider-val gamified-value" id="vbZVal">2.0</span>
+            </div>
+            
+            <div class="sim-stats-grid gamified-stats" style="margin-top:12px;">
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #22d3ee">
+                    <div class="sim-stat-label">|A| Magnitude</div>
+                    <div class="sim-stat-value" id="magA">--</div>
+                </div>
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #f97316">
+                    <div class="sim-stat-label">|B| Magnitude</div>
+                    <div class="sim-stat-value" id="magB">--</div>
+                </div>
+                <div class="sim-stat-card gamified-stat" style="border-left:3px solid #10b981">
+                    <div class="sim-stat-label">|R| Resultant</div>
+                    <div class="sim-stat-value" id="magR">--</div>
+                </div>
+            </div>
+            <div class="sim-status gamified-result" id="vectorReadout" style="margin-top:12px;"></div>
         </div>
     `;
 
     function updateVectors() {
-        vectorA.set(parseFloat(controlsContainer.querySelector('#vaX').value), parseFloat(controlsContainer.querySelector('#vaY').value), parseFloat(controlsContainer.querySelector('#vaZ').value));
-        vectorB.set(parseFloat(controlsContainer.querySelector('#vbX').value), parseFloat(controlsContainer.querySelector('#vbY').value), parseFloat(controlsContainer.querySelector('#vbZ').value));
+        vectorA.set(
+            parseFloat(controlsContainer.querySelector('#vaX').value), 
+            parseFloat(controlsContainer.querySelector('#vaY').value), 
+            parseFloat(controlsContainer.querySelector('#vaZ').value)
+        );
+        vectorB.set(
+            parseFloat(controlsContainer.querySelector('#vbX').value), 
+            parseFloat(controlsContainer.querySelector('#vbY').value), 
+            parseFloat(controlsContainer.querySelector('#vbZ').value)
+        );
         const res = vectorA.clone().add(vectorB);
 
-        controlsContainer.querySelector('#vaXVal').textContent = vectorA.x;
-        controlsContainer.querySelector('#vaYVal').textContent = vectorA.y;
-        controlsContainer.querySelector('#vaZVal').textContent = vectorA.z;
-        controlsContainer.querySelector('#vbXVal').textContent = vectorB.x;
-        controlsContainer.querySelector('#vbYVal').textContent = vectorB.y;
-        controlsContainer.querySelector('#vbZVal').textContent = vectorB.z;
+        // Update labels
+        controlsContainer.querySelector('#vaXVal').textContent = vectorA.x.toFixed(1);
+        controlsContainer.querySelector('#vaYVal').textContent = vectorA.y.toFixed(1);
+        controlsContainer.querySelector('#vaZVal').textContent = vectorA.z.toFixed(1);
+        controlsContainer.querySelector('#vbXVal').textContent = vectorB.x.toFixed(1);
+        controlsContainer.querySelector('#vbYVal').textContent = vectorB.y.toFixed(1);
+        controlsContainer.querySelector('#vbZVal').textContent = vectorB.z.toFixed(1);
 
-        if (vectorA.length() > 0.01) { arrowA.setDirection(vectorA.clone().normalize()); arrowA.setLength(vectorA.length(), 0.5, 0.3); }
-        if (vectorB.length() > 0.01) { arrowB.setDirection(vectorB.clone().normalize()); arrowB.setLength(vectorB.length(), 0.5, 0.3); }
-        if (res.length() > 0.01) { arrowR.setDirection(res.clone().normalize()); arrowR.setLength(res.length(), 0.5, 0.3); }
+        // Update arrow A (from origin)
+        if (vectorA.length() > 0.01) { 
+            arrowA.position.copy(origin);
+            arrowA.setDirection(vectorA.clone().normalize()); 
+            arrowA.setLength(vectorA.length(), 0.6, 0.4); 
+        }
+        
+        // Update arrow B (tail-to-tip: starts at tip of A!)
+        if (vectorB.length() > 0.01) { 
+            arrowB.position.copy(vectorA); // B starts where A ends
+            arrowB.setDirection(vectorB.clone().normalize()); 
+            arrowB.setLength(vectorB.length(), 0.6, 0.4); 
+        }
+        
+        // Update resultant arrow (from origin to final tip)
+        if (res.length() > 0.01) { 
+            arrowR.position.copy(origin);
+            arrowR.setDirection(res.clone().normalize()); 
+            arrowR.setLength(res.length(), 0.7, 0.5); 
+        }
 
+        // Update tip markers
         tipA.position.copy(vectorA);
-        tipB.position.copy(vectorB);
+        tipB.position.copy(res); // B tip is at the final position (A + B)
         tipR.position.copy(res);
 
+        // Update dashed parallelogram lines
+        dashedGeom1.setFromPoints([origin, vectorB.clone()]);
+        dashedLine1.computeLineDistances();
+        
+        dashedGeom2.setFromPoints([vectorA.clone(), res.clone()]);
+        dashedLine2.computeLineDistances();
+
+        // Update stats
         controlsContainer.querySelector('#magA').textContent = vectorA.length().toFixed(2);
         controlsContainer.querySelector('#magB').textContent = vectorB.length().toFixed(2);
         controlsContainer.querySelector('#magR').textContent = res.length().toFixed(2);
-        controlsContainer.querySelector('#vectorReadout').innerHTML = `<strong style="color:#10b981">R</strong> = (${res.x.toFixed(1)}, ${res.y.toFixed(1)}, ${res.z.toFixed(1)})`;
+        
+        // Update readout with visual representation
+        controlsContainer.querySelector('#vectorReadout').innerHTML = `
+            <strong style="color:#22d3ee">A</strong> = (${vectorA.x.toFixed(1)}, ${vectorA.y.toFixed(1)}, ${vectorA.z.toFixed(1)})<br>
+            <strong style="color:#f97316">B</strong> = (${vectorB.x.toFixed(1)}, ${vectorB.y.toFixed(1)}, ${vectorB.z.toFixed(1)})<br>
+            <strong style="color:#10b981">R = A + B</strong> = (${res.x.toFixed(1)}, ${res.y.toFixed(1)}, ${res.z.toFixed(1)})
+        `;
     }
 
     controlsContainer.querySelectorAll('input[type="range"]').forEach(inp => inp.addEventListener('input', updateVectors));
     updateVectors();
-    overlayEl.innerHTML += `<span class="sim-badge">🧮 Input X,Y,Z</span><span class="sim-badge">📐 Resultant</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">⛓️ Tail-to-Tip Method</span><span class="sim-badge">📐 3D Vectors</span>`;
 
     return () => {
-        scene.remove(arrowA, arrowB, arrowR, tipA, tipB, tipR, parallelogramLine1, parallelogramLine2);
+        scene.remove(arrowA, arrowB, arrowR, tipA, tipB, tipR, dashedLine1, dashedLine2, originSphere);
     };
 }
 
