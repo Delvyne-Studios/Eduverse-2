@@ -13,8 +13,7 @@ import {
     updatePasswordUI,
     showError,
     showSuccess,
-    closeModals,
-    handleAuthCallback
+    closeModals
 } from './auth-handler.js';
 
 // =================================================================
@@ -219,9 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check if already logged in
     checkExistingSession();
-    
-    // Handle OAuth callback
-    handleAuthCallback();
 });
 
 async function checkExistingSession() {
