@@ -8,8 +8,17 @@ const PORT = 3000;
 // Enable CORS
 app.use(cors());
 
-// Serve static files (including PDFs)
-app.use(express.static(__dirname));
+// Serve static files with proper MIME types
+app.use(express.static(__dirname, {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+        if (filePath.endsWith('.mjs')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+}));
 
 // Serve NCERT PDFs with proper headers
 app.use('/ncert-textbooks', express.static(path.join(__dirname, 'ncert-textbooks'), {
@@ -27,9 +36,9 @@ app.get('/*.json', (req, res) => {
     res.sendFile(path.join(__dirname, req.path));
 });
 
-// Serve index.html for root
+// Serve landing page for root
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'landing.html'));
 });
 
 app.listen(PORT, () => {
@@ -41,10 +50,11 @@ app.listen(PORT, () => {
 ║   🌐 Local:   http://localhost:${PORT}                       ║
 ║   📚 Status:  Ready to serve                               ║
 ║   🔥 CORS:    Enabled                                      ║
-║   📁 DB:      chem_db.json loaded                          ║
+║   🔐 Auth:    InsForge (Google, GitHub, Email/Password)    ║
 ║                                                            ║
 ║   Press Ctrl+C to stop the server                         ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
     `);
 });
+

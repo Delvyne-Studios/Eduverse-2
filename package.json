@@ -6,11 +6,16 @@
     "dev": "node server.js",
     "start": "node server.js"
   },
-  "keywords": ["education", "ai", "ncert"],
+  "keywords": [
+    "education",
+    "ai",
+    "ncert"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "@insforge/sdk": "^1.1.5",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   }
 }

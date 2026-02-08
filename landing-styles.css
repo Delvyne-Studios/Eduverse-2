@@ -1132,3 +1132,154 @@ body {
     100% { box-shadow: 0 0 0 0 rgba(255, 153, 51, 0); }
 }
 
+/* =================================================================
+   AUTHENTICATION - OAUTH & PASSWORD VALIDATION
+   ================================================================= */
+
+/* OAuth Buttons */
+.oauth-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.oauth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.oauth-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.oauth-btn i {
+    font-size: 1.2rem;
+}
+
+.google-btn:hover {
+    border-color: #4285f4;
+    background: rgba(66, 133, 244, 0.1);
+}
+
+.github-btn:hover {
+    border-color: #333;
+    background: rgba(51, 51, 51, 0.2);
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.divider span {
+    padding: 0 1rem;
+}
+
+/* Password Requirements */
+.password-requirements {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    transition: all 0.3s ease;
+}
+
+.requirement i {
+    font-size: 0.5rem;
+    color: var(--text-tertiary);
+    transition: all 0.3s ease;
+}
+
+.requirement.valid {
+    color: var(--success);
+}
+
+.requirement.valid i {
+    color: var(--success);
+}
+
+.requirement.invalid {
+    color: var(--danger);
+}
+
+.requirement.invalid i {
+    color: var(--danger);
+}
+
+/* Password Input States */
+.password-input.valid {
+    border-color: var(--success) !important;
+}
+
+.password-input.invalid {
+    border-color: var(--danger) !important;
+}
+
+/* Form Error Messages */
+.form-error {
+    display: none;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: 6px;
+    color: var(--danger);
+    font-size: 0.875rem;
+}
+
+.form-error.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Auth Modal Width */
+.auth-modal {
+    max-width: 450px;
+}
