@@ -1909,20 +1909,6 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
         scene.remove(trainGroup, carGroup, road, centerLine, relArrow);
     };
 }
-        if (Math.abs(relVel) > 0.01) {
-            relArrow.setDirection(new THREE.Vector3(relVel >= 0 ? 1 : -1, 0, 0));
-            relArrow.setLength(Math.min(5, Math.abs(relVel) * 0.8 + 0.5));
-        }
-        relArrow.position.set(carA.position.x, 1.2, carA.position.z);
-    }
-
-    engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">🔄 Frame Switching</span>`;
-
-    return () => {
-        scene.remove(carA, carB, relArrow, lane1, lane2);
-    };
-}
 
 function initLawsMotionSim(engine, controlsContainer, overlayEl) {
     const { scene, camera } = engine;
