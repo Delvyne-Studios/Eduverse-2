@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { YoutubeTranscript } = require('youtube-transcript');
+const { YoutubeTranscript } = require('@danielxceron/youtube-transcript');
 
 const app = express();
 const PORT = 3000;

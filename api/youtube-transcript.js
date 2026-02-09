@@ -1,5 +1,5 @@
 // Vercel Serverless Function - YouTube Transcript Fetcher
-const { YoutubeTranscript } = require('youtube-transcript');
+const { YoutubeTranscript } = require('@danielxceron/youtube-transcript');
 
 module.exports = async function handler(req, res) {
     // Enable CORS for Vercel deployment
