@@ -1923,10 +1923,17 @@ Return the JSON array of ${slideCount} slide objects:`;
         throw new Error('Invalid API response structure. Check console for details.');
     }
     
-    let content = data.choices[0].message.content?.trim() || '';
+    const message = data.choices[0].message;
+    let content = message.content?.trim() || '';
+    
+    // Check if this is a reasoning model with reasoning field
+    if (!content && message.reasoning) {
+        console.log('💡 Detected reasoning model - extracting from reasoning field');
+        content = message.reasoning.trim();
+    }
     
     if (!content) {
-        console.error('❌ API returned empty content');
+        console.error('❌ API returned empty content and no reasoning');
         console.error('Full response:', JSON.stringify(data, null, 2));
         throw new Error('AI returned empty response. This may be due to rate limiting or API issues.');
     }
