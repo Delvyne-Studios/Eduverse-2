@@ -1839,6 +1839,14 @@ async function generateAIPpt() {
 }
 
 async function generateSlideContent(topic, slideCount, chapterContext) {
+    console.log('🔍 Starting generateSlideContent');
+    console.log('  API_CONFIG exists?', !!API_CONFIG);
+    console.log('  API_CONFIG:', API_CONFIG);
+    
+    if (!API_CONFIG || !API_CONFIG.url || !API_CONFIG.model) {
+        throw new Error('API_CONFIG is not properly configured');
+    }
+    
     const chapterInfo = chapterContext
         ? `\n\nYOU HAVE THE NCERT CHAPTER. Use it as your primary source:\n=== CHAPTER ===\n${chapterContext.text.slice(0, 40000)}\n`
         : '';
@@ -1875,15 +1883,23 @@ SLIDE STRUCTURE RULES:
 
 Return the JSON array of ${slideCount} slide objects:`;
 
+    console.log('📤 Sending request to AI:');
+    console.log('  Model:', API_CONFIG.model);
+    console.log('  URL:', API_CONFIG.url);
+    console.log('  Prompt length:', prompt.length, 'chars');
+    console.log('  Max tokens:', 4000);
+    
+    const requestBody = {
+        model: API_CONFIG.model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: 4000
+    };
+
     const response = await fetch(API_CONFIG.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: API_CONFIG.model,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.4,
-            max_tokens: 4000
-        })
+        body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -1893,7 +1909,27 @@ Return the JSON array of ${slideCount} slide objects:`;
     }
 
     const data = await response.json();
-    let content = data.choices[0].message.content.trim();
+    
+    console.log('📦 Full API Response:', JSON.stringify(data, null, 2));
+    console.log('📊 Response structure check:');
+    console.log('  - Has choices?', !!data.choices);
+    console.log('  - Choices length:', data.choices?.length);
+    console.log('  - First choice:', data.choices?.[0]);
+    console.log('  - Message:', data.choices?.[0]?.message);
+    console.log('  - Content:', data.choices?.[0]?.message?.content);
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error('❌ Invalid API response structure');
+        throw new Error('Invalid API response structure. Check console for details.');
+    }
+    
+    let content = data.choices[0].message.content?.trim() || '';
+    
+    if (!content) {
+        console.error('❌ API returned empty content');
+        console.error('Full response:', JSON.stringify(data, null, 2));
+        throw new Error('AI returned empty response. This may be due to rate limiting or API issues.');
+    }
 
     console.log('🤖 RAW LLM OUTPUT:');
     console.log('─'.repeat(80));
