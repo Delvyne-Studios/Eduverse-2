@@ -1886,20 +1886,62 @@ Return the JSON array of ${slideCount} slide objects:`;
         })
     });
 
-    if (!response.ok) throw new Error('AI failed to generate slides');
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ AI API Error:', response.status, errorText);
+        throw new Error(`AI API failed with status ${response.status}`);
+    }
 
     const data = await response.json();
     let content = data.choices[0].message.content.trim();
 
+    console.log('🤖 RAW LLM OUTPUT:');
+    console.log('─'.repeat(80));
+    console.log(content);
+    console.log('─'.repeat(80));
+
     // Clean up any markdown fences
+    const beforeClean = content;
     content = content.replace(/```json\s*/gi, '').replace(/```\s*/gi, '');
+    
+    if (beforeClean !== content) {
+        console.log('🧹 After removing markdown fences:', content.substring(0, 200) + '...');
+    }
 
     // Try to extract JSON array
     const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) throw new Error('AI returned invalid format. Please try again.');
+    
+    if (!jsonMatch) {
+        console.error('❌ No JSON array found in response');
+        console.error('Content length:', content.length);
+        console.error('First 500 chars:', content.substring(0, 500));
+        console.error('Last 500 chars:', content.substring(Math.max(0, content.length - 500)));
+        throw new Error('AI returned invalid format - no JSON array found. Check console for details.');
+    }
 
-    const slides = JSON.parse(jsonMatch[0]);
-    if (!Array.isArray(slides) || slides.length === 0) throw new Error('No slides generated');
+    console.log('✅ JSON match found, length:', jsonMatch[0].length);
+    console.log('First 200 chars of matched JSON:', jsonMatch[0].substring(0, 200) + '...');
+
+    let slides;
+    try {
+        slides = JSON.parse(jsonMatch[0]);
+        console.log('✅ JSON parsed successfully, slide count:', slides.length);
+    } catch (parseError) {
+        console.error('❌ JSON Parse Error:', parseError.message);
+        console.error('Failed to parse:', jsonMatch[0].substring(0, 500));
+        throw new Error(`Failed to parse JSON: ${parseError.message}`);
+    }
+
+    if (!Array.isArray(slides) || slides.length === 0) {
+        console.error('❌ Parsed result is not a valid array or is empty');
+        console.error('Type:', typeof slides);
+        console.error('Is Array:', Array.isArray(slides));
+        console.error('Length:', slides?.length);
+        throw new Error('No slides generated - parsed result is invalid');
+    }
+
+    console.log('✅ Validation passed:', slides.length, 'slides generated');
+    console.log('Slide layouts:', slides.map(s => s.layout).join(', '));
 
     return slides;
 }
