@@ -1445,6 +1445,16 @@ async function fetchYouTubeTranscript(videoId) {
 }
 
 async function generateNotesFromTranscript(transcript, title) {
+    console.log('📝 Starting generateNotesFromTranscript');
+    console.log('  Video title:', title);
+    console.log('  Transcript length:', transcript.length, 'chars');
+    console.log('  API_CONFIG exists?', !!API_CONFIG);
+    console.log('  API_CONFIG:', API_CONFIG);
+    
+    if (!API_CONFIG || !API_CONFIG.url || !API_CONFIG.model) {
+        throw new Error('API_CONFIG is not properly configured for AI Notes');
+    }
+    
     const prompt = `You are an expert note-taker and educator. Your task is to generate COMPREHENSIVE, DETAILED, and WELL-STRUCTURED notes from a YouTube video transcript.
 
 VIDEO TITLE: ${title}
@@ -1480,25 +1490,72 @@ INSTRUCTIONS:
 
 Generate the notes now:`;
 
+    console.log('📤 Sending notes request to AI:');
+    console.log('  Model:', API_CONFIG.model);
+    console.log('  URL:', API_CONFIG.url);
+    console.log('  Prompt length:', prompt.length, 'chars');
+    console.log('  Max tokens:', 8000);
+
+    const requestBody = {
+        model: API_CONFIG.model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 8000
+    };
+
     const response = await fetch(API_CONFIG.url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model: API_CONFIG.model,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.3,
-            max_tokens: 4000
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
-        throw new Error('Failed to generate notes with AI');
+        const errorText = await response.text();
+        console.error('❌ AI Notes API Error:', response.status, errorText);
+        throw new Error(`AI API failed with status ${response.status}`);
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    
+    console.log('📦 Full AI Notes API Response:', JSON.stringify(data, null, 2));
+    console.log('📊 Response structure check:');
+    console.log('  - Has choices?', !!data.choices);
+    console.log('  - Choices length:', data.choices?.length);
+    console.log('  - First choice:', data.choices?.[0]);
+    console.log('  - Message:', data.choices?.[0]?.message);
+    console.log('  - Content:', data.choices?.[0]?.message?.content?.substring(0, 200) + '...');
+    console.log('  - Reasoning?', !!data.choices?.[0]?.message?.reasoning);
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error('❌ Invalid AI Notes API response structure');
+        throw new Error('Invalid API response structure for notes generation');
+    }
+    
+    const message = data.choices[0].message;
+    let content = message.content?.trim() || '';
+    
+    // Check if this is a reasoning model with reasoning field
+    if (!content && message.reasoning) {
+        console.log('💡 Detected reasoning model - extracting notes from reasoning field');
+        content = message.reasoning.trim();
+    }
+    
+    if (!content) {
+        console.error('❌ AI returned empty notes content and no reasoning');
+        console.error('Full response:', JSON.stringify(data, null, 2));
+        throw new Error('AI returned empty notes. This may be due to rate limiting or API issues.');
+    }
+    
+    console.log('✅ Notes generated successfully');
+    console.log('  Notes length:', content.length, 'chars');
+    console.log('  First 500 chars:', content.substring(0, 500));
+    
+    console.log('🤖 RAW AI NOTES OUTPUT:');
+    console.log('─'.repeat(80));
+    console.log(content);
+    console.log('─'.repeat(80));
+    
+    return content;
 }
 
 function displayNotes(transcriptData, notes) {
@@ -1598,6 +1655,8 @@ async function sendFollowUpQuestion() {
         return;
     }
     
+    console.log('💬 Sending follow-up question:', question);
+    
     // Add user message
     addChatMessage('user', question, messagesEl);
     input.value = '';
@@ -1617,25 +1676,54 @@ async function sendFollowUpQuestion() {
             { role: 'user', content: question }
         ];
         
+        console.log('📤 Sending follow-up request:');
+        console.log('  Model:', API_CONFIG.model);
+        console.log('  Messages count:', messages.length);
+        console.log('  Chat history length:', aiNotesState.chatHistory.length);
+        
+        const requestBody = {
+            model: API_CONFIG.model,
+            messages: messages,
+            temperature: 0.5,
+            max_tokens: 2000
+        };
+        
         const response = await fetch(API_CONFIG.url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: API_CONFIG.model,
-                messages: messages,
-                temperature: 0.5,
-                max_tokens: 1000
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
-            throw new Error('Failed to get response');
+            const errorText = await response.text();
+            console.error('❌ Follow-up API Error:', response.status, errorText);
+            throw new Error(`API failed with status ${response.status}`);
         }
         
         const data = await response.json();
-        const answer = data.choices[0].message.content;
+        
+        console.log('📦 Follow-up API Response:', JSON.stringify(data, null, 2));
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            console.error('❌ Invalid follow-up API response structure');
+            throw new Error('Invalid API response structure');
+        }
+        
+        const message = data.choices[0].message;
+        let answer = message.content?.trim() || '';
+        
+        // Check if this is a reasoning model with reasoning field
+        if (!answer && message.reasoning) {
+            console.log('💡 Detected reasoning model - extracting answer from reasoning field');
+            answer = message.reasoning.trim();
+        }
+        
+        if (!answer) {
+            console.error('❌ AI returned empty answer');
+            throw new Error('AI returned empty response');
+        }
+        
+        console.log('✅ Follow-up answer received, length:', answer.length);
         
         // Remove loading message
         const loadingMsg = document.getElementById(loadingId);
@@ -1649,7 +1737,7 @@ async function sendFollowUpQuestion() {
         aiNotesState.chatHistory.push({ role: 'assistant', content: answer });
         
     } catch (error) {
-        console.error('Error sending question:', error);
+        console.error('❌ Error sending follow-up question:', error);
         const loadingMsg = document.getElementById(loadingId);
         if (loadingMsg) loadingMsg.remove();
         addChatMessage('assistant', '❌ Failed to get response. Please try again.', messagesEl);
