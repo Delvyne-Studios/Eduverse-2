@@ -1,4 +1,6 @@
 // Vercel Serverless Function - YouTube Transcript Fetcher
+import { YoutubeTranscript } from 'youtube-transcript';
+
 export default async function handler(req, res) {
     // Only allow GET requests
     if (req.method !== 'GET') {
@@ -12,66 +14,29 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Fetch transcript using YouTube's internal API
-        const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-        const html = await response.text();
-
-        // Extract video title
-        const titleMatch = html.match(/<title>(.*?)<\/title>/);
-        const title = titleMatch ? titleMatch[1].replace(' - YouTube', '') : 'Unknown Title';
-
-        // Extract captions data from the page
-        const captionsMatch = html.match(/"captions":(\{.*?\}),/);
+        // Fetch transcript using youtube-transcript library
+        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
         
-        if (!captionsMatch) {
+        if (!transcriptData || transcriptData.length === 0) {
             return res.status(404).json({ 
-                error: 'No captions available for this video',
-                title: title
+                error: 'No transcript available for this video'
             });
         }
 
-        const captionsData = JSON.parse(captionsMatch[1]);
-        const tracks = captionsData?.playerCaptionsTracklistRenderer?.captionTracks;
-
-        if (!tracks || tracks.length === 0) {
-            return res.status(404).json({ 
-                error: 'No transcript tracks found',
-                title: title
-            });
-        }
-
-        // Get the first available track (usually auto-generated or English)
-        const trackUrl = tracks[0].baseUrl;
-
-        // Fetch the actual transcript
-        const transcriptResponse = await fetch(trackUrl);
-        const transcriptXml = await transcriptResponse.text();
-
-        // Parse XML to extract text
-        const textMatches = transcriptXml.matchAll(/<text[^>]*>(.*?)<\/text>/gs);
-        let transcript = '';
+        // Combine all transcript segments into a single text
+        const transcript = transcriptData.map(item => item.text).join(' ');
         
-        for (const match of textMatches) {
-            // Decode HTML entities and clean up
-            const text = match[1]
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&quot;/g, '"')
-                .replace(/&#39;/g, "'")
-                .replace(/\n/g, ' ')
-                .trim();
-            
-            if (text) {
-                transcript += text + ' ';
+        // Fetch video title from YouTube
+        let title = 'Unknown Title';
+        try {
+            const videoResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+            const html = await videoResponse.text();
+            const titleMatch = html.match(/<title>(.*?)<\/title>/);
+            if (titleMatch) {
+                title = titleMatch[1].replace(' - YouTube', '').trim();
             }
-        }
-
-        if (!transcript) {
-            return res.status(404).json({ 
-                error: 'Could not extract transcript text',
-                title: title
-            });
+        } catch (e) {
+            console.warn('Could not fetch video title:', e.message);
         }
 
         return res.status(200).json({
@@ -79,14 +44,25 @@ export default async function handler(req, res) {
             title: title,
             videoId: videoId,
             transcript: transcript.trim(),
-            language: tracks[0].languageCode || 'unknown',
-            duration: null // Could be extracted from the page if needed
+            language: 'auto-detected',
+            duration: null
         });
 
     } catch (error) {
         console.error('❌ Transcript fetch error:', error);
+        
+        // Provide helpful error message
+        let errorMessage = 'Failed to fetch transcript';
+        if (error.message?.includes('Transcript is disabled')) {
+            errorMessage = 'Transcript is disabled for this video';
+        } else if (error.message?.includes('Could not find captions')) {
+            errorMessage = 'No captions/subtitles available for this video';
+        } else if (error.message?.includes('Video unavailable')) {
+            errorMessage = 'Video is unavailable or private';
+        }
+        
         return res.status(500).json({ 
-            error: 'Failed to fetch transcript',
+            error: errorMessage,
             details: error.message 
         });
     }

@@ -1422,8 +1422,21 @@ async function fetchYouTubeTranscript(videoId) {
     const response = await fetch(`/api/youtube-transcript?videoId=${videoId}`);
     
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch transcript');
+        let errorMessage = 'Failed to fetch transcript';
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error.error || errorMessage;
+            } else {
+                // Server returned non-JSON (probably HTML error page)
+                errorMessage = 'Server error - please make sure the server is running correctly';
+            }
+        } catch (e) {
+            // Error parsing response
+            errorMessage = 'Failed to fetch transcript - invalid server response';
+        }
+        throw new Error(errorMessage);
     }
     
     return await response.json();
