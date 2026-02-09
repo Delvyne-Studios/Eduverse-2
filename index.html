@@ -500,6 +500,14 @@
                     <p>AI-powered personalized study schedule</p>
                     <div class="tool-badge">NEW</div>
                 </div>
+
+                <div class="tool-card glass-premium hover-lift" onclick="openTool('ai-notes')">
+                    <div class="tool-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>AI Notes</h3>
+                    <p>Generate detailed notes from YouTube videos</p>
+                </div>
             </div>
         </div>
 
@@ -1845,6 +1853,91 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI NOTES TOOL -->
+            <div class="tool-fullscreen" id="aiNotesTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-brain"></i> AI Notes Generator</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body glass-premium">
+                    <div class="ai-notes-container">
+                        <!-- Input Section -->
+                        <div class="ai-notes-input glass-premium">
+                            <label for="youtubeUrl" style="display: block; margin-bottom: var(--spacing-sm); font-weight: 600; color: var(--text-primary);">
+                                <i class="fab fa-youtube" style="color: #FF0000;"></i> YouTube Video URL
+                            </label>
+                            <div style="display: flex; gap: var(--spacing-sm);">
+                                <input type="text" id="youtubeUrl" class="tool-input glass-premium" placeholder="https://www.youtube.com/watch?v=..." style="flex: 1;">
+                                <button class="btn-primary" id="generateNotesBtn" onclick="generateAINotes()">
+                                    <i class="fas fa-magic"></i> Generate Notes
+                                </button>
+                            </div>
+                            <p style="margin-top: var(--spacing-xs); font-size: 0.85rem; color: var(--text-tertiary);">
+                                <i class="fas fa-info-circle"></i> Paste any YouTube video link to generate detailed, structured notes
+                            </p>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="aiNotesLoading" style="display: none; text-align: center; padding: var(--spacing-xl); color: var(--text-secondary);">
+                            <div style="font-size: 3rem; margin-bottom: var(--spacing-md);">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                            <h3 style="margin-bottom: var(--spacing-sm);">Processing Video...</h3>
+                            <p id="loadingMessage" style="color: var(--text-tertiary);">Extracting transcript...</p>
+                        </div>
+
+                        <!-- Notes Display -->
+                        <div id="aiNotesDisplay" style="display: none;">
+                            <!-- Video Info -->
+                            <div class="video-info-card glass-premium" id="videoInfoCard" style="margin-bottom: var(--spacing-md); padding: var(--spacing-md); border-radius: var(--border-radius);">
+                                <h3 style="margin-bottom: var(--spacing-xs); color: var(--text-primary);" id="videoTitle"></h3>
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem;" id="videoMeta"></p>
+                            </div>
+
+                            <!-- Generated Notes -->
+                            <div class="generated-notes glass-premium" id="generatedNotes" style="padding: var(--spacing-lg); border-radius: var(--border-radius); margin-bottom: var(--spacing-md); max-height: 600px; overflow-y: auto; line-height: 1.8; white-space: pre-wrap; font-family: var(--font-sans);">
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="notes-actions" style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap; margin-bottom: var(--spacing-md);">
+                                <button class="btn-secondary glass-btn" onclick="copyNotes()">
+                                    <i class="fas fa-copy"></i> Copy Notes
+                                </button>
+                                <button class="btn-secondary glass-btn" onclick="downloadNotes()">
+                                    <i class="fas fa-download"></i> Download
+                                </button>
+                                <button class="btn-secondary glass-btn" onclick="toggleFollowUpChat()">
+                                    <i class="fas fa-comments"></i> Ask Follow-up Questions
+                                </button>
+                            </div>
+
+                            <!-- Follow-up Chat -->
+                            <div id="followUpChat" style="display: none; margin-top: var(--spacing-md);">
+                                <div class="chat-container glass-premium" style="padding: var(--spacing-md); border-radius: var(--border-radius); max-height: 400px; overflow-y: auto; margin-bottom: var(--spacing-sm);" id="followUpChatMessages">
+                                </div>
+                                <div style="display: flex; gap: var(--spacing-sm);">
+                                    <input type="text" id="followUpInput" class="tool-input glass-premium" placeholder="Ask a follow-up question about the video..." style="flex: 1;">
+                                    <button class="btn-primary" onclick="sendFollowUpQuestion()">
+                                        <i class="fas fa-paper-plane"></i> Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="aiNotesEmpty" class="empty-state glass-premium" style="text-align: center; padding: var(--spacing-xl);">
+                            <div style="font-size: 4rem; opacity: 0.3; margin-bottom: var(--spacing-md);">
+                                <i class="fab fa-youtube"></i>
+                            </div>
+                            <h3 style="color: var(--text-secondary); margin-bottom: var(--spacing-sm);">No Notes Yet</h3>
+                            <p style="color: var(--text-tertiary);">Paste a YouTube video link above to generate detailed, structured notes</p>
                         </div>
                     </div>
                 </div>

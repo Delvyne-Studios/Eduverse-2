@@ -67,7 +67,8 @@ function openTool(toolId) {
         'mock-test': 'mockTestTool',
         'cheat-sheet': 'cheatSheetTool',
         'mindmap': 'mindmapTool',
-        'study-planner': 'studyPlannerTool'
+        'study-planner': 'studyPlannerTool',
+        'ai-notes': 'aiNotesTool'
     };
     
     const toolElement = document.getElementById(toolMap[toolId]);
@@ -83,7 +84,8 @@ function openTool(toolId) {
                 'mock-test': 'Mock Test',
                 'cheat-sheet': 'Cheat Sheet',
                 'mindmap': 'Mind Map',
-                'study-planner': 'Study Planner'
+                'study-planner': 'Study Planner',
+                'ai-notes': 'AI Notes'
             };
             window.gamification.addXP(5, `Used ${toolNames[toolId]}`);
         }
@@ -1314,3 +1316,359 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// =================================================================
+// AI NOTES GENERATOR - YouTube Video to Detailed Notes
+// =================================================================
+
+let aiNotesState = {
+    currentVideoId: null,
+    currentTitle: null,
+    currentTranscript: null,
+    currentNotes: null,
+    chatHistory: []
+};
+
+async function generateAINotes() {
+    const urlInput = document.getElementById('youtubeUrl');
+    const generateBtn = document.getElementById('generateNotesBtn');
+    const loadingEl = document.getElementById('aiNotesLoading');
+    const displayEl = document.getElementById('aiNotesDisplay');
+    const emptyEl = document.getElementById('aiNotesEmpty');
+    const loadingMsg = document.getElementById('loadingMessage');
+    
+    const url = urlInput.value.trim();
+    
+    if (!url) {
+        showToast('Please enter a YouTube URL', 'error');
+        return;
+    }
+    
+    // Extract video ID from URL
+    const videoId = extractYouTubeVideoId(url);
+    if (!videoId) {
+        showToast('Invalid YouTube URL', 'error');
+        return;
+    }
+    
+    // Disable button
+    if (generateBtn) {
+        generateBtn.disabled = true;
+        generateBtn.style.opacity = '0.6';
+    }
+    
+    // Show loading, hide others
+    emptyEl.style.display = 'none';
+    displayEl.style.display = 'none';
+    loadingEl.style.display = 'block';
+    loadingMsg.textContent = 'Extracting transcript from video...';
+    
+    try {
+        // Step 1: Fetch transcript
+        const transcriptData = await fetchYouTubeTranscript(videoId);
+        
+        aiNotesState.currentVideoId = videoId;
+        aiNotesState.currentTitle = transcriptData.title;
+        aiNotesState.currentTranscript = transcriptData.transcript;
+        aiNotesState.chatHistory = [];
+        
+        loadingMsg.textContent = 'Generating detailed notes with AI...';
+        
+        // Step 2: Generate notes with AI
+        const notes = await generateNotesFromTranscript(transcriptData.transcript, transcriptData.title);
+        
+        aiNotesState.currentNotes = notes;
+        
+        // Step 3: Display results
+        displayNotes(transcriptData, notes);
+        
+        // Award XP
+        if (window.gamification) {
+            window.gamification.addXP(15, 'Generated AI Notes');
+        }
+        
+        showToast('Notes generated successfully! 🎉', 'success');
+        
+    } catch (error) {
+        console.error('Error generating notes:', error);
+        showToast(error.message || 'Failed to generate notes', 'error');
+        emptyEl.style.display = 'block';
+    } finally {
+        // Re-enable button
+        if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.style.opacity = '1';
+        }
+        loadingEl.style.display = 'none';
+    }
+}
+
+function extractYouTubeVideoId(url) {
+    // Support multiple YouTube URL formats
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\?\/\s]+)/,
+        /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    
+    return null;
+}
+
+async function fetchYouTubeTranscript(videoId) {
+    const response = await fetch(`/api/youtube-transcript?videoId=${videoId}`);
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch transcript');
+    }
+    
+    return await response.json();
+}
+
+async function generateNotesFromTranscript(transcript, title) {
+    const prompt = `You are an expert note-taker and educator. Your task is to generate COMPREHENSIVE, DETAILED, and WELL-STRUCTURED notes from a YouTube video transcript.
+
+VIDEO TITLE: ${title}
+
+TRANSCRIPT:
+${transcript.slice(0, 100000)} 
+
+INSTRUCTIONS:
+1. Create detailed notes that capture ALL important information from the video
+2. Structure the notes with clear headings, subheadings, and bullet points
+3. Include:
+   - Main concepts and key points
+   - Definitions and explanations
+   - Examples and illustrations mentioned
+   - Step-by-step processes or procedures
+   - Important facts, figures, and data
+   - Formulas or equations (if applicable)
+   - Tips, tricks, and best practices
+   
+4. Format requirements:
+   - Use markdown-style formatting (## for headings, ### for subheadings, - for bullets)
+   - Use **bold** for important terms and concepts
+   - Use *italics* for emphasis
+   - Number steps in procedures
+   - Box key takeaways with ═══ borders
+   
+5. Organization:
+   - Start with a brief overview/summary (2-3 sentences)
+   - Organize content logically by topics/sections
+   - End with "Key Takeaways" section listing 5-7 most important points
+   
+6. BE THOROUGH - these notes should allow someone to understand the video content without watching it
+
+Generate the notes now:`;
+
+    const response = await fetch(API_CONFIG.url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: API_CONFIG.model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.3,
+            max_tokens: 4000
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to generate notes with AI');
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+function displayNotes(transcriptData, notes) {
+    const displayEl = document.getElementById('aiNotesDisplay');
+    const videoTitleEl = document.getElementById('videoTitle');
+    const videoMetaEl = document.getElementById('videoMeta');
+    const notesEl = document.getElementById('generatedNotes');
+    const followUpChat = document.getElementById('followUpChat');
+    const followUpMessages = document.getElementById('followUpChatMessages');
+    
+    // Display video info
+    videoTitleEl.textContent = transcriptData.title;
+    videoMetaEl.innerHTML = `<i class="fab fa-youtube"></i> Video ID: ${transcriptData.videoId} | Language: ${transcriptData.language}`;
+    
+    // Display notes with formatting
+    notesEl.innerHTML = formatNotes(notes);
+    
+    // Reset follow-up chat
+    followUpChat.style.display = 'none';
+    followUpMessages.innerHTML = '';
+    
+    // Show display section
+    displayEl.style.display = 'block';
+}
+
+function formatNotes(notes) {
+    // Convert markdown-style formatting to HTML
+    let formatted = notes
+        // Headers
+        .replace(/### (.*?)(\n|$)/g, '<h4 style="color: var(--accent); margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm);">$1</h4>')
+        .replace(/## (.*?)(\n|$)/g, '<h3 style="color: var(--accent); margin-top: var(--spacing-lg); margin-bottom: var(--spacing-sm);">$1</h3>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong style="color: var(--text-primary);">$1</strong>')
+        // Italic
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Bullets
+        .replace(/^- (.*?)$/gm, '<div style="margin-left: var(--spacing-md); margin-bottom: var(--spacing-xs);">• $1</div>')
+        // Numbers
+        .replace(/^(\d+)\. (.*?)$/gm, '<div style="margin-left: var(--spacing-md); margin-bottom: var(--spacing-xs);"><strong>$1.</strong> $2</div>')
+        // Line breaks
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+    
+    return formatted;
+}
+
+function copyNotes() {
+    const notes = aiNotesState.currentNotes;
+    if (!notes) return;
+    
+    navigator.clipboard.writeText(notes).then(() => {
+        showToast('Notes copied to clipboard! 📋', 'success');
+    }).catch(() => {
+        showToast('Failed to copy notes', 'error');
+    });
+}
+
+function downloadNotes() {
+    const notes = aiNotesState.currentNotes;
+    const title = aiNotesState.currentTitle;
+    
+    if (!notes) return;
+    
+    const blob = new Blob([notes], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_notes.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Notes downloaded! 📥', 'success');
+}
+
+function toggleFollowUpChat() {
+    const chatEl = document.getElementById('followUpChat');
+    const isVisible = chatEl.style.display !== 'none';
+    chatEl.style.display = isVisible ? 'none' : 'block';
+    
+    if (!isVisible) {
+        // Scroll to chat
+        chatEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+async function sendFollowUpQuestion() {
+    const input = document.getElementById('followUpInput');
+    const messagesEl = document.getElementById('followUpChatMessages');
+    const question = input.value.trim();
+    
+    if (!question) return;
+    
+    if (!aiNotesState.currentTranscript) {
+        showToast('No video loaded', 'error');
+        return;
+    }
+    
+    // Add user message
+    addChatMessage('user', question, messagesEl);
+    input.value = '';
+    
+    // Add loading message
+    const loadingId = 'loading_' + Date.now();
+    addChatMessage('assistant', '<i class="fas fa-spinner fa-spin"></i> Thinking...', messagesEl, loadingId);
+    
+    try {
+        // Build conversation context
+        const messages = [
+            {
+                role: 'system',
+                content: `You are a helpful assistant answering questions about a YouTube video. Here is the video transcript:\n\n${aiNotesState.currentTranscript.slice(0, 50000)}\n\nAnswer questions based on this transcript.`
+            },
+            ...aiNotesState.chatHistory,
+            { role: 'user', content: question }
+        ];
+        
+        const response = await fetch(API_CONFIG.url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: API_CONFIG.model,
+                messages: messages,
+                temperature: 0.5,
+                max_tokens: 1000
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to get response');
+        }
+        
+        const data = await response.json();
+        const answer = data.choices[0].message.content;
+        
+        // Remove loading message
+        const loadingMsg = document.getElementById(loadingId);
+        if (loadingMsg) loadingMsg.remove();
+        
+        // Add assistant message
+        addChatMessage('assistant', answer, messagesEl);
+        
+        // Update chat history
+        aiNotesState.chatHistory.push({ role: 'user', content: question });
+        aiNotesState.chatHistory.push({ role: 'assistant', content: answer });
+        
+    } catch (error) {
+        console.error('Error sending question:', error);
+        const loadingMsg = document.getElementById(loadingId);
+        if (loadingMsg) loadingMsg.remove();
+        addChatMessage('assistant', '❌ Failed to get response. Please try again.', messagesEl);
+    }
+}
+
+function addChatMessage(role, content, container, id = null) {
+    const msgDiv = document.createElement('div');
+    msgDiv.id = id || `msg_${Date.now()}`;
+    msgDiv.style.cssText = `
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+        border-radius: var(--border-radius);
+        ${role === 'user' ? 'background: var(--accent-transparent); margin-left: var(--spacing-xl); text-align: right;' : 'background: var(--bg-secondary); margin-right: var(--spacing-xl);'}
+    `;
+    msgDiv.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: var(--spacing-xs); color: var(--text-secondary); font-size: 0.85rem;">
+            ${role === 'user' ? '👤 You' : '🤖 AI Assistant'}
+        </div>
+        <div style="color: var(--text-primary);">${content}</div>
+    `;
+    
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+}
+
+// Handle Enter key in follow-up input
+document.addEventListener('DOMContentLoaded', () => {
+    const followUpInput = document.getElementById('followUpInput');
+    if (followUpInput) {
+        followUpInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendFollowUpQuestion();
+            }
+        });
+    }
+});
