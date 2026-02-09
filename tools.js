@@ -1887,13 +1887,13 @@ Return the JSON array of ${slideCount} slide objects:`;
     console.log('  Model:', API_CONFIG.model);
     console.log('  URL:', API_CONFIG.url);
     console.log('  Prompt length:', prompt.length, 'chars');
-    console.log('  Max tokens:', 4000);
+    console.log('  Max tokens:', 8000);
     
     const requestBody = {
         model: API_CONFIG.model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.4,
-        max_tokens: 4000
+        max_tokens: 8000
     };
 
     const response = await fetch(API_CONFIG.url, {
