@@ -508,6 +508,15 @@
                     <h3>AI Notes</h3>
                     <p>Generate detailed notes from YouTube videos</p>
                 </div>
+
+                <div class="tool-card glass-premium hover-lift featured-tool" onclick="openTool('ai-ppt')">
+                    <div class="tool-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3>AI Presentations</h3>
+                    <p>Generate stunning NCERT presentations instantly</p>
+                    <div class="tool-badge">NEW</div>
+                </div>
             </div>
         </div>
 
@@ -1939,6 +1948,92 @@
                             <h3 style="color: var(--text-secondary); margin-bottom: var(--spacing-sm);">No Notes Yet</h3>
                             <p style="color: var(--text-tertiary);">Paste a YouTube video link above to generate detailed, structured notes</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI PPT TOOL -->
+            <div class="tool-fullscreen" id="aiPptTool" style="display: none;">
+                <div class="tool-fullscreen-header">
+                    <h2><i class="fas fa-tv"></i> AI Presentation Maker</h2>
+                    <button class="close-tool-btn" onclick="closeTool()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="tool-fullscreen-body">
+                    <!-- Input Section -->
+                    <div id="pptInputSection" class="ai-ppt-input-section">
+                        <div class="glass-premium" style="padding: var(--spacing-lg); border-radius: var(--border-radius); margin-bottom: var(--spacing-md);">
+                            <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary);"><i class="fas fa-magic"></i> Create a Presentation</h3>
+                            <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                                <label style="font-weight: 600; color: var(--text-secondary);">Topic</label>
+                                <input type="text" id="pptTopic" class="tool-input glass-premium" placeholder="e.g., Thermodynamics, Organic Chemistry, Derivatives...">
+                                
+                                <div style="display: flex; gap: var(--spacing-md); align-items: flex-end; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 150px;">
+                                        <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: var(--spacing-xs);">Number of Slides</label>
+                                        <input type="number" id="pptSlideCount" class="tool-input glass-premium" value="8" min="3" max="20" style="width: 100%;">
+                                    </div>
+                                    <div style="flex: 1; min-width: 150px;">
+                                        <label style="font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: var(--spacing-xs);">Color Theme</label>
+                                        <select id="pptTheme" class="tool-input glass-premium" style="width: 100%;">
+                                            <option value="ocean">Ocean Blue</option>
+                                            <option value="emerald">Emerald Green</option>
+                                            <option value="sunset">Sunset Orange</option>
+                                            <option value="royal">Royal Purple</option>
+                                            <option value="crimson">Crimson Red</option>
+                                            <option value="midnight">Midnight Dark</option>
+                                            <option value="minimal">Minimal White</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn-primary" id="generatePptBtn" onclick="generateAIPpt()" style="height: 44px;">
+                                        <i class="fas fa-bolt"></i> Generate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="glass-premium" style="text-align: center; padding: var(--spacing-xl); border-radius: var(--border-radius); opacity: 0.6;">
+                            <div style="font-size: 4rem; margin-bottom: var(--spacing-md);"><i class="fas fa-chalkboard-teacher"></i></div>
+                            <h3 style="color: var(--text-secondary);">Your presentation will appear here</h3>
+                            <p style="color: var(--text-tertiary);">AI will generate a beautiful, NCERT-grade presentation with diagrams, formulas, and key concepts</p>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="pptLoading" style="display: none; text-align: center; padding: var(--spacing-xl);">
+                        <div style="font-size: 3rem; margin-bottom: var(--spacing-md);">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h3 style="color: var(--text-primary); margin-bottom: var(--spacing-sm);">Crafting Your Presentation...</h3>
+                        <p id="pptLoadingMsg" style="color: var(--text-tertiary);">Generating slide content with AI...</p>
+                        <div class="ppt-progress-bar" style="margin-top: var(--spacing-md); height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; max-width: 300px; margin-left: auto; margin-right: auto;">
+                            <div id="pptProgressFill" style="height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Presentation Display -->
+                    <div id="pptDisplaySection" style="display: none;">
+                        <!-- Toolbar -->
+                        <div class="ppt-toolbar glass-premium" style="display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--border-radius); margin-bottom: var(--spacing-sm); flex-wrap: wrap; gap: var(--spacing-sm);">
+                            <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                                <button class="btn-secondary glass-btn" onclick="pptPrevSlide()" id="pptPrevBtn"><i class="fas fa-chevron-left"></i></button>
+                                <span id="pptSlideIndicator" style="font-weight: 600; color: var(--text-primary); min-width: 80px; text-align: center;">1 / 1</span>
+                                <button class="btn-secondary glass-btn" onclick="pptNextSlide()" id="pptNextBtn"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                                <button class="btn-secondary glass-btn" onclick="pptToggleFullscreen()" title="Fullscreen"><i class="fas fa-expand"></i> Present</button>
+                                <button class="btn-secondary glass-btn" onclick="pptExportHTML()" title="Export"><i class="fas fa-download"></i> Export HTML</button>
+                                <button class="btn-secondary glass-btn" onclick="pptNewPresentation()" title="New"><i class="fas fa-plus"></i> New</button>
+                            </div>
+                        </div>
+
+                        <!-- Slide Viewport -->
+                        <div id="pptViewport" style="position: relative; width: 100%; max-width: 960px; margin: 0 auto; aspect-ratio: 16/9; border-radius: var(--border-radius); overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.3);">
+                            <div id="pptSlideContainer" style="width: 100%; height: 100%; position: relative;"></div>
+                        </div>
+
+                        <!-- Slide Thumbnails -->
+                        <div id="pptThumbnails" style="display: flex; gap: var(--spacing-sm); padding: var(--spacing-md) 0; overflow-x: auto; max-width: 960px; margin: 0 auto;"></div>
                     </div>
                 </div>
             </div>

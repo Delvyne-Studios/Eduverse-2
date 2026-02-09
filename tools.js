@@ -68,7 +68,8 @@ function openTool(toolId) {
         'cheat-sheet': 'cheatSheetTool',
         'mindmap': 'mindmapTool',
         'study-planner': 'studyPlannerTool',
-        'ai-notes': 'aiNotesTool'
+        'ai-notes': 'aiNotesTool',
+        'ai-ppt': 'aiPptTool'
     };
     
     const toolElement = document.getElementById(toolMap[toolId]);
@@ -85,7 +86,8 @@ function openTool(toolId) {
                 'cheat-sheet': 'Cheat Sheet',
                 'mindmap': 'Mind Map',
                 'study-planner': 'Study Planner',
-                'ai-notes': 'AI Notes'
+                'ai-notes': 'AI Notes',
+                'ai-ppt': 'AI Presentations'
             };
             window.gamification.addXP(5, `Used ${toolNames[toolId]}`);
         }
@@ -1684,4 +1686,555 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+});
+
+// =================================================================
+// AI PRESENTATION MAKER
+// =================================================================
+
+const PPT_THEMES = {
+    ocean: {
+        name: 'Ocean Blue',
+        primary: '#0f4c75', accent: '#3282b8', light: '#bbe1fa',
+        bg: '#0b2545', bgAlt: '#13315c', text: '#ffffff', textMuted: '#a8c8e8',
+        gradient: 'linear-gradient(135deg, #0b2545, #1b3a5c, #0f4c75)'
+    },
+    emerald: {
+        name: 'Emerald Green',
+        primary: '#1b5e20', accent: '#43a047', light: '#c8e6c9',
+        bg: '#0a2e12', bgAlt: '#1a3c24', text: '#ffffff', textMuted: '#a0c4a8',
+        gradient: 'linear-gradient(135deg, #0a2e12, #1b5e20, #2e7d32)'
+    },
+    sunset: {
+        name: 'Sunset Orange',
+        primary: '#e65100', accent: '#ff9800', light: '#ffe0b2',
+        bg: '#3e1a00', bgAlt: '#5c2800', text: '#ffffff', textMuted: '#d4a574',
+        gradient: 'linear-gradient(135deg, #3e1a00, #bf360c, #e65100)'
+    },
+    royal: {
+        name: 'Royal Purple',
+        primary: '#4a148c', accent: '#ab47bc', light: '#e1bee7',
+        bg: '#1a0533', bgAlt: '#2c0d52', text: '#ffffff', textMuted: '#b89fd0',
+        gradient: 'linear-gradient(135deg, #1a0533, #4a148c, #6a1b9a)'
+    },
+    crimson: {
+        name: 'Crimson Red',
+        primary: '#b71c1c', accent: '#ef5350', light: '#ffcdd2',
+        bg: '#3c0a0a', bgAlt: '#5c1515', text: '#ffffff', textMuted: '#d09090',
+        gradient: 'linear-gradient(135deg, #3c0a0a, #8e1318, #b71c1c)'
+    },
+    midnight: {
+        name: 'Midnight Dark',
+        primary: '#1a1a2e', accent: '#e94560', light: '#f5c6d0',
+        bg: '#0f0f1a', bgAlt: '#16213e', text: '#ffffff', textMuted: '#8888aa',
+        gradient: 'linear-gradient(135deg, #0f0f1a, #16213e, #1a1a2e)'
+    },
+    minimal: {
+        name: 'Minimal White',
+        primary: '#212121', accent: '#1976d2', light: '#e3f2fd',
+        bg: '#ffffff', bgAlt: '#f5f5f5', text: '#212121', textMuted: '#757575',
+        gradient: 'linear-gradient(135deg, #ffffff, #f5f5f5, #eeeeee)'
+    }
+};
+
+let pptState = {
+    slides: [],
+    currentSlide: 0,
+    theme: null,
+    topic: '',
+    isFullscreen: false
+};
+
+async function generateAIPpt() {
+    const topicInput = document.getElementById('pptTopic');
+    const slideCountInput = document.getElementById('pptSlideCount');
+    const themeSelect = document.getElementById('pptTheme');
+    const generateBtn = document.getElementById('generatePptBtn');
+    const inputSection = document.getElementById('pptInputSection');
+    const loadingEl = document.getElementById('pptLoading');
+    const displaySection = document.getElementById('pptDisplaySection');
+    const loadingMsg = document.getElementById('pptLoadingMsg');
+    const progressFill = document.getElementById('pptProgressFill');
+
+    const topic = topicInput.value.trim();
+    const slideCount = parseInt(slideCountInput.value) || 8;
+    const themeName = themeSelect.value;
+
+    if (!topic) {
+        showToast('Please enter a topic', 'error');
+        return;
+    }
+
+    if (slideCount < 3 || slideCount > 20) {
+        showToast('Slide count must be between 3 and 20', 'error');
+        return;
+    }
+
+    pptState.theme = PPT_THEMES[themeName];
+    pptState.topic = topic;
+
+    // Disable button
+    generateBtn.disabled = true;
+    generateBtn.style.opacity = '0.6';
+
+    // Show loading
+    inputSection.style.display = 'none';
+    loadingEl.style.display = 'block';
+    displaySection.style.display = 'none';
+    progressFill.style.width = '10%';
+
+    try {
+        // Step 1: Identify relevant NCERT chapter
+        loadingMsg.textContent = 'Identifying relevant NCERT chapter...';
+        progressFill.style.width = '15%';
+
+        let chapterContext = null;
+        try {
+            chapterContext = await identifyChapterWithAI(topic);
+            if (chapterContext) {
+                loadingMsg.textContent = `Loaded: ${chapterContext.info.chapter}. Generating slides...`;
+            }
+        } catch (e) {
+            console.warn('Could not load chapter context:', e);
+        }
+        progressFill.style.width = '25%';
+
+        // Step 2: Generate slide content with AI
+        loadingMsg.textContent = 'AI is crafting your presentation...';
+        const slidesData = await generateSlideContent(topic, slideCount, chapterContext);
+        progressFill.style.width = '70%';
+
+        // Step 3: Render slides
+        loadingMsg.textContent = 'Rendering beautiful slides...';
+        pptState.slides = slidesData;
+        pptState.currentSlide = 0;
+        progressFill.style.width = '90%';
+
+        renderAllSlides();
+        buildThumbnails();
+        updateSlideNav();
+        progressFill.style.width = '100%';
+
+        // Show presentation
+        setTimeout(() => {
+            loadingEl.style.display = 'none';
+            displaySection.style.display = 'block';
+        }, 400);
+
+        if (window.gamification) {
+            window.gamification.addXP(20, 'Generated AI Presentation');
+        }
+
+        showToast('Presentation generated! 🎉', 'success');
+
+    } catch (error) {
+        console.error('Error generating PPT:', error);
+        showToast(error.message || 'Failed to generate presentation', 'error');
+        inputSection.style.display = 'block';
+        loadingEl.style.display = 'none';
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.style.opacity = '1';
+    }
+}
+
+async function generateSlideContent(topic, slideCount, chapterContext) {
+    const chapterInfo = chapterContext
+        ? `\n\nYOU HAVE THE NCERT CHAPTER. Use it as your primary source:\n=== CHAPTER ===\n${chapterContext.text.slice(0, 40000)}\n`
+        : '';
+
+    const prompt = `You are a world-class presentation designer for Class 11 CBSE NCERT students.
+
+Create a ${slideCount}-slide presentation on: "${topic}"
+${chapterInfo}
+
+RESPOND WITH VALID JSON ONLY. No markdown, no code fences, just the JSON array.
+
+Each slide object must have these fields:
+- "layout": one of "title", "content", "two-column", "diagram", "formula", "summary"
+- "title": slide heading (short, punchy)
+- "subtitle": optional subheading or context line
+- "bullets": array of bullet point strings (each bullet should be 1-2 sentences, informative)
+- "leftColumn": for two-column layout — object with "heading" and "bullets" array
+- "rightColumn": for two-column layout — object with "heading" and "bullets" array
+- "formula": for formula layout — string with the key formula/equation (use unicode math symbols: ², ³, √, ∑, ∫, Δ, θ, π, α, β, →, ⇌, ≥, ≤, ₁, ₂)
+- "formulaExplanation": string explaining the formula variables
+- "diagramDescription": for diagram layout — describe what visual/diagram to represent
+- "keyTakeaways": for summary slide — array of key points
+- "speakerNotes": short note for the presenter (2-3 sentences)
+
+SLIDE STRUCTURE RULES:
+1. Slide 1 MUST be layout "title" with the main topic and a compelling subtitle
+2. Last slide MUST be layout "summary" with key takeaways
+3. Middle slides: mix "content", "two-column", "formula", "diagram" layouts for variety
+4. Each content slide: 4-6 detailed bullet points. Be thorough — include facts, definitions, examples
+5. For formula slides: write the actual formula + explain each variable
+6. For diagram slides: describe the diagram clearly (flowchart, cycle, comparison, etc.)
+7. Everything MUST be NCERT-accurate for Class 11 CBSE
+8. Include specific examples, numerical values, and real applications where relevant
+
+Return the JSON array of ${slideCount} slide objects:`;
+
+    const response = await fetch(API_CONFIG.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: API_CONFIG.model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.4,
+            max_tokens: 4000
+        })
+    });
+
+    if (!response.ok) throw new Error('AI failed to generate slides');
+
+    const data = await response.json();
+    let content = data.choices[0].message.content.trim();
+
+    // Clean up any markdown fences
+    content = content.replace(/```json\s*/gi, '').replace(/```\s*/gi, '');
+
+    // Try to extract JSON array
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) throw new Error('AI returned invalid format. Please try again.');
+
+    const slides = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(slides) || slides.length === 0) throw new Error('No slides generated');
+
+    return slides;
+}
+
+function renderSlideHTML(slide, index, total) {
+    const t = pptState.theme;
+    const isLight = t === PPT_THEMES.minimal;
+    const accentRgba = hexToRgba(t.accent, 0.15);
+    const primaryRgba = hexToRgba(t.primary, 0.5);
+
+    // Decorative shapes
+    const decoCircle = `<div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:${hexToRgba(t.accent, 0.08)};pointer-events:none;"></div>`;
+    const decoLine = `<div style="position:absolute;bottom:0;left:0;width:100%;height:4px;background:linear-gradient(90deg, ${t.accent}, transparent);"></div>`;
+    const footerBar = `<div style="position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:8px 24px;font-size:10px;color:${t.textMuted};letter-spacing:0.5px;"><span>EduVerse • NCERT Class 11</span><span>${index + 1} / ${total}</span></div>`;
+
+    let inner = '';
+
+    switch (slide.layout) {
+        case 'title':
+            inner = `
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px 60px;position:relative;z-index:1;">
+                    <div style="width:60px;height:4px;background:${t.accent};border-radius:2px;margin-bottom:20px;"></div>
+                    <h1 style="font-size:clamp(28px,4vw,44px);font-weight:800;color:${t.text};margin:0 0 16px 0;line-height:1.15;letter-spacing:-0.5px;">${escPptHtml(slide.title)}</h1>
+                    ${slide.subtitle ? `<p style="font-size:clamp(14px,2vw,20px);color:${t.textMuted};margin:0;font-weight:300;max-width:80%;">${escPptHtml(slide.subtitle)}</p>` : ''}
+                    <div style="margin-top:32px;display:flex;align-items:center;gap:8px;color:${t.accent};font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">
+                        <div style="width:24px;height:1px;background:${t.accent};"></div>
+                        NCERT Class 11
+                        <div style="width:24px;height:1px;background:${t.accent};"></div>
+                    </div>
+                </div>
+                <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:${t.gradient};opacity:0.6;pointer-events:none;"></div>
+                ${decoCircle}
+            `;
+            break;
+
+        case 'two-column':
+            const leftCol = slide.leftColumn || { heading: '', bullets: [] };
+            const rightCol = slide.rightColumn || { heading: '', bullets: [] };
+            inner = `
+                <div style="display:flex;flex-direction:column;height:100%;padding:32px 36px 40px;position:relative;z-index:1;">
+                    <h2 style="font-size:clamp(18px,2.5vw,26px);font-weight:700;color:${t.text};margin:0 0 20px 0;padding-bottom:12px;border-bottom:2px solid ${hexToRgba(t.accent, 0.3)};">${escPptHtml(slide.title)}</h2>
+                    <div style="display:flex;gap:24px;flex:1;min-height:0;">
+                        <div style="flex:1;background:${hexToRgba(t.accent, 0.06)};border-radius:12px;padding:20px;border-left:3px solid ${t.accent};">
+                            ${leftCol.heading ? `<h3 style="font-size:15px;font-weight:700;color:${t.accent};margin:0 0 12px 0;text-transform:uppercase;letter-spacing:0.5px;">${escPptHtml(leftCol.heading)}</h3>` : ''}
+                            ${(leftCol.bullets || []).map(b => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:${t.accent};font-size:8px;margin-top:5px;">●</span><span style="font-size:13px;color:${t.text};line-height:1.5;">${escPptHtml(b)}</span></div>`).join('')}
+                        </div>
+                        <div style="flex:1;background:${hexToRgba(t.primary, 0.08)};border-radius:12px;padding:20px;border-left:3px solid ${t.primary};">
+                            ${rightCol.heading ? `<h3 style="font-size:15px;font-weight:700;color:${t.accent};margin:0 0 12px 0;text-transform:uppercase;letter-spacing:0.5px;">${escPptHtml(rightCol.heading)}</h3>` : ''}
+                            ${(rightCol.bullets || []).map(b => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;"><span style="color:${t.accent};font-size:8px;margin-top:5px;">●</span><span style="font-size:13px;color:${t.text};line-height:1.5;">${escPptHtml(b)}</span></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                ${decoLine}
+            `;
+            break;
+
+        case 'formula':
+            inner = `
+                <div style="display:flex;flex-direction:column;height:100%;padding:32px 36px 40px;position:relative;z-index:1;">
+                    <h2 style="font-size:clamp(18px,2.5vw,26px);font-weight:700;color:${t.text};margin:0 0 20px 0;">${escPptHtml(slide.title)}</h2>
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+                        <div style="background:${hexToRgba(t.accent, 0.08)};border:2px solid ${hexToRgba(t.accent, 0.25)};border-radius:16px;padding:28px 48px;text-align:center;">
+                            <div style="font-size:clamp(22px,3.5vw,36px);font-weight:700;color:${t.accent};font-family:'Courier New',monospace;letter-spacing:1px;">${escPptHtml(slide.formula || '')}</div>
+                        </div>
+                        ${slide.formulaExplanation ? `<p style="font-size:14px;color:${t.textMuted};text-align:center;max-width:80%;line-height:1.6;">${escPptHtml(slide.formulaExplanation)}</p>` : ''}
+                        ${(slide.bullets || []).length > 0 ? `<div style="width:100%;max-width:85%;margin-top:8px;">${slide.bullets.map(b => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;"><span style="color:${t.accent};font-size:8px;margin-top:5px;">●</span><span style="font-size:13px;color:${t.text};line-height:1.5;">${escPptHtml(b)}</span></div>`).join('')}</div>` : ''}
+                    </div>
+                </div>
+                ${decoLine}
+            `;
+            break;
+
+        case 'diagram':
+            inner = `
+                <div style="display:flex;flex-direction:column;height:100%;padding:32px 36px 40px;position:relative;z-index:1;">
+                    <h2 style="font-size:clamp(18px,2.5vw,26px);font-weight:700;color:${t.text};margin:0 0 20px 0;">${escPptHtml(slide.title)}</h2>
+                    <div style="flex:1;display:flex;gap:24px;">
+                        <div style="flex:1;background:${hexToRgba(t.accent, 0.04)};border:1.5px dashed ${hexToRgba(t.accent, 0.3)};border-radius:12px;display:flex;align-items:center;justify-content:center;padding:20px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:48px;margin-bottom:12px;opacity:0.4;">📊</div>
+                                <p style="font-size:13px;color:${t.textMuted};line-height:1.5;max-width:260px;">${escPptHtml(slide.diagramDescription || 'Diagram')}</p>
+                            </div>
+                        </div>
+                        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+                            ${(slide.bullets || []).map(b => `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;"><span style="color:${t.accent};font-size:8px;margin-top:5px;">●</span><span style="font-size:13px;color:${t.text};line-height:1.5;">${escPptHtml(b)}</span></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                ${decoLine}
+            `;
+            break;
+
+        case 'summary':
+            const takeaways = slide.keyTakeaways || slide.bullets || [];
+            inner = `
+                <div style="display:flex;flex-direction:column;height:100%;padding:32px 36px 40px;position:relative;z-index:1;">
+                    <h2 style="font-size:clamp(20px,3vw,30px);font-weight:800;color:${t.text};margin:0 0 8px 0;">${escPptHtml(slide.title || 'Key Takeaways')}</h2>
+                    <div style="width:48px;height:3px;background:${t.accent};border-radius:2px;margin-bottom:20px;"></div>
+                    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;">
+                        ${takeaways.map((item, i) => `
+                            <div style="display:flex;align-items:flex-start;gap:12px;background:${hexToRgba(t.accent, 0.06)};padding:12px 16px;border-radius:10px;border-left:3px solid ${t.accent};">
+                                <span style="font-size:18px;font-weight:800;color:${t.accent};min-width:24px;">${i + 1}</span>
+                                <span style="font-size:14px;color:${t.text};line-height:1.5;">${escPptHtml(item)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ${decoLine}
+            `;
+            break;
+
+        default: // content
+            inner = `
+                <div style="display:flex;flex-direction:column;height:100%;padding:32px 36px 40px;position:relative;z-index:1;">
+                    <h2 style="font-size:clamp(18px,2.5vw,26px);font-weight:700;color:${t.text};margin:0 0 4px 0;">${escPptHtml(slide.title)}</h2>
+                    ${slide.subtitle ? `<p style="font-size:13px;color:${t.textMuted};margin:0 0 16px 0;">${escPptHtml(slide.subtitle)}</p>` : '<div style="margin-bottom:16px;"></div>'}
+                    <div style="width:40px;height:3px;background:${t.accent};border-radius:2px;margin-bottom:20px;"></div>
+                    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;">
+                        ${(slide.bullets || []).map(b => `
+                            <div style="display:flex;align-items:flex-start;gap:10px;">
+                                <div style="min-width:6px;min-height:6px;width:6px;height:6px;border-radius:50%;background:${t.accent};margin-top:7px;"></div>
+                                <span style="font-size:14px;color:${t.text};line-height:1.6;">${escPptHtml(b)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ${decoLine}
+            `;
+            break;
+    }
+
+    return `
+        <div class="ppt-slide" style="width:100%;height:100%;position:absolute;top:0;left:0;background:${t.bg};font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow:hidden;box-sizing:border-box;">
+            ${inner}
+            ${footerBar}
+        </div>
+    `;
+}
+
+function escPptHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function renderAllSlides() {
+    const container = document.getElementById('pptSlideContainer');
+    if (!container) return;
+    const total = pptState.slides.length;
+    container.innerHTML = pptState.slides.map((s, i) => renderSlideHTML(s, i, total)).join('');
+    showSlide(0);
+}
+
+function showSlide(index) {
+    const slides = document.querySelectorAll('#pptSlideContainer .ppt-slide');
+    slides.forEach((s, i) => {
+        s.style.display = i === index ? 'block' : 'none';
+        s.style.opacity = i === index ? '1' : '0';
+    });
+    pptState.currentSlide = index;
+    updateSlideNav();
+
+    // Highlight thumbnail
+    document.querySelectorAll('.ppt-thumb').forEach((th, i) => {
+        th.style.outline = i === index ? `2px solid ${pptState.theme.accent}` : 'none';
+        th.style.opacity = i === index ? '1' : '0.6';
+    });
+}
+
+function pptPrevSlide() {
+    if (pptState.currentSlide > 0) showSlide(pptState.currentSlide - 1);
+}
+
+function pptNextSlide() {
+    if (pptState.currentSlide < pptState.slides.length - 1) showSlide(pptState.currentSlide + 1);
+}
+
+function updateSlideNav() {
+    const indicator = document.getElementById('pptSlideIndicator');
+    const prevBtn = document.getElementById('pptPrevBtn');
+    const nextBtn = document.getElementById('pptNextBtn');
+    if (indicator) indicator.textContent = `${pptState.currentSlide + 1} / ${pptState.slides.length}`;
+    if (prevBtn) prevBtn.disabled = pptState.currentSlide === 0;
+    if (nextBtn) nextBtn.disabled = pptState.currentSlide === pptState.slides.length - 1;
+}
+
+function buildThumbnails() {
+    const container = document.getElementById('pptThumbnails');
+    if (!container) return;
+    container.innerHTML = '';
+    pptState.slides.forEach((slide, i) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'ppt-thumb';
+        thumb.style.cssText = `
+            min-width:120px;width:120px;height:68px;border-radius:6px;cursor:pointer;
+            overflow:hidden;position:relative;background:${pptState.theme.bg};
+            transition:all 0.2s ease;outline:${i === 0 ? `2px solid ${pptState.theme.accent}` : 'none'};
+            opacity:${i === 0 ? '1' : '0.6'};flex-shrink:0;
+        `;
+        // Render a mini version
+        thumb.innerHTML = `
+            <div style="transform:scale(0.125);transform-origin:top left;width:960px;height:540px;pointer-events:none;position:absolute;top:0;left:0;">
+                ${renderSlideHTML(slide, i, pptState.slides.length)}
+            </div>
+            <div style="position:absolute;bottom:2px;right:4px;font-size:9px;color:${pptState.theme.textMuted};font-weight:600;">${i + 1}</div>
+        `;
+        thumb.onclick = () => showSlide(i);
+        container.appendChild(thumb);
+    });
+}
+
+function pptToggleFullscreen() {
+    const viewport = document.getElementById('pptViewport');
+    if (!viewport) return;
+
+    if (!pptState.isFullscreen) {
+        // Enter fullscreen
+        viewport.style.cssText = `
+            position:fixed;top:0;left:0;width:100vw;height:100vh;
+            max-width:none;border-radius:0;z-index:99999;aspect-ratio:auto;
+            box-shadow:none;cursor:none;
+        `;
+        pptState.isFullscreen = true;
+
+        // Keyboard nav
+        document.addEventListener('keydown', pptFullscreenKeyHandler);
+        // Click to close
+        viewport.addEventListener('click', pptExitFullscreen);
+    } else {
+        pptExitFullscreen();
+    }
+}
+
+function pptExitFullscreen() {
+    const viewport = document.getElementById('pptViewport');
+    if (!viewport) return;
+    viewport.style.cssText = `
+        position:relative;width:100%;max-width:960px;margin:0 auto;
+        aspect-ratio:16/9;border-radius:var(--border-radius);overflow:hidden;
+        box-shadow:0 8px 40px rgba(0,0,0,0.3);
+    `;
+    pptState.isFullscreen = false;
+    document.removeEventListener('keydown', pptFullscreenKeyHandler);
+    viewport.removeEventListener('click', pptExitFullscreen);
+}
+
+function pptFullscreenKeyHandler(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); pptNextSlide(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); pptPrevSlide(); }
+    else if (e.key === 'Escape') { pptExitFullscreen(); }
+}
+
+function pptExportHTML() {
+    if (!pptState.slides || pptState.slides.length === 0) return;
+
+    const t = pptState.theme;
+    const total = pptState.slides.length;
+    const slidesHTML = pptState.slides.map((s, i) => {
+        return `<div class="slide" id="slide-${i}" style="display:${i === 0 ? 'block' : 'none'};">${renderSlideHTML(s, i, total)}</div>`;
+    }).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escPptHtml(pptState.topic)} - EduVerse Presentation</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Segoe UI',system-ui,sans-serif; }
+  .presentation { width:100vw; height:100vh; position:relative; overflow:hidden; }
+  .slide { position:absolute; top:0; left:0; width:100%; height:100%; }
+  .slide .ppt-slide { width:100% !important; height:100% !important; }
+  .nav-hint { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.4); font-size:12px; z-index:100; }
+</style>
+</head>
+<body>
+<div class="presentation">${slidesHTML}</div>
+<div class="nav-hint">← → Arrow keys to navigate | Press F for fullscreen</div>
+<script>
+let current = 0;
+const total = ${total};
+function show(i) {
+  document.querySelectorAll('.slide').forEach((s,idx) => s.style.display = idx === i ? 'block' : 'none');
+  current = i;
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); if (current < total-1) show(current+1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); if (current > 0) show(current-1); }
+  if (e.key === 'f' || e.key === 'F') { document.documentElement.requestFullscreen?.(); }
+  if (e.key === 'Escape') { document.exitFullscreen?.(); }
+});
+document.addEventListener('click', e => {
+  const x = e.clientX / window.innerWidth;
+  if (x > 0.5 && current < total-1) show(current+1);
+  else if (x <= 0.5 && current > 0) show(current-1);
+});
+</script>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${pptState.topic.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_presentation.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Presentation exported! Open in any browser to present.', 'success');
+}
+
+function pptNewPresentation() {
+    pptState.slides = [];
+    pptState.currentSlide = 0;
+    document.getElementById('pptDisplaySection').style.display = 'none';
+    document.getElementById('pptInputSection').style.display = 'block';
+}
+
+// Add keyboard navigation when PPT tool is open
+document.addEventListener('keydown', (e) => {
+    const pptTool = document.getElementById('aiPptTool');
+    if (!pptTool || pptTool.style.display === 'none') return;
+    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) return;
+
+    if (e.key === 'ArrowRight') pptNextSlide();
+    else if (e.key === 'ArrowLeft') pptPrevSlide();
 });
