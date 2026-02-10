@@ -606,6 +606,132 @@ class ChatAssistant {
     }
     
     // =================================================================
+    // FUNCTION CALLING DEFINITIONS
+    // =================================================================
+    getFunctionDefinitions() {
+        return [
+            {
+                name: "web_search",
+                description: "Search the web for current information, facts, news, or any topic not in NCERT textbooks. Use this when you need up-to-date information, real-world examples, or information beyond the textbooks. Do NOT use for basic NCERT content.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        query: {
+                            type: "string",
+                            description: "The search query. Be specific and clear. Example: 'latest discoveries in quantum physics 2025'"
+                        },
+                        search_depth: {
+                            type: "string",
+                            enum: ["basic", "advanced"],
+                            description: "Use 'advanced' for comprehensive search, 'basic' for quick facts",
+                            default: "advanced"
+                        }
+                    },
+                    required: ["query"]
+                }
+            },
+            {
+                name: "ncert_web_search",
+                description: "Search specifically for NCERT official content, CBSE resources, or supplementary NCERT materials from ncert.nic.in and related official sites. Use this when student asks for official NCERT content, exam patterns, or CBSE guidelines that are not in the loaded textbook.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        query: {
+                            type: "string",
+                            description: "The NCERT-specific search query. Example: 'NCERT Class 11 Chemistry experiment procedures'"
+                        },
+                        subject: {
+                            type: "string",
+                            enum: ["chemistry", "physics", "mathematics", "all"],
+                            description: "The subject to focus the search on",
+                            default: "all"
+                        }
+                    },
+                    required: ["query"]
+                }
+            }
+        ];
+    }
+
+    // =================================================================
+    // EXECUTE FUNCTION CALLS
+    // =================================================================
+    async executeFunction(functionName, functionArgs) {
+        console.log(`🔧 Executing function: ${functionName}`);
+        console.log('📥 Arguments:', functionArgs);
+
+        try {
+            if (functionName === 'web_search') {
+                const response = await fetch('/api/web-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(functionArgs)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Web search failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Web search complete:', data.results?.length, 'results');
+                
+                // Format results for AI
+                let formattedResults = `# Web Search Results for: "${data.query}"\n\n`;
+                
+                if (data.answer) {
+                    formattedResults += `## Quick Answer:\n${data.answer}\n\n`;
+                }
+                
+                formattedResults += `## Top ${data.results.length} Results:\n\n`;
+                data.results.forEach((result, index) => {
+                    formattedResults += `### ${index + 1}. ${result.title}\n`;
+                    formattedResults += `**URL:** ${result.url}\n`;
+                    formattedResults += `**Content:** ${result.content}\n`;
+                    formattedResults += `**Relevance Score:** ${result.score}\n\n`;
+                });
+
+                return formattedResults;
+            }
+            else if (functionName === 'ncert_web_search') {
+                const response = await fetch('/api/ncert-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(functionArgs)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`NCERT search failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ NCERT search complete:', data.results?.length, 'results');
+                
+                // Format NCERT results for AI
+                let formattedResults = `# NCERT Search Results for: "${data.query}"\n\n`;
+                
+                if (data.answer) {
+                    formattedResults += `## Summary from NCERT Sources:\n${data.answer}\n\n`;
+                }
+                
+                formattedResults += `## Official NCERT/CBSE Resources (${data.results.length} found):\n\n`;
+                data.results.forEach((result, index) => {
+                    formattedResults += `### ${index + 1}. ${result.title}\n`;
+                    formattedResults += `**Source:** ${result.url} ${result.is_ncert ? '✅ (Official NCERT)' : ''}\n`;
+                    formattedResults += `**Content:** ${result.content}\n\n`;
+                });
+
+                return formattedResults;
+            }
+            else {
+                throw new Error(`Unknown function: ${functionName}`);
+            }
+        } catch (error) {
+            console.error(`❌ Function execution error (${functionName}):`, error);
+            return `Error executing ${functionName}: ${error.message}`;
+        }
+    }
+
+    // =================================================================
     // OPENROUTER API WITH STREAMING
     // =================================================================
     async callOpenRouterAPIWithStreaming(systemPrompt, typingDiv, readSubtopics = [], retryCount = 0) {
@@ -618,6 +744,9 @@ class ChatAssistant {
         try {
             console.log(`🔄 Attempting API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
             
+            // Get function definitions
+            const functions = this.getFunctionDefinitions();
+            
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
@@ -626,7 +755,11 @@ class ChatAssistant {
                 body: JSON.stringify({
                     model: this.model,
                     messages: messages,
-                    stream: true,
+                    tools: functions.map(func => ({
+                        type: "function",
+                        function: func
+                    })),
+                    stream: false, // Disable streaming for function calling
                     temperature: 0.7
                 })
             });
@@ -638,9 +771,13 @@ class ChatAssistant {
             
             console.log('✅ API connection successful');
             
-            // Setup streaming reader
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
+            // Parse JSON response (no streaming for function calling)
+            const data = await response.json();
+            const choice = data.choices?.[0];
+            
+            if (!choice) {
+                throw new Error('Invalid API response - no choices');
+            }
             
             // Setup message elements
             const contentDiv = typingDiv.querySelector('.message-content');
@@ -655,97 +792,109 @@ class ChatAssistant {
             timeDiv.textContent = this.getCurrentTime();
             contentDiv.appendChild(timeDiv);
             
-            let fullResponse = '';
-            let buffer = '';
-            let isStreaming = true;
-            
-            // Add typing cursor during streaming
-            const addTypingCursor = () => {
-                if (isStreaming) {
-                    bubbleDiv.textContent = fullResponse;
-                    const cursor = document.createElement('span');
-                    cursor.className = 'typing-cursor';
-                    cursor.textContent = '|';
-                    bubbleDiv.appendChild(cursor);
+            // Check if AI wants to call a function
+            if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+                console.log('🔧 AI requested function call(s)');
+                
+                // Show "Searching web..." indicator
+                bubbleDiv.innerHTML = '<div class="searching-indicator"><i class="fas fa-globe"></i> Searching the web... </div>';
+                this.scrollToBottom();
+                
+                // Add assistant message with function call to history
+                this.currentMessages.push(choice.message);
+                
+                // Execute all function calls
+                const functionResults = [];
+                for (const toolCall of choice.message.tool_calls) {
+                    const functionName = toolCall.function.name;
+                    const functionArgs = JSON.parse(toolCall.function.arguments);
+                    
+                    // Execute function
+                    const result = await this.executeFunction(functionName, functionArgs);
+                    
+                    // Add function result to messages
+                    functionResults.push({
+                        role: 'tool',
+                        tool_call_id: toolCall.id,
+                        name: functionName,
+                        content: result
+                    });
                 }
-            };
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
                 
-                const chunk = decoder.decode(value, { stream: true });
-                buffer += chunk;;
+                // Add function results to messages
+                this.currentMessages.push(...functionResults);
                 
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
+                // Call AI again with function results
+                bubbleDiv.innerHTML = '<div class="searching-indicator"><i class="fas fa-brain"></i> Processing search results...</div>';
+                this.scrollToBottom();
                 
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        if (data === '[DONE]') continue;
-                        
-                        try {
-                            const json = JSON.parse(data);
-                            const content = json.choices?.[0]?.delta?.content;
-                            
-                            if (content) {
-                                fullResponse += content;
-                                addTypingCursor();
-                                this.scrollToBottom();
-                            }
-                            
-                            const finishReason = json.choices?.[0]?.finish_reason;
-                            if (finishReason) {
-                                console.log('⚠️ Stream finished with reason:', finishReason);
-                            }
-                        } catch (e) {
-                            console.warn('Parse error (non-critical):', e.message);
-                        }
-                    }
+                const followUpResponse = await fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            ...this.currentMessages
+                        ],
+                        temperature: 0.7
+                    })
+                });
+                
+                if (!followUpResponse.ok) {
+                    throw new Error('Follow-up API call failed');
                 }
+                
+                const followUpData = await followUpResponse.json();
+                const finalResponse = followUpData.choices?.[0]?.message?.content;
+                
+                if (!finalResponse) {
+                    throw new Error('No response after function call');
+                }
+                
+                // Process and display final response
+                const processedResponse = await this.processVisualContent(finalResponse, contentDiv);
+                bubbleDiv.innerHTML = this.finalFormatSolution(processedResponse.text);
+                
+                // Add "Searched web" badge
+                const searchBadge = document.createElement('div');
+                searchBadge.className = 'search-badge';
+                searchBadge.innerHTML = '<i class="fas fa-globe"></i> Web search used';
+                contentDiv.appendChild(searchBadge);
+                
+                // Store final message
+                this.currentMessages.push({
+                    role: 'assistant',
+                    content: finalResponse
+                });
+                
+                console.log('✅ Function calling complete!');
             }
-            
-            // Streaming complete
-            isStreaming = false;
-            console.log('🎨 Formatting response...');
-            
-            // Process diagrams/graphs first
-            const processedResponse = await this.processVisualContent(fullResponse, contentDiv);
-            
-            // Format with markdown and KaTeX auto-render
-            bubbleDiv.innerHTML = this.finalFormatSolution(processedResponse.text);
-            console.log('✅ Formatting complete!');
-            
-            // Add context log if available
-            if (readSubtopics && Array.isArray(readSubtopics) && readSubtopics.length > 0) {
-                const contextLog = document.createElement('div');
-                contextLog.className = 'context-log';
-                contextLog.innerHTML = `
-                    <strong>📚 DATABASE CONTEXT USED:</strong><br>
-                    ${readSubtopics.map(s => `• ${s}`).join('<br>')}
-                `;
-                contentDiv.appendChild(contextLog);
+            else {
+                // No function call - normal response
+                const fullResponse = choice.message?.content || '';
+                
+                if (!fullResponse) {
+                    throw new Error('Empty response from API');
+                }
+                
+                console.log('🎨 Formatting response...');
+                
+                // Process diagrams/graphs first
+                const processedResponse = await this.processVisualContent(fullResponse, contentDiv);
+                
+                // Format with markdown and KaTeX auto-render
+                bubbleDiv.innerHTML = this.finalFormatSolution(processedResponse.text);
+                console.log('✅ Formatting complete!');
+                
+                // Store message
+                this.currentMessages.push({
+                    role: 'assistant',
+                    content: fullResponse
+                });
             }
-            
-            // Add context usage display
-            if (window.chatManager) {
-                const usageHtml = window.chatManager.getContextUsageDisplay(
-                    systemPrompt,
-                    this.currentMessages,
-                    null
-                );
-                const usageDiv = document.createElement('div');
-                usageDiv.className = 'message-context-usage';
-                usageDiv.innerHTML = usageHtml;
-                contentDiv.appendChild(usageDiv);
-            }
-            
-            // Store message
-            this.currentMessages.push({
-                role: 'assistant',
-                content: fullResponse
-            });
             
             // Save to history and generate summary
             await this.saveAIResponseToHistory(fullResponse);
