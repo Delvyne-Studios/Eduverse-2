@@ -1481,12 +1481,21 @@ INSTRUCTIONS:
    - Number steps in procedures
    - Box key takeaways with ═══ borders
    
-5. Organization:
+5. **MATHEMATICAL EQUATIONS** (VERY IMPORTANT):
+   - Use \\( and \\) for inline equations (e.g., \\( E = mc^2 \\))
+   - Use $$ and $$ for display equations on separate lines
+   - Examples:
+     * Inline: The formula \\( a^2 + b^2 = c^2 \\) is the Pythagorean theorem
+     * Display: $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$
+   - Common symbols: \\cdot (dot), \\theta (theta), \\cos (cosine), \\sin (sine), \\frac{num}{den} (fraction)
+   - NEVER use plain text for equations - always wrap in \\( \\) or $$ $$
+   
+6. Organization:
    - Start with a brief overview/summary (2-3 sentences)
    - Organize content logically by topics/sections
    - End with "Key Takeaways" section listing 5-7 most important points
    
-6. BE THOROUGH - these notes should allow someone to understand the video content without watching it
+7. BE THOROUGH - these notes should allow someone to understand the video content without watching it
 
 Generate the notes now:`;
 
@@ -1572,6 +1581,20 @@ function displayNotes(transcriptData, notes) {
     
     // Display notes with formatting
     notesEl.innerHTML = formatNotes(notes);
+    
+    // Render math equations with KaTeX
+    if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(notesEl, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '\\[', right: '\\]', display: true},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false,
+            trust: true
+        });
+    }
     
     // Reset follow-up chat
     followUpChat.style.display = 'none';
@@ -1670,7 +1693,17 @@ async function sendFollowUpQuestion() {
         const messages = [
             {
                 role: 'system',
-                content: `You are a helpful assistant answering questions about a YouTube video. Here is the video transcript:\n\n${aiNotesState.currentTranscript.slice(0, 50000)}\n\nAnswer questions based on this transcript.`
+                content: `You are a helpful assistant answering questions about a YouTube video. Here is the video transcript:
+
+${aiNotesState.currentTranscript.slice(0, 50000)}
+
+Answer questions based on this transcript. 
+
+IMPORTANT: For mathematical equations:
+- Use \\( and \\) for inline equations (e.g., \\( E = mc^2 \\))
+- Use $$ and $$ for display equations
+- Example: The work formula is \\( W = F \\cdot s \\cdot \\cos\\theta \\)
+- Common symbols: \\cdot \\theta \\cos \\sin \\frac{}{} \\sqrt{} ^{} _{}`
             },
             ...aiNotesState.chatHistory,
             { role: 'user', content: question }
@@ -1761,6 +1794,21 @@ function addChatMessage(role, content, container, id = null) {
     `;
     
     container.appendChild(msgDiv);
+    
+    // Render math equations with KaTeX
+    if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(msgDiv, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '\\[', right: '\\]', display: true},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false,
+            trust: true
+        });
+    }
+    
     container.scrollTop = container.scrollHeight;
 }
 
