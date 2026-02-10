@@ -897,7 +897,11 @@ class ChatAssistant {
             }
             
             // Save to history and generate summary
-            await this.saveAIResponseToHistory(fullResponse);
+            await this.saveAIResponseToHistory(
+                choice.message?.tool_calls ? 
+                    followUpData.choices?.[0]?.message?.content : 
+                    choice.message?.content
+            );
             
         } catch (error) {
             console.error(`❌ API Error (attempt ${retryCount + 1}):`, error);

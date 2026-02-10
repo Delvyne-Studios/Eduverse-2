@@ -162,6 +162,137 @@ app.get('/api/youtube-transcript', async (req, res) => {
     }
 });
 
+// Web Search API endpoint using Tavily
+app.post('/api/web-search', async (req, res) => {
+    const { query, search_depth = 'standard', max_results = 5 } = req.body;
+
+    if (!query) {
+        return res.status(400).json({ error: 'Missing query parameter' });
+    }
+
+    const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
+    if (!TAVILY_API_KEY) {
+        console.error('❌ Missing TAVILY_API_KEY environment variable');
+        return res.status(500).json({ error: 'Server configuration error - missing Tavily API key' });
+    }
+
+    console.log('🔍 Web search query:', query);
+
+    try {
+        const response = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${TAVILY_API_KEY}`
+            },
+            body: JSON.stringify({
+                query: query,
+                search_depth: search_depth,
+                max_results: max_results,
+                include_answer: true
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Tavily API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Format results for AI consumption
+        const formattedResults = {
+            answer: data.answer || 'No direct answer found',
+            results: data.results?.map(result => ({
+                title: result.title,
+                url: result.url,
+                content: result.content,
+                score: result.score
+            })) || [],
+            query: query
+        };
+
+        return res.status(200).json(formattedResults);
+
+    } catch (error) {
+        console.error('❌ Web search error:', error);
+        return res.status(500).json({ 
+            error: 'Web search failed',
+            details: error.message 
+        });
+    }
+});
+
+// NCERT Search API endpoint
+app.post('/api/ncert-search', async (req, res) => {
+    const { query, subject } = req.body;
+
+    if (!query) {
+        return res.status(400).json({ error: 'Missing query parameter' });
+    }
+
+    const TAVILY_API_KEY = process.env.TAVILY_API_KEY;
+    if (!TAVILY_API_KEY) {
+        console.error('❌ Missing TAVILY_API_KEY environment variable');
+        return res.status(500).json({ error: 'Server configuration error - missing Tavily API key' });
+    }
+
+    // Build NCERT-focused search query
+    let searchQuery = query;
+    if (subject) {
+        searchQuery = `${query} ${subject} NCERT`;
+    } else {
+        searchQuery = `${query} NCERT CBSE`;
+    }
+
+    console.log('📚 NCERT search query:', searchQuery);
+
+    try {
+        const response = await fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${TAVILY_API_KEY}`
+            },
+            body: JSON.stringify({
+                query: searchQuery,
+                search_depth: 'advanced',
+                max_results: 8,
+                include_domains: ['ncert.nic.in', 'cbse.gov.in', 'byjus.com', 'vedantu.com', 'toppr.com'],
+                include_answer: true
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Tavily API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Mark official NCERT sources
+        const formattedResults = {
+            answer: data.answer || 'No direct answer found',
+            results: data.results?.map(result => ({
+                title: result.title,
+                url: result.url,
+                content: result.content,
+                score: result.score,
+                is_ncert: result.url.includes('ncert.nic.in') || result.url.includes('cbse.gov.in')
+            })) || [],
+            query: query,
+            subject: subject
+        };
+
+        return res.status(200).json(formattedResults);
+
+    } catch (error) {
+        console.error('❌ NCERT search error:', error);
+        return res.status(500).json({ 
+            error: 'NCERT search failed',
+            details: error.message 
+        });
+    }
+});
+
 // Serve landing page for root
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'landing.html'));
