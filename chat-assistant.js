@@ -792,6 +792,9 @@ class ChatAssistant {
             timeDiv.textContent = this.getCurrentTime();
             contentDiv.appendChild(timeDiv);
             
+            // Variable to store final AI response for history
+            let finalAIResponse = '';
+            
             // Check if AI wants to call a function
             if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
                 console.log('🔧 AI requested function call(s)');
@@ -848,14 +851,14 @@ class ChatAssistant {
                 }
                 
                 const followUpData = await followUpResponse.json();
-                const finalResponse = followUpData.choices?.[0]?.message?.content;
+                finalAIResponse = followUpData.choices?.[0]?.message?.content;
                 
-                if (!finalResponse) {
+                if (!finalAIResponse) {
                     throw new Error('No response after function call');
                 }
                 
                 // Process and display final response
-                const processedResponse = await this.processVisualContent(finalResponse, contentDiv);
+                const processedResponse = await this.processVisualContent(finalAIResponse, contentDiv);
                 bubbleDiv.innerHTML = this.finalFormatSolution(processedResponse.text);
                 
                 // Add "Searched web" badge
@@ -867,23 +870,23 @@ class ChatAssistant {
                 // Store final message
                 this.currentMessages.push({
                     role: 'assistant',
-                    content: finalResponse
+                    content: finalAIResponse
                 });
                 
                 console.log('✅ Function calling complete!');
             }
             else {
                 // No function call - normal response
-                const fullResponse = choice.message?.content || '';
+                finalAIResponse = choice.message?.content || '';
                 
-                if (!fullResponse) {
+                if (!finalAIResponse) {
                     throw new Error('Empty response from API');
                 }
                 
                 console.log('🎨 Formatting response...');
                 
                 // Process diagrams/graphs first
-                const processedResponse = await this.processVisualContent(fullResponse, contentDiv);
+                const processedResponse = await this.processVisualContent(finalAIResponse, contentDiv);
                 
                 // Format with markdown and KaTeX auto-render
                 bubbleDiv.innerHTML = this.finalFormatSolution(processedResponse.text);
@@ -892,16 +895,12 @@ class ChatAssistant {
                 // Store message
                 this.currentMessages.push({
                     role: 'assistant',
-                    content: fullResponse
+                    content: finalAIResponse
                 });
             }
             
             // Save to history and generate summary
-            await this.saveAIResponseToHistory(
-                choice.message?.tool_calls ? 
-                    followUpData.choices?.[0]?.message?.content : 
-                    choice.message?.content
-            );
+            await this.saveAIResponseToHistory(finalAIResponse);
             
         } catch (error) {
             console.error(`❌ API Error (attempt ${retryCount + 1}):`, error);
