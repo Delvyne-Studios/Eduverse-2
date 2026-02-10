@@ -1393,7 +1393,18 @@ async function generateAINotes() {
         
     } catch (error) {
         console.error('Error generating notes:', error);
-        showToast(error.message || 'Failed to generate notes', 'error');
+        
+        // Provide helpful error messages
+        let errorMsg = error.message || 'Failed to generate notes';
+        if (errorMsg.includes('Transcript is disabled') || errorMsg.includes('No transcript')) {
+            errorMsg = '⚠️ This video doesn\'t have transcripts enabled. Try another video!\n\n💡 Tip: Look for videos with the "CC" button enabled';
+        } else if (errorMsg.includes('unavailable') || errorMsg.includes('private')) {
+            errorMsg = '❌ Video is unavailable, private, or deleted';
+        } else if (errorMsg.includes('API')) {
+            errorMsg = '🔑 API Error: Check your OpenRouter API key in settings';
+        }
+        
+        showToast(errorMsg, 'error');
         emptyEl.style.display = 'block';
     } finally {
         // Re-enable button
