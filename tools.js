@@ -1514,13 +1514,13 @@ Generate the notes now:`;
     console.log('  Model:', API_CONFIG.model);
     console.log('  URL:', API_CONFIG.url);
     console.log('  Prompt length:', prompt.length, 'chars');
-    console.log('  Max tokens:', 8000);
+    console.log('  Max tokens:', 3000);
 
     const requestBody = {
         model: API_CONFIG.model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
-        max_tokens: 8000
+        max_tokens: 3000
     };
 
     const response = await fetch(API_CONFIG.url, {

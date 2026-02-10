@@ -14,10 +14,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@danielxceron/youtube-transcript": "^1.2.6",
     "@insforge/sdk": "^1.1.5",
     "cors": "^2.8.5",
     "dotenv": "^17.2.4",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "youtubei.js": "^10.5.0"
   }
 }
