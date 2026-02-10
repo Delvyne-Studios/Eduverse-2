@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "description": "Vercel Serverless API Functions",
   "dependencies": {
-    "youtubei.js": "^10.5.0"
+    "youtube-transcript": "^1.2.1"
   }
 }

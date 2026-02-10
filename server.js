@@ -109,7 +109,7 @@ app.post('/api/openrouter', async (req, res) => {
     }
 });
 
-// YouTube Transcript API endpoint using youtubei.js
+// YouTube Transcript API endpoint using youtube-transcript (more reliable)
 app.get('/api/youtube-transcript', async (req, res) => {
     const { videoId } = req.query;
 
@@ -120,57 +120,39 @@ app.get('/api/youtube-transcript', async (req, res) => {
     console.log('🎬 Fetching transcript for video:', videoId);
 
     try {
-        // Dynamically import youtubei.js
-        const { Innertube } = await import('youtubei.js');
+        // Import youtube-transcript (uses web scraping - more reliable)
+        const { YoutubeTranscript } = await import('youtube-transcript');
         
-        // Initialize Innertube (YouTube's internal API)
-        console.log('🔧 Initializing Innertube...');
-        const youtube = await Innertube.create({
-            lang: 'en',
-            location: 'US',
-            retrieve_player: false
-        });
+        console.log('📥 Fetching transcript using youtube-transcript...');
         
-        console.log('📥 Fetching video info...');
-        const info = await youtube.getInfo(videoId);
+        // Fetch transcript - this scrapes directly from YouTube page
+        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
         
-        // Get video title
-        const title = info.basic_info?.title || 'Unknown Title';
-        console.log('🎯 Video title:', title);
+        console.log('✅ Transcript data received, segments:', transcriptData?.length || 0);
         
-        // Get transcript/captions
-        console.log('📜 Fetching transcript...');
-        const transcriptData = await info.getTranscript();
-        
-        if (!transcriptData || !transcriptData.transcript) {
-            console.log('❌ No transcript available');
+        if (!transcriptData || transcriptData.length === 0) {
+            console.log('❌ No transcript data found');
             return res.status(404).json({ 
-                error: '⚠️ No transcript/captions available for this video.\n\n💡 The video creator may have disabled captions, or the video may not have any subtitles.'
+                error: '⚠️ No transcript/captions available for this video.\n\n💡 Make sure the video has captions enabled (CC button visible).'
             });
         }
-        
-        console.log('✅ Transcript segments received:', transcriptData.transcript.content?.body?.initial_segments?.length || 0);
-        
-        // Extract text from transcript segments
-        const segments = transcriptData.transcript.content?.body?.initial_segments || [];
-        if (segments.length === 0) {
-            return res.status(404).json({ 
-                error: '⚠️ Transcript is empty or unavailable for this video.'
-            });
-        }
-        
-        // Combine all segments into one transcript
-        const transcript = segments
-            .map(segment => segment.snippet?.text?.toString() || '')
-            .filter(text => text.trim().length > 0)
-            .join(' ');
-        
+
+        // Combine all transcript segments into a single text
+        const transcript = transcriptData.map(item => item.text).join(' ');
         console.log('📝 Combined transcript length:', transcript.length, 'characters');
         
-        if (transcript.length === 0) {
-            return res.status(404).json({ 
-                error: '⚠️ Could not extract transcript text from video.'
-            });
+        // Fetch video title from YouTube
+        let title = 'Unknown Title';
+        try {
+            const videoResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+            const html = await videoResponse.text();
+            const titleMatch = html.match(/<title>(.*?)<\/title>/);
+            if (titleMatch) {
+                title = titleMatch[1].replace(' - YouTube', '').trim();
+            }
+            console.log('🎯 Video title:', title);
+        } catch (e) {
+            console.warn('⚠️ Could not fetch video title:', e.message);
         }
 
         return res.status(200).json({
@@ -178,8 +160,8 @@ app.get('/api/youtube-transcript', async (req, res) => {
             title: title,
             videoId: videoId,
             transcript: transcript.trim(),
-            language: transcriptData.transcript.content?.body?.language || 'auto',
-            duration: info.basic_info?.duration || null
+            language: 'auto-detected',
+            duration: null
         });
 
     } catch (error) {
@@ -191,21 +173,22 @@ app.get('/api/youtube-transcript', async (req, res) => {
         let errorMessage = 'Failed to fetch transcript';
         let statusCode = 500;
         
-        if (error.message?.includes('Video unavailable') || error.message?.includes('This video is unavailable')) {
-            errorMessage = '❌ Video is unavailable, private, or has been removed';
+        // Check for specific error patterns from youtube-transcript
+        if (error.message?.includes('Could not find captions') || error.message?.includes('Transcript is disabled')) {
+            errorMessage = '⚠️ This video doesn\'t have transcripts/captions available.\\n\\n💡 The video needs to have captions enabled (CC button visible on YouTube).\\n\\n📺 Try: Khan Academy, CrashCourse, TED-Ed, Veritasium - they usually have captions!';
             statusCode = 404;
-        } else if (error.message?.includes('Transcript is disabled') || error.message?.includes('No captions')) {
-            errorMessage = '⚠️ This video doesn\'t have transcripts/captions enabled.\n\n💡 Try another video with the "CC" button';
+        } else if (error.message?.includes('Video unavailable') || error.message?.includes('unavailable')) {
+            errorMessage = '❌ Video is unavailable, private, or has been removed';
             statusCode = 404;
         } else if (error.message?.includes('age-restricted') || error.message?.includes('age restricted')) {
             errorMessage = '🔞 This video is age-restricted. Try a different video.';
             statusCode = 403;
-        } else if (error.message?.includes('country')) {
-            errorMessage = '🌍 This video is not available in your region';
+        } else if (error.message?.includes('403') || error.message?.includes('Forbidden')) {
+            errorMessage = '🚫 Access to this video is restricted. Try a different video.';
             statusCode = 403;
-        } else if (error.message?.includes('members-only') || error.message?.includes('membership')) {
-            errorMessage = '👥 This is a members-only video';
-            statusCode = 403;
+        } else if (error.message?.includes('404') || error.message?.includes('not found')) {
+            errorMessage = '❌ Video not found. Check the URL and try again.';
+            statusCode = 404;
         } else {
             // Include actual error for debugging
             errorMessage = `⚠️ Could not fetch transcript: ${error.message}`;
