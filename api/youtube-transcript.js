@@ -1,7 +1,6 @@
 // Vercel Serverless Function - YouTube Transcript Fetcher
-// Version: 4.0 - Using youtube-transcript (web scraping)
-// This directly scrapes YouTube pages - if you can see captions, this can get them!
-const { YoutubeTranscript } = require('youtube-transcript');
+// Version: 5.0 - Custom scraper (directly extracts from YouTube page)
+// If you can see captions on YouTube, this WILL get them!
 
 module.exports = async function handler(req, res) {
     // Enable CORS for Vercel deployment
@@ -29,43 +28,99 @@ module.exports = async function handler(req, res) {
     console.log('🎬 Fetching transcript for video:', videoId);
 
     try {
-        // Fetch transcript using youtube-transcript (web scraping)
-        console.log('📥 Calling YoutubeTranscript.fetchTranscript...');
-        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
+        // Fetch the video page
+        const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        console.log('📥 Fetching:', videoUrl);
         
-        console.log('✅ Transcript data received, segments:', transcriptData?.length || 0);
+        const response = await fetch(videoUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to fetch video page`);
+        }
         
-        if (!transcriptData || transcriptData.length === 0) {
-            console.log('❌ No transcript data found');
+        const html = await response.text();
+        
+        // Extract video title
+        let title = 'Unknown Title';
+        const titleMatch = html.match(/"title":"([^"]+)"/);
+        if (titleMatch) {
+            title = titleMatch[1].replace(/\\u0026/g, '&').replace(/\\\\/g, '');
+        }
+        console.log('🎯 Video title:', title);
+        
+        // Extract caption tracks
+        const captionTracksMatch = html.match(/"captionTracks":\[([^\]]+)\]/);
+        if (!captionTracksMatch) {
+            console.log('❌ No caption tracks found');
             return res.status(404).json({ 
-                error: '⚠️ No transcript available for this video'
+                error: '⚠️ No captions/transcripts available for this video.\\n\\n💡 Make sure the video has captions enabled (CC button visible on YouTube).'
             });
         }
-
-        // Combine all transcript segments into a single text
-        const transcript = transcriptData.map(item => item.text).join(' ');
-        console.log('📝 Combined transcript length:', transcript.length, 'characters');
         
-        // Fetch video title from YouTube
-        let title = 'Unknown Title';
-        try {
-            const videoResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-            const html = await videoResponse.text();
-            const titleMatch = html.match(/<title>(.*?)<\/title>/);
-            if (titleMatch) {
-                title = titleMatch[1].replace(' - YouTube', '').trim();
-            }
-            console.log('🎯 Video title:', title);
-        } catch (e) {
-            console.warn('⚠️ Could not fetch video title:', e.message);
+        // Parse the first caption track URL
+        const captionData = captionTracksMatch[0];
+        const baseUrlMatch = captionData.match(/"baseUrl":"([^"]+)"/);
+        
+        if (!baseUrlMatch) {
+            throw new Error('Could not extract caption URL');
         }
+        
+        // Decode the URL (it has escaped characters)
+        let captionUrl = baseUrlMatch[1]
+            .replace(/\\u0026/g, '&')
+            .replace(/\\\//g, '/');
+        
+        console.log('📜 Fetching captions...');
+        
+        // Fetch the caption data (XML format)
+        const captionResponse = await fetch(captionUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
+        if (!captionResponse.ok) {
+            throw new Error('Failed to fetch caption data');
+        }
+        
+        const captionXml = await captionResponse.text();
+        
+        // Parse the XML to extract text
+        const textMatches = captionXml.matchAll(/<text[^>]*>([^<]+)<\/text>/g);
+        const segments = [];
+        
+        for (const match of textMatches) {
+            let text = match[1]
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/\n/g, ' ')
+                .trim();
+            
+            if (text) {
+                segments.push(text);
+            }
+        }
+        
+        if (segments.length === 0) {
+            throw new Error('No caption text found in the transcript');
+        }
+        
+        const transcript = segments.join(' ');
+        console.log('✅ Transcript extracted:', segments.length, 'segments,', transcript.length, 'characters');
 
         return res.status(200).json({
             success: true,
             title: title,
             videoId: videoId,
-            transcript: transcript.trim(),
-            language: 'auto-detected',
+            transcript: transcript,
+            language: 'auto',
             duration: null
         });
 

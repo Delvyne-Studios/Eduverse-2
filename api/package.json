@@ -2,7 +2,5 @@
   "name": "eduverse-api",
   "version": "1.0.0",
   "description": "Vercel Serverless API Functions",
-  "dependencies": {
-    "youtube-transcript": "^1.2.1"
-  }
+  "dependencies": {}
 }

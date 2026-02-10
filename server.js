@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { fetchYouTubeTranscript } = require('./transcript-scraper');
 
 const app = express();
 const PORT = 3000;
@@ -109,7 +110,7 @@ app.post('/api/openrouter', async (req, res) => {
     }
 });
 
-// YouTube Transcript API endpoint using youtube-transcript (more reliable)
+// YouTube Transcript API endpoint using custom scraper
 app.get('/api/youtube-transcript', async (req, res) => {
     const { videoId } = req.query;
 
@@ -120,49 +121,8 @@ app.get('/api/youtube-transcript', async (req, res) => {
     console.log('🎬 Fetching transcript for video:', videoId);
 
     try {
-        // Import youtube-transcript (uses web scraping - more reliable)
-        const { YoutubeTranscript } = await import('youtube-transcript');
-        
-        console.log('📥 Fetching transcript using youtube-transcript...');
-        
-        // Fetch transcript - this scrapes directly from YouTube page
-        const transcriptData = await YoutubeTranscript.fetchTranscript(videoId);
-        
-        console.log('✅ Transcript data received, segments:', transcriptData?.length || 0);
-        
-        if (!transcriptData || transcriptData.length === 0) {
-            console.log('❌ No transcript data found');
-            return res.status(404).json({ 
-                error: '⚠️ No transcript/captions available for this video.\n\n💡 Make sure the video has captions enabled (CC button visible).'
-            });
-        }
-
-        // Combine all transcript segments into a single text
-        const transcript = transcriptData.map(item => item.text).join(' ');
-        console.log('📝 Combined transcript length:', transcript.length, 'characters');
-        
-        // Fetch video title from YouTube
-        let title = 'Unknown Title';
-        try {
-            const videoResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
-            const html = await videoResponse.text();
-            const titleMatch = html.match(/<title>(.*?)<\/title>/);
-            if (titleMatch) {
-                title = titleMatch[1].replace(' - YouTube', '').trim();
-            }
-            console.log('🎯 Video title:', title);
-        } catch (e) {
-            console.warn('⚠️ Could not fetch video title:', e.message);
-        }
-
-        return res.status(200).json({
-            success: true,
-            title: title,
-            videoId: videoId,
-            transcript: transcript.trim(),
-            language: 'auto-detected',
-            duration: null
-        });
+        const result = await fetchYouTubeTranscript(videoId);
+        return res.status(200).json(result);
 
     } catch (error) {
         console.error('❌ Transcript fetch error:', error);
