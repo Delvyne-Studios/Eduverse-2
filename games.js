@@ -5059,8 +5059,6 @@ function initWaveGraphSim(engine, controlsContainer, overlayEl) {
     return () => { cancelAnimationFrame(rafId); wgDiv.remove(); };
 }
 
-}
-
 // Expose to global scope (module doesn't auto-export to window)
 window.closeGameDetail = closeGameDetail;
 window.closeGamePlay = closeGamePlay;
