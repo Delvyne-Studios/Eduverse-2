@@ -954,17 +954,20 @@ const SIMULATORS = {
         { id: 'projectile', title: 'Projectile Motion', summary: 'Angle, velocity, gravity, and height. Visualize trajectory and vectors.' },
         { id: 'vector-add', title: 'Vector Addition 3D', summary: 'Drag vectors in 3D and see the resultant live.' },
         { id: 'relative-motion', title: 'Relative Motion', summary: 'Switch observer frames and see relative velocity vectors.' },
-        { id: 'laws-motion', title: 'Laws of Motion Playground', summary: 'Apply forces, mass, friction, and watch acceleration.' },
-        { id: 'roller-coaster', title: 'Work-Energy Roller Coaster', summary: 'Track motion with KE/PE graphs in sync.' }
+        { id: 'laws-motion', title: 'Friction Simulator', summary: 'Apply forces, adjust friction, observe static vs kinetic friction.' },
+        { id: 'roller-coaster', title: 'Work-Energy Roller Coaster', summary: 'Track motion with KE/PE graphs in sync.' },
+        { id: 'shm', title: 'Simple Harmonic Motion', summary: 'Pendulum: period, amplitude and energy in real time.' }
     ],
     chemistry: [
         { id: 'orbitals', title: 'Atomic Orbital Visualizer', summary: 's, p, d orbitals in 3D with slicing.' },
         { id: 'vsepr', title: 'Molecular Geometry (VSEPR)', summary: 'Switch shapes and view bond angles.' },
-        { id: 'hybrid', title: 'Hybridization Explorer', summary: 'Animate s + p to sp, sp2, sp3.' }
+        { id: 'hybrid', title: 'Hybridization Explorer', summary: 'Animate s + p to sp, sp2, sp3.' },
+        { id: 'mo-diagram', title: 'Molecular Orbital Diagram', summary: 'MO energy diagrams for N₂, O₂, F₂, NO, CO.' }
     ],
     maths: [
         { id: 'coord-3d', title: '3D Coordinate Geometry', summary: 'Points, distance, and section formula.' },
-        { id: 'plane-line', title: 'Plane & Line in 3D', summary: 'Rotate planes, see intersections and skew.' }
+        { id: 'plane-line', title: 'Plane & Line in 3D', summary: 'Rotate planes, see intersections and skew.' },
+        { id: 'lpp', title: 'Linear Programming (LPP)', summary: 'Feasible region, corner points, optimal solution.' }
     ]
 };
 
@@ -977,17 +980,17 @@ function renderSimulators(container) {
                     <div class="sim-category-card" data-category="physics">
                         <div class="category-icon">⚡</div>
                         <h3>Physics</h3>
-                        <p class="sim-status">5 simulators</p>
+                        <p class="sim-status">6 simulators</p>
                     </div>
                     <div class="sim-category-card" data-category="chemistry">
                         <div class="category-icon">🧪</div>
                         <h3>Chemistry</h3>
-                        <p class="sim-status">3 simulators</p>
+                        <p class="sim-status">4 simulators</p>
                     </div>
                     <div class="sim-category-card" data-category="maths">
                         <div class="category-icon">📐</div>
                         <h3>Maths</h3>
-                        <p class="sim-status">2 simulators</p>
+                        <p class="sim-status">3 simulators</p>
                     </div>
                 </div>
                 <div class="game-section-title" style="margin-top: 16px;"><i class="fas fa-cube"></i> 📋 Simulator List</div>
@@ -1082,6 +1085,15 @@ function renderSimulators(container) {
                 break;
             case 'plane-line':
                 cleanupFn = initPlaneLineSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'shm':
+                cleanupFn = initSHMSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'lpp':
+                cleanupFn = initLPPSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'mo-diagram':
+                cleanupFn = initMOSim(simEngine, uiControls, overlayEl);
                 break;
             default:
                 break;
@@ -1299,9 +1311,9 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     const velocityArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 1, 0).normalize(), new THREE.Vector3(), 3, 0x22d3ee, 0.4, 0.25);
     scene.add(velocityArrow);
 
-    // Camera for projectile
-    camera.position.set(8, 8, 18);
-    camera.lookAt(5, 2, 0);
+    // Camera for projectile - side view to clearly show parabolic arc
+    camera.position.set(7, 5, 22);
+    camera.lookAt(7, 4, 0);
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
@@ -1346,7 +1358,7 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     let time = 0;
     let flightTime = 1;
     let isLaunched = false;
-    let animationSpeed = 1.0;
+    let animationSpeed = 1.5; // slightly faster for better visual clarity
 
     function updateLabels() {
         controlsContainer.querySelector('#angleVal').textContent = angleInput.value + '°';
@@ -1436,9 +1448,14 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
     });
     
     launchBtn.addEventListener('click', () => { 
-        isLaunched = true;
-        time = 0;
-        launchBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+        if (!isLaunched) {
+            isLaunched = true;
+            time = 0;
+            launchBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+        } else {
+            isLaunched = false;
+            launchBtn.innerHTML = '<i class="fas fa-space-shuttle"></i> Launch';
+        }
     });
     
     resetBtn.addEventListener('click', () => { 
@@ -1461,219 +1478,229 @@ function initProjectileSim(engine, controlsContainer, overlayEl) {
 function initVectorAddSim(engine, controlsContainer, overlayEl) {
     const { scene, camera } = engine;
     
-    // Better camera position
-    camera.position.set(8, 6, 10);
-    camera.lookAt(0, 2, 0);
-    
-    const origin = new THREE.Vector3(0, 0, 0);
-    let vectorA = new THREE.Vector3(4, 2, 1);
-    let vectorB = new THREE.Vector3(2, 3, 2);
-
-    // Vector A starts from origin
-    const arrowA = new THREE.ArrowHelper(
-        vectorA.clone().normalize(), 
-        origin, 
-        vectorA.length(), 
-        0x22d3ee, 
-        0.6, 
-        0.4
-    );
-    scene.add(arrowA);
-    
-    // Vector B starts from tip of A (tail-to-tip method!)
-    const arrowB = new THREE.ArrowHelper(
-        vectorB.clone().normalize(), 
-        vectorA.clone(), 
-        vectorB.length(), 
-        0xf97316, 
-        0.6, 
-        0.4
-    );
-    scene.add(arrowB);
-    
-    // Resultant arrow from origin to final tip
-    const resultant = vectorA.clone().add(vectorB);
-    const arrowR = new THREE.ArrowHelper(
-        resultant.clone().normalize(), 
-        origin, 
-        resultant.length(), 
-        0x10b981, 
-        0.7, 
-        0.5
-    );
-    scene.add(arrowR);
-    
-    // Dashed line showing parallelogram for visualization
-    const dashedMaterial = new THREE.LineDashedMaterial({ 
-        color: 0x64748b, 
-        dashSize: 0.3, 
-        gapSize: 0.15,
-        opacity: 0.6,
-        transparent: true
-    });
-    
-    // Dashed line from origin to B
-    const dashedGeom1 = new THREE.BufferGeometry().setFromPoints([origin, vectorB.clone()]);
-    const dashedLine1 = new THREE.Line(dashedGeom1, dashedMaterial);
-    dashedLine1.computeLineDistances();
-    scene.add(dashedLine1);
-    
-    // Dashed line from tip of A to final tip (parallel to B from origin)
-    const dashedGeom2 = new THREE.BufferGeometry().setFromPoints([vectorA.clone(), resultant.clone()]);
-    const dashedLine2 = new THREE.Line(dashedGeom2, dashedMaterial);
-    dashedLine2.computeLineDistances();
-    scene.add(dashedLine2);
-
-    // Tip markers for visual clarity
-    const createTipMarker = (color) => new THREE.Mesh(
-        new THREE.SphereGeometry(0.22, 16, 16), 
-        new THREE.MeshStandardMaterial({ 
-            color, 
-            emissive: color, 
-            emissiveIntensity: 0.4,
-            metalness: 0.6
-        })
-    );
-    
-    const tipA = createTipMarker(0x22d3ee);
-    const tipB = createTipMarker(0xf97316);
-    const tipR = createTipMarker(0x10b981);
-    scene.add(tipA, tipB, tipR);
-
-    // Origin marker
-    const originSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15, 16, 16),
-        new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xfbbf24, emissiveIntensity: 0.5 })
-    );
-    scene.add(originSphere);
+    // Hide the 3D scene - we'll use a 2D canvas overlay instead
+    camera.position.set(0, 100, 0.01);
+    camera.lookAt(0, 0, 0);
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 📐 Vector A <span style="color:#22d3ee">●</span></div>
-            <div class="sim-control-row">
-                <label>X Component</label>
-                <input class="sim-slider" id="vaX" type="range" min="-8" max="8" value="4" step="0.5">
-                <span class="sim-slider-val" id="vaXVal">4.0</span>
-            </div>
-            <div class="sim-control-row">
-                <label>Y Component</label>
-                <input class="sim-slider" id="vaY" type="range" min="-8" max="8" value="2" step="0.5">
-                <span class="sim-slider-val" id="vaYVal">2.0</span>
-            </div>
-            <div class="sim-control-row">
-                <label>Z Component</label>
-                <input class="sim-slider" id="vaZ" type="range" min="-8" max="8" value="1" step="0.5">
-                <span class="sim-slider-val" id="vaZVal">1.0</span>
+            <div class="game-section-title"><i class="fas fa-arrows-alt"></i> 📐 Vector Addition</div>
+            
+            <div style="display:flex;gap:12px;margin-bottom:8px;">
+                <button class="btn-primary" id="vecMethodBtn" style="flex:1;padding:6px;font-size:0.8rem;">Tail-to-Tip</button>
+                <button class="btn-secondary" id="vecParallelBtn" style="flex:1;padding:6px;font-size:0.8rem;">Parallelogram</button>
             </div>
             
-            <div class="game-section-title" style="margin-top:12px;"><i class="fas fa-arrows-alt"></i> 📐 Vector B <span style="color:#f97316">●</span></div>
-            <div class="sim-control-row">
-                <label>X Component</label>
-                <input class="sim-slider" id="vbX" type="range" min="-8" max="8" value="2" step="0.5">
-                <span class="sim-slider-val" id="vbXVal">2.0</span>
+            <canvas id="vecCanvas2D" width="340" height="300" style="width:100%;border-radius:10px;background:#0f1419;display:block;margin-bottom:10px;"></canvas>
+
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+                <span style="color:#22d3ee;font-weight:700;min-width:14px;">A</span>
+                <label style="font-size:0.78rem;min-width:40px;">mag</label>
+                <input class="sim-slider" id="vaMag" type="range" min="1" max="8" value="5" step="0.5" style="flex:1;">
+                <span class="sim-slider-val" id="vaMagVal">5</span>
             </div>
-            <div class="sim-control-row">
-                <label>Y Component</label>
-                <input class="sim-slider" id="vbY" type="range" min="-8" max="8" value="3" step="0.5">
-                <span class="sim-slider-val" id="vbYVal">3.0</span>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+                <span style="color:#22d3ee;font-weight:700;min-width:14px;">A</span>
+                <label style="font-size:0.78rem;min-width:40px;">angle</label>
+                <input class="sim-slider" id="vaAng" type="range" min="0" max="360" value="30" step="5" style="flex:1;">
+                <span class="sim-slider-val" id="vaAngVal">30°</span>
             </div>
-            <div class="sim-control-row">
-                <label>Z Component</label>
-                <input class="sim-slider" id="vbZ" type="range" min="-8" max="8" value="2" step="0.5">
-                <span class="sim-slider-val" id="vbZVal">2.0</span>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+                <span style="color:#f97316;font-weight:700;min-width:14px;">B</span>
+                <label style="font-size:0.78rem;min-width:40px;">mag</label>
+                <input class="sim-slider" id="vbMag" type="range" min="1" max="8" value="4" step="0.5" style="flex:1;">
+                <span class="sim-slider-val" id="vbMagVal">4</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
+                <span style="color:#f97316;font-weight:700;min-width:14px;">B</span>
+                <label style="font-size:0.78rem;min-width:40px;">angle</label>
+                <input class="sim-slider" id="vbAng" type="range" min="0" max="360" value="110" step="5" style="flex:1;">
+                <span class="sim-slider-val" id="vbAngVal">110°</span>
             </div>
             
-            <div class="sim-stats-grid" style="margin-top:12px;">
+            <div class="sim-stats-grid">
                 <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
-                    <div class="sim-stat-label">|A| Magnitude</div>
-                    <div class="sim-stat-value" id="magA">--</div>
+                    <div class="sim-stat-label">|A|</div>
+                    <div class="sim-stat-value" id="magA">5.0</div>
                 </div>
                 <div class="sim-stat-card" style="border-left:3px solid #f97316">
-                    <div class="sim-stat-label">|B| Magnitude</div>
-                    <div class="sim-stat-value" id="magB">--</div>
+                    <div class="sim-stat-label">|B|</div>
+                    <div class="sim-stat-value" id="magB">4.0</div>
                 </div>
                 <div class="sim-stat-card" style="border-left:3px solid #10b981">
-                    <div class="sim-stat-label">|R| Resultant</div>
+                    <div class="sim-stat-label">|R|</div>
                     <div class="sim-stat-value" id="magR">--</div>
                 </div>
+                <div class="sim-stat-card" style="border-left:3px solid #a855f7">
+                    <div class="sim-stat-label">R angle</div>
+                    <div class="sim-stat-value" id="angR">--</div>
+                    <div class="sim-stat-unit">°</div>
+                </div>
             </div>
-            <div class="sim-status" id="vectorReadout" style="margin-top:12px;"></div>
+            <div class="sim-status" id="vectorReadout" style="margin-top:8px;font-size:0.82rem;"></div>
         </div>
     `;
 
-    function updateVectors() {
-        vectorA.set(
-            parseFloat(controlsContainer.querySelector('#vaX').value), 
-            parseFloat(controlsContainer.querySelector('#vaY').value), 
-            parseFloat(controlsContainer.querySelector('#vaZ').value)
-        );
-        vectorB.set(
-            parseFloat(controlsContainer.querySelector('#vbX').value), 
-            parseFloat(controlsContainer.querySelector('#vbY').value), 
-            parseFloat(controlsContainer.querySelector('#vbZ').value)
-        );
-        const res = vectorA.clone().add(vectorB);
+    const canvas = controlsContainer.querySelector('#vecCanvas2D');
+    const ctx = canvas.getContext('2d');
+    let method = 'tip'; // 'tip' or 'para'
 
-        // Update labels
-        controlsContainer.querySelector('#vaXVal').textContent = vectorA.x.toFixed(1);
-        controlsContainer.querySelector('#vaYVal').textContent = vectorA.y.toFixed(1);
-        controlsContainer.querySelector('#vaZVal').textContent = vectorA.z.toFixed(1);
-        controlsContainer.querySelector('#vbXVal').textContent = vectorB.x.toFixed(1);
-        controlsContainer.querySelector('#vbYVal').textContent = vectorB.y.toFixed(1);
-        controlsContainer.querySelector('#vbZVal').textContent = vectorB.z.toFixed(1);
+    controlsContainer.querySelector('#vecMethodBtn').addEventListener('click', () => { method = 'tip'; drawVectors(); });
+    controlsContainer.querySelector('#vecParallelBtn').addEventListener('click', () => { method = 'para'; drawVectors(); });
 
-        // Update arrow A (from origin)
-        if (vectorA.length() > 0.01) { 
-            arrowA.position.copy(origin);
-            arrowA.setDirection(vectorA.clone().normalize()); 
-            arrowA.setLength(vectorA.length(), 0.6, 0.4); 
+    function drawArrow2D(ctx, x1, y1, x2, y2, color, width, label) {
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        if (len < 2) return;
+        const ang = Math.atan2(dy, dx);
+        const hLen = Math.min(18, len * 0.35);
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Arrowhead
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - hLen * Math.cos(ang - 0.38), y2 - hLen * Math.sin(ang - 0.38));
+        ctx.lineTo(x2 - hLen * 0.6 * Math.cos(ang), y2 - hLen * 0.6 * Math.sin(ang));
+        ctx.lineTo(x2 - hLen * Math.cos(ang + 0.38), y2 - hLen * Math.sin(ang + 0.38));
+        ctx.closePath();
+        ctx.fill();
+
+        if (label) {
+            ctx.fillStyle = color;
+            ctx.font = 'bold 13px sans-serif';
+            const mx = (x1 + x2) / 2 - 12 * Math.sin(ang);
+            const my = (y1 + y2) / 2 + 12 * Math.cos(ang);
+            ctx.fillText(label, mx, my);
         }
-        
-        // Update arrow B (tail-to-tip: starts at tip of A!)
-        if (vectorB.length() > 0.01) { 
-            arrowB.position.copy(vectorA); // B starts where A ends
-            arrowB.setDirection(vectorB.clone().normalize()); 
-            arrowB.setLength(vectorB.length(), 0.6, 0.4); 
+        ctx.restore();
+    }
+
+    function dashedLine2D(ctx, x1, y1, x2, y2, color) {
+        ctx.save();
+        ctx.setLineDash([7, 5]);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawVectors() {
+        const aMag = parseFloat(controlsContainer.querySelector('#vaMag').value);
+        const aAng = parseFloat(controlsContainer.querySelector('#vaAng').value) * Math.PI / 180;
+        const bMag = parseFloat(controlsContainer.querySelector('#vbMag').value);
+        const bAng = parseFloat(controlsContainer.querySelector('#vbAng').value) * Math.PI / 180;
+
+        controlsContainer.querySelector('#vaMagVal').textContent = aMag.toFixed(1);
+        controlsContainer.querySelector('#vaAngVal').textContent = controlsContainer.querySelector('#vaAng').value + '°';
+        controlsContainer.querySelector('#vbMagVal').textContent = bMag.toFixed(1);
+        controlsContainer.querySelector('#vbAngVal').textContent = controlsContainer.querySelector('#vbAng').value + '°';
+
+        const W = canvas.width, H = canvas.height;
+        const scale = 22; // pixels per unit
+        const ox = W / 2, oy = H / 2 + 20; // origin
+
+        // Clear
+        ctx.fillStyle = '#0f1419';
+        ctx.fillRect(0, 0, W, H);
+
+        // Grid
+        ctx.save();
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        for (let x = ox % scale; x < W; x += scale) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+        for (let y = oy % scale; y < H; y += scale) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+        // Axes
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke();
+        // Axis labels
+        ctx.fillStyle = '#475569'; ctx.font = '10px sans-serif';
+        ctx.fillText('+X', W - 20, oy - 5);
+        ctx.fillText('+Y', ox + 5, 12);
+        ctx.restore();
+
+        // Component vectors  
+        const ax = aMag * Math.cos(aAng), ay = aMag * Math.sin(aAng);
+        const bx = bMag * Math.cos(bAng), by = bMag * Math.sin(bAng);
+        const rx = ax + bx, ry = ay + by;
+        const rMag = Math.sqrt(rx*rx + ry*ry);
+        const rAng = Math.atan2(ry, rx) * 180 / Math.PI;
+
+        // Note: canvas Y is flipped (positive Y goes down)
+        const ax_px = ax * scale, ay_px = -ay * scale; // flip Y
+        const bx_px = bx * scale, by_px = -by * scale;
+        const rx_px = rx * scale, ry_px = -ry * scale;
+
+        if (method === 'tip') {
+            // Tail-to-tip: A from origin, B from tip of A
+            drawArrow2D(ctx, ox, oy, ox + ax_px, oy + ay_px, '#22d3ee', 3, 'A');
+            drawArrow2D(ctx, ox + ax_px, oy + ay_px, ox + ax_px + bx_px, oy + ay_px + by_px, '#f97316', 3, 'B');
+            drawArrow2D(ctx, ox, oy, ox + rx_px, oy + ry_px, '#10b981', 3.5, 'R');
+
+            // Label method
+            ctx.fillStyle = '#64748b'; ctx.font = '11px sans-serif';
+            ctx.fillText('Tail-to-Tip Method', 8, 15);
+        } else {
+            // Parallelogram: both from origin, dashed copies, resultant is diagonal
+            drawArrow2D(ctx, ox, oy, ox + ax_px, oy + ay_px, '#22d3ee', 3, 'A');
+            drawArrow2D(ctx, ox, oy, ox + bx_px, oy + by_px, '#f97316', 3, 'B');
+            // Dashed copies
+            dashedLine2D(ctx, ox + bx_px, oy + by_px, ox + rx_px, oy + ry_px, '#22d3ee');
+            dashedLine2D(ctx, ox + ax_px, oy + ay_px, ox + rx_px, oy + ry_px, '#f97316');
+            // Resultant diagonal
+            drawArrow2D(ctx, ox, oy, ox + rx_px, oy + ry_px, '#10b981', 3.5, 'R');
+
+            ctx.fillStyle = '#64748b'; ctx.font = '11px sans-serif';
+            ctx.fillText('Parallelogram Method', 8, 15);
         }
-        
-        // Update resultant arrow (from origin to final tip)
-        if (res.length() > 0.01) { 
-            arrowR.position.copy(origin);
-            arrowR.setDirection(res.clone().normalize()); 
-            arrowR.setLength(res.length(), 0.7, 0.5); 
-        }
 
-        // Update tip markers
-        tipA.position.copy(vectorA);
-        tipB.position.copy(res); // B tip is at the final position (A + B)
-        tipR.position.copy(res);
+        // Origin dot
+        ctx.beginPath();
+        ctx.arc(ox, oy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
 
-        // Update dashed parallelogram lines
-        dashedGeom1.setFromPoints([origin, vectorB.clone()]);
-        dashedLine1.computeLineDistances();
-        
-        dashedGeom2.setFromPoints([vectorA.clone(), res.clone()]);
-        dashedLine2.computeLineDistances();
+        // Component readout
+        ctx.fillStyle = '#22d3ee'; ctx.font = '11px sans-serif';
+        ctx.fillText(`A: (${ax.toFixed(1)}, ${ay.toFixed(1)})`, 8, H - 44);
+        ctx.fillStyle = '#f97316';
+        ctx.fillText(`B: (${bx.toFixed(1)}, ${by.toFixed(1)})`, 8, H - 28);
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(`R: (${rx.toFixed(1)}, ${ry.toFixed(1)})`, 8, H - 12);
 
-        // Update stats
-        controlsContainer.querySelector('#magA').textContent = vectorA.length().toFixed(2);
-        controlsContainer.querySelector('#magB').textContent = vectorB.length().toFixed(2);
-        controlsContainer.querySelector('#magR').textContent = res.length().toFixed(2);
-        
-        // Update readout with visual representation
+        controlsContainer.querySelector('#magA').textContent = aMag.toFixed(2);
+        controlsContainer.querySelector('#magB').textContent = bMag.toFixed(2);
+        controlsContainer.querySelector('#magR').textContent = rMag.toFixed(2);
+        controlsContainer.querySelector('#angR').textContent = rAng.toFixed(1);
         controlsContainer.querySelector('#vectorReadout').innerHTML = `
-            <strong style="color:#22d3ee">A</strong> = (${vectorA.x.toFixed(1)}, ${vectorA.y.toFixed(1)}, ${vectorA.z.toFixed(1)})<br>
-            <strong style="color:#f97316">B</strong> = (${vectorB.x.toFixed(1)}, ${vectorB.y.toFixed(1)}, ${vectorB.z.toFixed(1)})<br>
-            <strong style="color:#10b981">R = A + B</strong> = (${res.x.toFixed(1)}, ${res.y.toFixed(1)}, ${res.z.toFixed(1)})
+            <strong style="color:#22d3ee">A</strong> = ${aMag.toFixed(1)} at ${(aAng*180/Math.PI).toFixed(0)}° &nbsp;
+            <strong style="color:#f97316">B</strong> = ${bMag.toFixed(1)} at ${(bAng*180/Math.PI).toFixed(0)}°<br>
+            <strong style="color:#10b981">R = A + B</strong>: magnitude <strong>${rMag.toFixed(2)}</strong> at <strong>${rAng.toFixed(1)}°</strong>
         `;
     }
 
-    controlsContainer.querySelectorAll('input[type="range"]').forEach(inp => inp.addEventListener('input', updateVectors));
-    updateVectors();
-    overlayEl.innerHTML += `<span class="sim-badge">⛓️ Tail-to-Tip Method</span><span class="sim-badge">📐 3D Vectors</span>`;
+    controlsContainer.querySelectorAll('input[type="range"]').forEach(inp => inp.addEventListener('input', drawVectors));
+    drawVectors();
+
+    // No 3D update needed - pure 2D canvas
+    engine.setUpdate(() => {});
+    overlayEl.innerHTML += `<span class="sim-badge">📐 2D Vector Addition</span><span class="sim-badge">⛓️ Tail-to-Tip & Parallelogram</span>`;
 
     return () => {
-        scene.remove(arrowA, arrowB, arrowR, tipA, tipB, tipR, dashedLine1, dashedLine2, originSphere);
+        // Nothing to remove from scene - 2D canvas only
     };
 }
 
@@ -1684,11 +1711,11 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
     camera.position.set(0, 8, 16);
     camera.lookAt(0, 1, 0);
 
-    // Create detailed train (Object A)
+    // Create detailed train (Object A) — longer with 2 carriages + locomotive
     const trainGroup = new THREE.Group();
-    // Train body
+    // Locomotive body
     const trainBody = new THREE.Mesh(
-        new THREE.BoxGeometry(2.5, 1.2, 1.0),
+        new THREE.BoxGeometry(2.8, 1.3, 1.0),
         new THREE.MeshStandardMaterial({ 
             color: 0x22d3ee, 
             emissive: 0x22d3ee, 
@@ -1697,31 +1724,63 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
             roughness: 0.3 
         })
     );
-    trainBody.position.y = 0.6;
+    trainBody.position.set(0, 0.65, 0);
     trainGroup.add(trainBody);
-    
-    // Train front (cabin)
+    // Locomotive cabin/nose
     const trainFront = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.8, 0.9),
-        new THREE.MeshStandardMaterial({ 
-            color: 0x0ea5e9, 
-            metalness: 0.8, 
-            roughness: 0.2 
-        })
+        new THREE.BoxGeometry(0.6, 0.9, 0.9),
+        new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.8, roughness: 0.2 })
     );
-    trainFront.position.set(1.5, 0.8, 0);
+    trainFront.position.set(1.65, 0.9, 0);
     trainGroup.add(trainFront);
-    
-    // Train wheels
-    for (let i = 0; i < 4; i++) {
-        const wheel = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.18, 0.18, 0.15, 16),
-            new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.1 })
-        );
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(-0.8 + i * 0.8, 0.18, 0.6);
-        trainGroup.add(wheel);
-    }
+    // Chimney on top
+    const chimney = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.12, 0.4, 8),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9 })
+    );
+    chimney.position.set(0.8, 1.55, 0);
+    trainGroup.add(chimney);
+    // Carriage 1
+    const carriage1 = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1.1, 0.95),
+        new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.1, metalness: 0.6 })
+    );
+    carriage1.position.set(-3.2, 0.55, 0);
+    trainGroup.add(carriage1);
+    // Carriage 2
+    const carriage2 = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1.1, 0.95),
+        new THREE.MeshStandardMaterial({ color: 0x0891b2, emissive: 0x0891b2, emissiveIntensity: 0.1, metalness: 0.6 })
+    );
+    carriage2.position.set(-6.2, 0.55, 0);
+    trainGroup.add(carriage2);
+    // Coupler between loco and carriage1
+    const coupler1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.2),
+        new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.9 }));
+    coupler1.position.set(-1.8, 0.4, 0);
+    trainGroup.add(coupler1);
+    // Coupler between carriage1 and carriage2
+    const coupler2 = coupler1.clone();
+    coupler2.position.set(-4.85, 0.4, 0);
+    trainGroup.add(coupler2);
+    // Wheels for all sections
+    const wheelPositions = [
+        [1.0, -3.0], [0.2, -3.0],   // loco wheels
+        [-2.0, -3.0], [-3.0, -3.0], // loco rear + carriage1 front
+        [-4.3, -3.0], [-5.1, -3.0], // carriage1 rear + carriage2 front
+        [-6.3, -3.0], [-7.1, -3.0], // carriage2 rear
+    ];
+    wheelPositions.forEach(([wx, wz]) => {
+        [-0.6, 0.6].forEach(side => {
+            const wheel = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.18, 0.18, 0.14, 16),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.1 })
+            );
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(wx, 0.18, side);
+            trainGroup.add(wheel);
+        });
+    });
     trainGroup.position.y = 0;
     trainGroup.position.z = -2;
     scene.add(trainGroup);
@@ -1770,38 +1829,82 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
     carGroup.position.z = 2;
     scene.add(carGroup);
 
-    // Enhanced road with lane markings
-    const roadGeometry = new THREE.PlaneGeometry(40, 5.5);
+    // === TRAIN SIDE (z = -2): Rail track ===
+    // Rail bed (gravel/ballast)
+    const railBed = new THREE.Mesh(
+        new THREE.BoxGeometry(42, 0.15, 2.2),
+        new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.99, metalness: 0 })
+    );
+    railBed.position.set(0, 0.0, -2);
+    railBed.receiveShadow = true;
+    scene.add(railBed);
+    // Railway ties/sleepers
+    const tieMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e, roughness: 0.95 });
+    for (let i = -20; i <= 20; i += 1.2) {
+        const tie = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 1.8), tieMat);
+        tie.position.set(i, 0.1, -2);
+        scene.add(tie);
+    }
+    // Left rail
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.3 });
+    const leftRail = new THREE.Mesh(new THREE.BoxGeometry(42, 0.1, 0.12), railMat);
+    leftRail.position.set(0, 0.2, -2 - 0.7);
+    scene.add(leftRail);
+    // Right rail
+    const rightRail = new THREE.Mesh(new THREE.BoxGeometry(42, 0.1, 0.12), railMat);
+    rightRail.position.set(0, 0.2, -2 + 0.7);
+    scene.add(rightRail);
+
+    // === CAR SIDE (z = +2): Road ===
+    const roadGeometry = new THREE.PlaneGeometry(42, 2.8);
     const roadMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x1e293b, 
+        color: 0x374151, 
         roughness: 0.95,
         metalness: 0.05
     });
     const road = new THREE.Mesh(roadGeometry, roadMaterial);
     road.rotation.x = -Math.PI / 2;
-    road.position.y = 0.005;
+    road.position.set(0, 0.01, 2);
     road.receiveShadow = true;
     scene.add(road);
-    
-    // Lane dividers (dashed lines)
-    for (let i = -15; i < 15; i += 2) {
-        const dash = new THREE.Mesh(
-            new THREE.PlaneGeometry(1, 0.15),
-            new THREE.MeshBasicMaterial({ color: 0xfbbf24 })
-        );
+    // Road edge lines (white)
+    const roadEdgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const leftEdge = new THREE.Mesh(new THREE.PlaneGeometry(42, 0.12), roadEdgeMat);
+    leftEdge.rotation.x = -Math.PI / 2;
+    leftEdge.position.set(0, 0.02, 2 - 1.3);
+    scene.add(leftEdge);
+    const rightEdge = new THREE.Mesh(new THREE.PlaneGeometry(42, 0.12), roadEdgeMat);
+    rightEdge.rotation.x = -Math.PI / 2;
+    rightEdge.position.set(0, 0.02, 2 + 1.3);
+    scene.add(rightEdge);
+    // Road center dashes
+    for (let i = -20; i < 20; i += 2) {
+        const dash = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.1), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
         dash.rotation.x = -Math.PI / 2;
-        dash.position.set(i, 0.02, 0);
+        dash.position.set(i, 0.025, 2);
         scene.add(dash);
     }
-    
-    // Center line
-    const centerLine = new THREE.Mesh(
-        new THREE.PlaneGeometry(40, 0.1),
-        new THREE.MeshBasicMaterial({ color: 0xfef3c7 })
+    // Ground between and around
+    const groundMid = new THREE.Mesh(
+        new THREE.PlaneGeometry(42, 4),
+        new THREE.MeshStandardMaterial({ color: 0x1c2333, roughness: 0.99 })
     );
-    centerLine.rotation.x = -Math.PI / 2;
-    centerLine.position.y = 0.015;
-    scene.add(centerLine);
+    groundMid.rotation.x = -Math.PI / 2;
+    groundMid.position.set(0, 0, 0);
+    groundMid.receiveShadow = true;
+    scene.add(groundMid);
+    
+    // Center divider (grass strip)
+    const divider = new THREE.Mesh(
+        new THREE.PlaneGeometry(42, 0.6),
+        new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.99 })
+    );
+    divider.rotation.x = -Math.PI / 2;
+    divider.position.set(0, 0.02, 0);
+    scene.add(divider);
+    
+    // Separate label line: "TRAIN" side and "CAR" side
+    const centerLine = groundMid; // Keep scene reference consistent
 
     // Relative velocity arrow
     const relArrow = new THREE.ArrowHelper(
@@ -1820,13 +1923,13 @@ function initRelativeMotionSim(engine, controlsContainer, overlayEl) {
             <div class="game-section-title"><i class="fas fa-sync-alt"></i> 🎮 Relative Motion</div>
             <div class="sim-control-row">
                 <label>🚂 Train Speed</label>
-                <input class="sim-slider" id="relVA" type="range" min="0" max="10" value="4" step="0.5">
-                <span class="sim-slider-val" id="relVAVal">4 m/s</span>
+                <input class="sim-slider" id="relVA" type="range" min="0" max="10" value="8" step="0.5">
+                <span class="sim-slider-val" id="relVAVal">8 m/s</span>
             </div>
             <div class="sim-control-row">
                 <label>🚗 Car Speed</label>
-                <input class="sim-slider" id="relVB" type="range" min="0" max="10" value="6" step="0.5">
-                <span class="sim-slider-val" id="relVBVal">6 m/s</span>
+                <input class="sim-slider" id="relVB" type="range" min="0" max="10" value="4" step="0.5">
+                <span class="sim-slider-val" id="relVBVal">4 m/s</span>
             </div>
             <div class="sim-control-row" style="margin-top: 12px;">
                 <label style="min-width: 100%;">👁️ Observer Frame</label>
@@ -1919,7 +2022,7 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
 
     // Enhanced surface with texture-like appearance
     const surface = new THREE.Mesh(
-        new THREE.BoxGeometry(24, 0.3, 4), 
+        new THREE.BoxGeometry(36, 0.3, 5), 
         new THREE.MeshStandardMaterial({ 
             color: 0x334155, 
             roughness: 0.95,
@@ -1931,7 +2034,7 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
     scene.add(surface);
     
     // Add grid lines on surface for depth
-    const gridHelper = new THREE.GridHelper(24, 24, 0x475569, 0x475569);
+    const gridHelper = new THREE.GridHelper(36, 36, 0x475569, 0x475569);
     gridHelper.position.y = 0.02;
     gridHelper.rotation.y = Math.PI / 2;
     scene.add(gridHelper);
@@ -1991,7 +2094,7 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-bolt"></i> ⚖️ Newton's Laws</div>
+            <div class="game-section-title"><i class="fas fa-bolt"></i> 🧲 Friction Simulator</div>
             <div class="sim-control-row">
                 <label>⬅➡ Applied Force</label>
                 <input class="sim-slider" id="forceInput" type="range" min="-20" max="20" value="10">
@@ -2056,8 +2159,8 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
         position += velocity * 0.016;
 
         // Wrap to stay in view
-        if (position > 10) position = -10;
-        if (position < -10) position = 10;
+        if (position > 15) position = -15;
+        if (position < -15) position = 15;
         blockGroup.position.x = position;
 
         // Applied force arrow (cyan)
@@ -2109,7 +2212,7 @@ function initLawsMotionSim(engine, controlsContainer, overlayEl) {
     
     engine.setUpdate(update);
     overlayEl.innerHTML += `<span class="sim-badge">🔵 Applied Force</span><span class="sim-badge">🔴 Friction</span><span class="sim-badge">🟢 Acceleration</span>`;
-
+    
     return () => {
         scene.remove(blockGroup, forceArrow, frictionArrow, accArrow, surface, gridHelper);
     };
@@ -2120,120 +2223,87 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
     camera.position.set(0, 14, 26);
     camera.lookAt(0, 5, 0);
 
-    // Enhanced track with more dramatic curves
+    // Pure gravity roller coaster: starts at a high peak, drops fast, then even-height bumps
+    // No lift chain — cart starts at the top and falls naturally.
+    // Even hills after the big drop so cart maintains speed through them.
     const trackPoints = [
-        new THREE.Vector3(-14, 12, 0),
-        new THREE.Vector3(-12, 12, 1),
-        new THREE.Vector3(-8, 2.5, 2),
-        new THREE.Vector3(-5, 10, 0),
-        new THREE.Vector3(-2, 1.8, -1),
-        new THREE.Vector3(1, 8, 1),
-        new THREE.Vector3(4, 1.2, 0),
-        new THREE.Vector3(7, 6, -1),
-        new THREE.Vector3(10, 2, 0),
-        new THREE.Vector3(12, 5, 1),
-        new THREE.Vector3(14, 3, 0)
+        new THREE.Vector3(-14, 11.5, 0),  // START — high peak (released from here)
+        new THREE.Vector3(-11, 10.0, 0),  // tip over edge — just past peak
+        new THREE.Vector3(-8,  4.5,  0),  // steep first drop
+        new THREE.Vector3(-5,  0.8,  0),  // valley 1 — max speed
+        new THREE.Vector3(-2,  6.0,  0),  // hill 2 — even height
+        new THREE.Vector3( 1,  0.8,  0),  // valley 2
+        new THREE.Vector3( 4,  5.5,  0),  // hill 3 — slightly shorter
+        new THREE.Vector3( 7,  0.8,  0),  // valley 3
+        new THREE.Vector3(10,  5.0,  0),  // hill 4
+        new THREE.Vector3(13,  0.8,  0),  // valley 4
+        new THREE.Vector3(14,  1.2,  0),  // approach station
     ];
-    const curve = new THREE.CatmullRomCurve3(trackPoints, false, 'catmullrom', 0.4);
+    const curve = new THREE.CatmullRomCurve3(trackPoints, false, 'catmullrom', 0.5);
 
     // Ground platform
     const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(32, 32),
+        new THREE.PlaneGeometry(36, 14),
         new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.95 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Track supports with realistic structure
-    const supportMat = new THREE.MeshStandardMaterial({ 
-        color: 0x64748b, 
-        metalness: 0.7, 
-        roughness: 0.4 
-    });
+    // Track supports
+    const supportMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7, roughness: 0.4 });
     const supports = [];
-    for (let i = 0; i <= 1; i += 0.08) {
+    for (let i = 0; i <= 1; i += 0.06) {
         const p = curve.getPointAt(i);
         if (p.y > 1.5) {
-            // Main pillar
-            const pillar = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.12, 0.15, p.y, 8), 
-                supportMat
-            );
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, p.y, 8), supportMat);
             pillar.position.set(p.x, p.y / 2, p.z);
             pillar.castShadow = true;
             scene.add(pillar);
             supports.push(pillar);
-            
-            // Support base
-            const base = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.25, 0.3, 0.3, 8),
-                supportMat
-            );
-            base.position.set(p.x, 0.15, p.z);
-            scene.add(base);
-            supports.push(base);
         }
     }
 
-    // Track rails (dual rails for realism)
-    const tubeGeometry1 = new THREE.TubeGeometry(curve, 240, 0.12, 12, false);
+    // Track tube
+    const tubeGeometry1 = new THREE.TubeGeometry(curve, 300, 0.12, 12, false);
     const tubeMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x38bdf8, 
-        metalness: 0.8, 
-        roughness: 0.2,
-        emissive: 0x38bdf8,
-        emissiveIntensity: 0.1
+        color: 0x38bdf8, metalness: 0.8, roughness: 0.2,
+        emissive: 0x38bdf8, emissiveIntensity: 0.15
     });
     const track1 = new THREE.Mesh(tubeGeometry1, tubeMaterial);
     track1.castShadow = true;
     scene.add(track1);
 
-    // Detailed cart
+    // Cart
     const cartGroup = new THREE.Group();
-    
-    // Cart body
     const cartBody = new THREE.Mesh(
         new THREE.BoxGeometry(1.2, 0.6, 0.7), 
-        new THREE.MeshStandardMaterial({ 
-            color: 0xf59e0b, 
-            emissive: 0xf59e0b, 
-            emissiveIntensity: 0.4, 
-            metalness: 0.6,
-            roughness: 0.3
-        })
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.4, metalness: 0.6, roughness: 0.3 })
     );
     cartBody.castShadow = true;
     cartGroup.add(cartBody);
-    
-    // Cart roof
     const cartRoof = new THREE.Mesh(
         new THREE.BoxGeometry(1.0, 0.2, 0.65),
         new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.7 })
     );
     cartRoof.position.y = 0.4;
     cartGroup.add(cartRoof);
-    
-    // Cart wheels
     for (let i = 0; i < 4; i++) {
         const wheel = new THREE.Mesh(
             new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12),
             new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9 })
         );
         wheel.rotation.z = Math.PI / 2;
-        const xPos = i < 2 ? -0.5 : 0.5;
-        const zPos = i % 2 === 0 ? 0.4 : -0.4;
-        wheel.position.set(xPos, -0.4, zPos);
+        wheel.position.set(i < 2 ? -0.5 : 0.5, -0.35, i % 2 === 0 ? 0.4 : -0.4);
         cartGroup.add(wheel);
     }
-    
     scene.add(cartGroup);
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-chart-area"></i> 🎢 Energy Conservation</div>
-            <canvas class="sim-graph" id="energyGraph" width="300" height="160" style="border-radius: 8px; background: #0f1419;"></canvas>
-            <div class="sim-stats-grid" style="margin-top: 12px;">
+            <div class="game-section-title"><i class="fas fa-chart-area"></i> 🎢 Work-Energy Roller Coaster</div>
+            <canvas class="sim-graph" id="energyGraph" width="300" height="160" style="border-radius:8px;background:#0f1419;"></canvas>
+            <div class="sim-stats-grid" style="margin-top:12px;">
                 <div class="sim-stat-card" style="border-left:3px solid #38bdf8">
                     <div class="sim-stat-label">⛰️ Potential Energy</div>
                     <div class="sim-stat-value" id="peVal">--</div>
@@ -2255,7 +2325,7 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
                     <div class="sim-stat-unit">J</div>
                 </div>
             </div>
-            <div class="sim-status" id="coasterInfo" style="margin-top: 12px;"></div>
+            <div class="sim-status" id="coasterInfo" style="margin-top:12px;"></div>
             <button class="btn-primary sim-action-btn" id="resetCoasterBtn"><i class="fas fa-redo"></i> Restart</button>
         </div>
     `;
@@ -2264,46 +2334,53 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
     const ctx = graph.getContext('2d');
     const coasterInfoEl = controlsContainer.querySelector('#coasterInfo');
 
-    // Physics-based motion
     const g = 9.8;
     const mass = 1.5;
-    const maxH = 12;
-    let arcPos = 0;
-    let speed = 0;
     const totalLen = curve.getLength();
+    
+    // Pure gravity physics — cart starts at the high peak (arcPos ~0) with zero speed.
+    // No lift chain: it tips over naturally and gravity drives the whole ride.
+    let arcPos = 0.01;
+    let speed = 0.0;
 
     const peHistory = [];
     const keHistory = [];
     
     function update() {
-        // Get current height and slope
-        const pos = curve.getPointAt(arcPos);
-        const tangent = curve.getTangentAt(arcPos);
+        const clampedPos = Math.max(0.001, Math.min(0.999, arcPos));
+        const tangent = curve.getTangentAt(clampedPos);
         const slopeAngle = Math.asin(Math.max(-1, Math.min(1, tangent.y)));
 
-        // a = -g * sin(slope) along the track
+        // Gravity acceleration along track slope
         const accel = -g * Math.sin(slopeAngle);
         speed += accel * 0.016;
-        speed *= 0.9992; // minimal friction
-
-        // Advance arc position
+        speed *= 0.9996; // tiny rolling friction
         arcPos += (speed * 0.016) / totalLen;
-        if (arcPos > 0.99) { arcPos = 0.01; speed = 1.0; }
-        if (arcPos < 0.01) { arcPos = 0.99; speed = -1.0; }
 
-        const newPos = curve.getPointAt(Math.max(0.001, Math.min(0.999, arcPos)));
+        // Bounce/wrap at ends
+        if (arcPos >= 0.99) {
+            arcPos = 0.98;
+            speed = -Math.abs(speed) * 0.35;
+        }
+        if (arcPos <= 0.001) {
+            // Reached start again — restart from peak
+            arcPos = 0.01;
+            speed = 0;
+            peHistory.length = 0;
+            keHistory.length = 0;
+        }
+
+        const newPos = curve.getPointAt(clampedPos);
         cartGroup.position.copy(newPos);
         cartGroup.position.y += 0.3;
 
-        // Orient cart along track
-        const lookTarget = curve.getPointAt(Math.min(0.999, arcPos + 0.01));
+        const lookPos = Math.min(0.999, clampedPos + 0.01);
+        const lookTarget = curve.getPointAt(lookPos);
         cartGroup.lookAt(lookTarget);
-        
-        // Rotate wheels based on speed
+
+        // Rotate wheels
         cartGroup.children.forEach((child, i) => {
-            if (i >= 3) { // wheels are last 4 children
-                child.rotation.x += speed * 0.1;
-            }
+            if (i >= 3) child.rotation.x += speed * 0.12;
         });
 
         const h = newPos.y;
@@ -2316,107 +2393,63 @@ function initRollerCoasterSim(engine, controlsContainer, overlayEl) {
         controlsContainer.querySelector('#speedVal').textContent = Math.abs(speed).toFixed(2);
         controlsContainer.querySelector('#totalEVal').textContent = totalE.toFixed(1);
         
-        // Store energy history for graph
         peHistory.push(pe);
         keHistory.push(ke);
-        if (peHistory.length > 60) {
-            peHistory.shift();
-            keHistory.shift();
-        }
+        if (peHistory.length > 80) { peHistory.shift(); keHistory.shift(); }
         
-        // Status message
-        if (h > 8) {
-            coasterInfoEl.innerHTML = `<strong style="color: #38bdf8;">⛰️ High altitude!</strong> Maximum potential energy`;
-        } else if (h < 3 && Math.abs(speed) > 4) {
-            coasterInfoEl.innerHTML = `<strong style="color: #f59e0b;">⚡ Maximum speed!</strong> Kinetic energy peak`;
-        } else if (Math.abs(speed) < 2) {
-            coasterInfoEl.innerHTML = `<strong style="color: #fbbf24;">🔄 Converting...</strong> PE → KE transition`;
+        if (h < 2 && Math.abs(speed) > 4) {
+            coasterInfoEl.innerHTML = `<strong style="color:#f59e0b;">⚡ MAXIMUM SPEED!</strong> All PE converted to KE`;
+        } else if (h > 9) {
+            const tipDir = speed < 0.5 ? '🫨 Barely moving...' : '📉 Starting to fall!';
+            coasterInfoEl.innerHTML = `<strong style="color:#38bdf8;">⛰️ At the Top:</strong> ${tipDir} PE = ${pe.toFixed(1)} J`;
         } else {
-            coasterInfoEl.innerHTML = `<strong style="color: #10b981;">✓ Energy conserved:</strong> ${totalE.toFixed(1)} J`;
+            coasterInfoEl.innerHTML = `<strong style="color:#10b981;">✓ Energy conserved:</strong> ${totalE.toFixed(1)} J`;
         }
         
         drawEnergyGraph(peHistory, keHistory);
     }
 
     function drawEnergyGraph(peHist, keHist) {
-        const w = graph.width;
-        const hgt = graph.height;
-        
-        // Clear with dark background
+        const w = graph.width, hgt = graph.height;
         ctx.fillStyle = '#0f1419';
         ctx.fillRect(0, 0, w, hgt);
-        
-        // Draw grid lines
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
         for (let i = 0; i <= 4; i++) {
             const y = (hgt / 4) * i;
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(w, y);
-            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
         }
-        
-        // Title
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 11px sans-serif';
         ctx.fillText('Energy Over Time', 10, 15);
-        
         if (peHist.length < 2) return;
-        
         const maxE = Math.max(...peHist, ...keHist, 1);
         const step = w / (peHist.length - 1);
-        
-        // Draw PE line
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5;
         ctx.beginPath();
         peHist.forEach((pe, i) => {
-            const x = i * step;
-            const y = hgt - 10 - ((pe / maxE) * (hgt - 30));
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
+            const x = i * step, y = hgt - 10 - ((pe / maxE) * (hgt - 30));
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.stroke();
-        
-        // Draw KE line
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 2.5;
         ctx.beginPath();
         keHist.forEach((ke, i) => {
-            const x = i * step;
-            const y = hgt - 10 - ((ke / maxE) * (hgt - 30));
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
+            const x = i * step, y = hgt - 10 - ((ke / maxE) * (hgt - 30));
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
         ctx.stroke();
-        
-        // Legend
-        ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(10, hgt - 30, 15, 8);
-        ctx.fillStyle = '#fff';
-        ctx.font = '10px sans-serif';
-        ctx.fillText('PE', 30, hgt - 22);
-        
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(60, hgt - 30, 15, 8);
-        ctx.fillStyle = '#fff';
-        ctx.fillText('KE', 80, hgt - 22);
+        ctx.fillStyle = '#38bdf8'; ctx.fillRect(10, hgt - 30, 15, 8);
+        ctx.fillStyle = '#fff'; ctx.font = '10px sans-serif'; ctx.fillText('PE', 30, hgt - 22);
+        ctx.fillStyle = '#f59e0b'; ctx.fillRect(60, hgt - 30, 15, 8);
+        ctx.fillStyle = '#fff'; ctx.fillText('KE', 80, hgt - 22);
     }
 
-    // Start with initial speed from the top
-    speed = 2.5;
-    arcPos = 0.02;
-    
     controlsContainer.querySelector('#resetCoasterBtn').addEventListener('click', () => {
-        speed = 2.5;
-        arcPos = 0.02;
-        peHistory.length = 0;
-        keHistory.length = 0;
+        arcPos = 0.01; speed = 0;
+        peHistory.length = 0; keHistory.length = 0;
     });
 
     engine.setUpdate(update);
-    overlayEl.innerHTML += `<span class="sim-badge">🎢 Realistic Physics</span><span class="sim-badge">⚡ Energy Conservation</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🎢 Pure Gravity Drop</span><span class="sim-badge">⚡ Energy Conservation</span>`;
 
     return () => {
         scene.remove(track1, cartGroup, ground);
@@ -2453,8 +2486,10 @@ function initOrbitalSim(engine, controlsContainer, overlayEl) {
             <div class="game-section-title"><i class="fas fa-atom"></i> 🎮 Atomic Orbitals</div>
             <select class="game-select" id="orbitalType">
                 <option value="1s">1s - Spherical</option>
-                <option value="2s">2s - Larger Sphere</option>
+                <option value="2s">2s - Larger Sphere (1 node)</option>
                 <option value="2p">2p - Dumbbell</option>
+                <option value="3s">3s - Sphere (2 radial nodes)</option>
+                <option value="3p">3p - Dumbbell (1 radial node)</option>
                 <option value="3d">3d - Cloverleaf</option>
             </select>
             <div class="sim-control-row">
@@ -2506,23 +2541,38 @@ function initOrbitalSim(engine, controlsContainer, overlayEl) {
 
         if (type === '1s') {
             orbitalGroup.add(createLobe(2, 2, 2, 0x8b5cf6, [0, 0, 0]));
-            info = '1s: Spherical, 1 node surface = 0';
+            info = '1s: Spherical, n=1, l=0. No nodes. 2 max electrons.';
         } else if (type === '2s') {
-            orbitalGroup.add(createLobe(3, 3, 3, 0x8b5cf6, [0, 0, 0]));
-            orbitalGroup.add(createLobe(1.2, 1.2, 1.2, 0xc084fc, [0, 0, 0]));
-            info = '2s: Spherical with 1 radial node';
+            orbitalGroup.add(createLobe(3.5, 3.5, 3.5, 0x8b5cf6, [0, 0, 0]));
+            orbitalGroup.add(createLobe(1.5, 1.5, 1.5, 0xc084fc, [0, 0, 0]));
+            info = '2s: Spherical, n=2, l=0. 1 radial node (inner shell). 2 max electrons.';
         } else if (type === '2p') {
             // Two lobes along Y axis (dumbbell)
-            orbitalGroup.add(createLobe(1.2, 2.5, 1.2, 0x22d3ee, [0, 2, 0]));
-            orbitalGroup.add(createLobe(1.2, 2.5, 1.2, 0xf97316, [0, -2, 0]));
-            info = '2p: Dumbbell shape, 1 angular node (plane)';
+            orbitalGroup.add(createLobe(1.2, 2.8, 1.2, 0x22d3ee, [0, 2.3, 0]));
+            orbitalGroup.add(createLobe(1.2, 2.8, 1.2, 0xf97316, [0, -2.3, 0]));
+            info = '2p: Dumbbell, n=2, l=1. 1 angular nodal plane. 6 max electrons (3 orbitals).';
+        } else if (type === '3s') {
+            // 3s: largest sphere with 2 radial nodes (3 concentric regions)
+            orbitalGroup.add(createLobe(4.5, 4.5, 4.5, 0x8b5cf6, [0, 0, 0]));
+            orbitalGroup.add(createLobe(2.8, 2.8, 2.8, 0xc084fc, [0, 0, 0]));
+            orbitalGroup.add(createLobe(1.2, 1.2, 1.2, 0xa78bfa, [0, 0, 0]));
+            info = '3s: Spherical, n=3, l=0. 2 radial nodes (3 shells visible). 2 max electrons.';
+        } else if (type === '3p') {
+            // 3p: larger dumbbell with waist node (intermediate radial node)
+            // Outer lobes (large)
+            orbitalGroup.add(createLobe(1.5, 3.5, 1.5, 0x22d3ee, [0, 3.5, 0]));
+            orbitalGroup.add(createLobe(1.5, 3.5, 1.5, 0xf97316, [0, -3.5, 0]));
+            // Inner lobes (smaller, showing radial node)
+            orbitalGroup.add(createLobe(0.8, 1.4, 0.8, 0x67e8f9, [0, 1.2, 0]));
+            orbitalGroup.add(createLobe(0.8, 1.4, 0.8, 0xfed7aa, [0, -1.2, 0]));
+            info = '3p: Dumbbell, n=3, l=1. 1 radial + 1 angular node. 6 max electrons (3 orbitals).';
         } else if (type === '3d') {
             // Four lobes in XY plane (cloverleaf)
             orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0x22d3ee, [2, 2, 0]));
             orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0xf97316, [-2, -2, 0]));
             orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0x22d3ee, [2, -2, 0]));
             orbitalGroup.add(createLobe(1.5, 1.5, 0.8, 0xf97316, [-2, 2, 0]));
-            info = '3d: Cloverleaf, 2 angular nodal planes';
+            info = '3d: Cloverleaf, n=3, l=2. 2 angular nodal planes. 10 max electrons (5 orbitals).';
         }
         infoEl.textContent = info;
     }
@@ -2554,111 +2604,247 @@ function initVseprSim(engine, controlsContainer, overlayEl) {
     camera.lookAt(0, 5, 0);
 
     const molGroup = new THREE.Group();
-    molGroup.position.y = 5; // Elevated above grid
+    molGroup.position.y = 5;
     scene.add(molGroup);
 
     const central = new THREE.Mesh(
         new THREE.SphereGeometry(0.6, 32, 32), 
-        new THREE.MeshStandardMaterial({ 
-            color: 0xec4899, 
-            emissive: 0xec4899, 
-            emissiveIntensity: 0.3,
-            metalness: 0.4,
-            roughness: 0.3
-        })
+        new THREE.MeshStandardMaterial({ color: 0xec4899, emissive: 0xec4899, emissiveIntensity: 0.3, metalness: 0.4, roughness: 0.3 })
     );
     molGroup.add(central);
-    const atoms = [];
-    const bonds = [];
+    const atomMeshes = [];
+    const bondMeshes = [];
+    const lonePairMeshes = [];
 
-    controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-project-diagram"></i> 🎮 VSEPR Geometry</div>
-            <select class="game-select" id="vseprShape">
-                <option value="linear">Linear (2 atoms)</option>
-                <option value="trigonal">Trigonal Planar (3)</option>
-                <option value="tetra" selected>Tetrahedral (4)</option>
-                <option value="bipyramidal">Trigonal Bipyramidal (5)</option>
-                <option value="octa">Octahedral (6)</option>
-            </select>
-            <div class="sim-stats-grid" style="margin-top:10px;">
-                <div class="sim-stat-card"><div class="sim-stat-label">Bond Angle</div><div class="sim-stat-value" id="vseprAngle">--</div><div class="sim-stat-unit">°</div></div>
-                <div class="sim-stat-card"><div class="sim-stat-label">Atoms</div><div class="sim-stat-value" id="vseprCount">--</div></div>
-            </div>
-            <div class="sim-status" id="vseprInfo" style="margin-top:12px;"></div>
-        </div>
-    `;
-
-    const shapeSelect = controlsContainer.querySelector('#vseprShape');
-    const angleEl = controlsContainer.querySelector('#vseprAngle');
-    const countEl = controlsContainer.querySelector('#vseprCount');
-    const infoEl = controlsContainer.querySelector('#vseprInfo');
-
-    function setShape(shape) {
-        atoms.forEach(a => molGroup.remove(a));
-        bonds.forEach(b => molGroup.remove(b));
-        atoms.length = 0;
-        bonds.length = 0;
-
-        const positions = [];
-        let angleInfo = '';
-        let example = '';
-        const R = 3; // bond length
-
-        if (shape === 'linear') {
-            positions.push([R, 0, 0], [-R, 0, 0]);
-            angleInfo = '180'; example = 'e.g. CO₂, BeCl₂';
-        } else if (shape === 'trigonal') {
-            for (let i = 0; i < 3; i++) {
-                const a = (i * 2 * Math.PI) / 3;
-                positions.push([R * Math.cos(a), 0, R * Math.sin(a)]);
+    // VSEPR data structure: geometry → available shapes
+    // Each shape has: bondPairs, lonePairs, angle, hybridization, examples, positions (bonding atoms), lonePairDirs
+    const VSEPR_DATA = {
+        linear: {
+            label: 'Linear (AB₂)',
+            shapes: {
+                linear: {
+                    name: 'Linear', bondPairs: 2, lonePairs: 0, angle: '180°',
+                    hybrid: 'sp', example: 'CO₂, BeCl₂, C₂H₂',
+                    atomPos: [[3,0,0],[-3,0,0]], lpDirs: []
+                }
             }
-            angleInfo = '120'; example = 'e.g. BF₃, AlCl₃';
-        } else if (shape === 'tetra') {
-            // Tetrahedral vertices
-            positions.push([1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]);
-            positions.forEach(p => { p[0] *= R / 1.73; p[1] *= R / 1.73; p[2] *= R / 1.73; });
-            angleInfo = '109.5'; example = 'e.g. CH₄, NH₄⁺';
-        } else if (shape === 'bipyramidal') {
-            for (let i = 0; i < 3; i++) {
-                const a = (i * 2 * Math.PI) / 3;
-                positions.push([R * Math.cos(a), 0, R * Math.sin(a)]);
+        },
+        trigplanar: {
+            label: 'Trigonal Planar (AB₃)',
+            shapes: {
+                trigonal_planar: {
+                    name: 'Trigonal Planar', bondPairs: 3, lonePairs: 0, angle: '120°',
+                    hybrid: 'sp²', example: 'BF₃, SO₃, AlCl₃',
+                    atomPos: [[3,0,0],[-1.5,0,2.6],[-1.5,0,-2.6]], lpDirs: []
+                },
+                bent_tp: {
+                    name: 'Bent (from Trigonal Planar)', bondPairs: 2, lonePairs: 1, angle: '~119°',
+                    hybrid: 'sp²', example: 'SO₂, O₃, SnCl₂',
+                    atomPos: [[2.8,0,1.6],[-2.8,0,1.6]], lpDirs: [[0,0,-2.5]]
+                }
             }
-            positions.push([0, R, 0], [0, -R, 0]);
-            angleInfo = '90/120'; example = 'e.g. PCl₅';
-        } else {
-            positions.push([R, 0, 0], [-R, 0, 0], [0, R, 0], [0, -R, 0], [0, 0, R], [0, 0, -R]);
-            angleInfo = '90'; example = 'e.g. SF₆';
+        },
+        tetrahedral: {
+            label: 'Tetrahedral (AB₄)',
+            shapes: {
+                tetrahedral: {
+                    name: 'Tetrahedral', bondPairs: 4, lonePairs: 0, angle: '109.5°',
+                    hybrid: 'sp³', example: 'CH₄, CCl₄, NH₄⁺, SiF₄',
+                    atomPos: [[1.73,1.73,1.73],[-1.73,-1.73,1.73],[-1.73,1.73,-1.73],[1.73,-1.73,-1.73]],
+                    lpDirs: []
+                },
+                trigonal_pyramidal: {
+                    name: 'Trigonal Pyramidal', bondPairs: 3, lonePairs: 1, angle: '~107°',
+                    hybrid: 'sp³', example: 'NH₃, PCl₃, AsH₃',
+                    atomPos: [[2.6,0.6,0],[-1.3,0.6,2.25],[-1.3,0.6,-2.25]], lpDirs: [[0,-2.5,0]]
+                },
+                bent_tet: {
+                    name: 'Bent (from Tetrahedral)', bondPairs: 2, lonePairs: 2, angle: '~104.5°',
+                    hybrid: 'sp³', example: 'H₂O, H₂S, SCl₂',
+                    atomPos: [[2.4,0.5,1.5],[-2.4,0.5,1.5]], lpDirs: [[0,-2,0],[0,0,-2.5]]
+                }
+            }
+        },
+        tbipyramidal: {
+            label: 'Trigonal Bipyramidal (AB₅)',
+            shapes: {
+                tbipyramidal: {
+                    name: 'Trigonal Bipyramidal', bondPairs: 5, lonePairs: 0, angle: '90°/120°',
+                    hybrid: 'sp³d', example: 'PCl₅, AsF₅, SbCl₅',
+                    atomPos: [[3,0,0],[-1.5,0,2.6],[-1.5,0,-2.6],[0,3,0],[0,-3,0]], lpDirs: []
+                },
+                seesaw: {
+                    name: 'See-Saw', bondPairs: 4, lonePairs: 1, angle: '~173°/~102°',
+                    hybrid: 'sp³d', example: 'SF₄, XeO₂F₂',
+                    atomPos: [[3,0,0],[-1.5,0,2.6],[-1.5,0,-2.6],[0,-3,0]], lpDirs: [[0,2.5,0]]
+                },
+                tshape: {
+                    name: 'T-Shape', bondPairs: 3, lonePairs: 2, angle: '~87°/180°',
+                    hybrid: 'sp³d', example: 'ClF₃, BrF₃',
+                    atomPos: [[3,0,0],[-3,0,0],[0,-3,0]], lpDirs: [[0,2.5,0],[0,0,2.5]]
+                },
+                linear_tbp: {
+                    name: 'Linear (from TBP)', bondPairs: 2, lonePairs: 3, angle: '180°',
+                    hybrid: 'sp³d', example: 'I₃⁻, XeF₂',
+                    atomPos: [[0,3,0],[0,-3,0]], lpDirs: [[3,0,0],[-1.5,0,2.6],[-1.5,0,-2.6]]
+                }
+            }
+        },
+        octahedral: {
+            label: 'Octahedral (AB₆)',
+            shapes: {
+                octahedral: {
+                    name: 'Octahedral', bondPairs: 6, lonePairs: 0, angle: '90°',
+                    hybrid: 'sp³d²', example: 'SF₆, Mo(CO)₆, [PtCl₆]²⁻',
+                    atomPos: [[3,0,0],[-3,0,0],[0,3,0],[0,-3,0],[0,0,3],[0,0,-3]], lpDirs: []
+                },
+                square_pyramidal: {
+                    name: 'Square Pyramidal', bondPairs: 5, lonePairs: 1, angle: '~87°/180°',
+                    hybrid: 'sp³d²', example: 'BrF₅, XeOF₄, IF₅',
+                    atomPos: [[3,0,0],[-3,0,0],[0,0,3],[0,0,-3],[0,3,0]], lpDirs: [[0,-2.5,0]]
+                },
+                square_planar: {
+                    name: 'Square Planar', bondPairs: 4, lonePairs: 2, angle: '90°',
+                    hybrid: 'sp³d²', example: 'XeF₄, [PtCl₄]²⁻, [ICl₄]⁻',
+                    atomPos: [[3,0,0],[-3,0,0],[0,0,3],[0,0,-3]], lpDirs: [[0,2.5,0],[0,-2.5,0]]
+                }
+            }
         }
+    };
 
-        positions.forEach(pos => {
-            const atom = new THREE.Mesh(new THREE.SphereGeometry(0.35, 24, 24), new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.15 }));
-            atom.position.set(pos[0], pos[1], pos[2]);
-            atoms.push(atom);
-            molGroup.add(atom);
-
-            // Bond line from center to atom
-            const bondGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(pos[0], pos[1], pos[2])]);
-            const bond = new THREE.Line(bondGeom, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
-            bonds.push(bond);
-            molGroup.add(bond);
-        });
-
-        angleEl.textContent = angleInfo;
-        countEl.textContent = positions.length;
-        infoEl.textContent = example;
+    // Build the controls UI
+    function buildUI() {
+        const geomKeys = Object.keys(VSEPR_DATA);
+        const geomOptions = geomKeys.map(k => `<option value="${k}">${VSEPR_DATA[k].label}</option>`).join('');
+        
+        controlsContainer.innerHTML = `
+            <div class="game-panel sim-controls-panel">
+                <div class="game-section-title"><i class="fas fa-project-diagram"></i> 🧬 VSEPR Explorer</div>
+                <div class="sim-control-row">
+                    <label style="font-weight:700;color:#a78bfa;">📐 Electron Pair Geometry</label>
+                    <select class="game-select" id="vseprGeom" style="margin-top:4px;">${geomOptions}</select>
+                </div>
+                <div class="sim-control-row" style="margin-top:8px;">
+                    <label style="font-weight:700;color:#22d3ee;">🔷 Molecular Shape</label>
+                    <select class="game-select" id="vseprShape" style="margin-top:4px;"></select>
+                </div>
+                <div class="sim-stats-grid" style="margin-top:10px;">
+                    <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
+                        <div class="sim-stat-label">🔵 Bond Pairs</div>
+                        <div class="sim-stat-value" id="vBondPairs">--</div>
+                    </div>
+                    <div class="sim-stat-card" style="border-left:3px solid #f97316">
+                        <div class="sim-stat-label">🟠 Lone Pairs</div>
+                        <div class="sim-stat-value" id="vLonePairs">--</div>
+                    </div>
+                    <div class="sim-stat-card" style="border-left:3px solid #10b981">
+                        <div class="sim-stat-label">📐 Bond Angle</div>
+                        <div class="sim-stat-value" id="vAngle" style="font-size:0.85rem">--</div>
+                    </div>
+                    <div class="sim-stat-card" style="border-left:3px solid #a78bfa">
+                        <div class="sim-stat-label">🧬 Hybrid</div>
+                        <div class="sim-stat-value" id="vHybrid" style="font-size:0.85rem">--</div>
+                    </div>
+                </div>
+                <div class="sim-status" id="vseprExample" style="margin-top:8px;font-size:0.88rem;border-left:3px solid #fbbf24;padding-left:8px;"></div>
+            </div>
+        `;
     }
 
-    shapeSelect.addEventListener('change', () => setShape(shapeSelect.value));
-    setShape('tetra');
+    function populateShapes(geomKey) {
+        const shapeSelect = controlsContainer.querySelector('#vseprShape');
+        const shapes = VSEPR_DATA[geomKey].shapes;
+        shapeSelect.innerHTML = Object.keys(shapes).map(k => `<option value="${k}">${shapes[k].name}</option>`).join('');
+        return Object.keys(shapes)[0];
+    }
 
-    // Slow rotation
+    function renderMolecule(geomKey, shapeKey) {
+        // Clear old meshes
+        atomMeshes.forEach(m => molGroup.remove(m));
+        bondMeshes.forEach(m => molGroup.remove(m));
+        lonePairMeshes.forEach(m => molGroup.remove(m));
+        atomMeshes.length = 0; bondMeshes.length = 0; lonePairMeshes.length = 0;
+
+        const shapeData = VSEPR_DATA[geomKey].shapes[shapeKey];
+        if (!shapeData) return;
+
+        // Bonding atoms (cyan spheres)
+        shapeData.atomPos.forEach(pos => {
+            const atom = new THREE.Mesh(
+                new THREE.SphereGeometry(0.38, 24, 24),
+                new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.2, metalness: 0.5 })
+            );
+            atom.position.set(pos[0], pos[1], pos[2]);
+            atomMeshes.push(atom);
+            molGroup.add(atom);
+
+            // Bond cylinder (more realistic than line)
+            const dir = new THREE.Vector3(pos[0], pos[1], pos[2]);
+            const len = dir.length();
+            const bondGeom = new THREE.CylinderGeometry(0.08, 0.08, len - 0.6, 8);
+            const bondMesh = new THREE.Mesh(bondGeom, new THREE.MeshStandardMaterial({ color: 0xffffff, opacity: 0.7, transparent: true }));
+            const mid = dir.clone().multiplyScalar(0.5);
+            bondMesh.position.copy(mid);
+            bondMesh.lookAt(dir);
+            bondMesh.rotateX(Math.PI / 2);
+            bondMeshes.push(bondMesh);
+            molGroup.add(bondMesh);
+        });
+
+        // Lone pairs (orange fuzzy clouds)
+        shapeData.lpDirs.forEach(pos => {
+            const lp = new THREE.Mesh(
+                new THREE.SphereGeometry(0.5, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.5, transparent: true, opacity: 0.55, depthWrite: false })
+            );
+            lp.position.set(pos[0], pos[1], pos[2]);
+            lonePairMeshes.push(lp);
+            molGroup.add(lp);
+            // Small second cloud for "cloud" effect
+            const lp2 = new THREE.Mesh(
+                new THREE.SphereGeometry(0.35, 12, 12),
+                new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xfbbf24, emissiveIntensity: 0.3, transparent: true, opacity: 0.4, depthWrite: false })
+            );
+            lp2.position.set(pos[0]*1.25, pos[1]*1.25, pos[2]*1.25);
+            lonePairMeshes.push(lp2);
+            molGroup.add(lp2);
+        });
+
+        // Update stats
+        controlsContainer.querySelector('#vBondPairs').textContent = shapeData.bondPairs;
+        controlsContainer.querySelector('#vLonePairs').textContent = shapeData.lonePairs;
+        controlsContainer.querySelector('#vAngle').textContent = shapeData.angle;
+        controlsContainer.querySelector('#vHybrid').textContent = shapeData.hybrid;
+        controlsContainer.querySelector('#vseprExample').innerHTML = `<strong>Examples:</strong> ${shapeData.example}`;
+    }
+
+    buildUI();
+
+    const geomSelect = controlsContainer.querySelector('#vseprGeom');
+    geomSelect.value = 'tetrahedral';
+    let currentGeom = 'tetrahedral';
+    let currentShapeKey = populateShapes('tetrahedral');
+
+    const shapeSelectEl = controlsContainer.querySelector('#vseprShape');
+    renderMolecule(currentGeom, currentShapeKey);
+
+    geomSelect.addEventListener('change', () => {
+        currentGeom = geomSelect.value;
+        currentShapeKey = populateShapes(currentGeom);
+        renderMolecule(currentGeom, currentShapeKey);
+    });
+    shapeSelectEl.addEventListener('change', () => {
+        currentShapeKey = shapeSelectEl.value;
+        renderMolecule(currentGeom, currentShapeKey);
+    });
+
     engine.setUpdate(() => { molGroup.rotation.y += 0.005; });
-    overlayEl.innerHTML += `<span class="sim-badge">🔗 Bond Angles</span>`;
+    overlayEl.innerHTML += `<span class="sim-badge">🔗 Geometry + Shape</span><span class="sim-badge">🟠 Lone Pairs</span>`;
 
     return () => {
-        atoms.forEach(a => molGroup.remove(a));
-        bonds.forEach(b => molGroup.remove(b));
+        atomMeshes.forEach(a => molGroup.remove(a));
+        bondMeshes.forEach(b => molGroup.remove(b));
+        lonePairMeshes.forEach(l => molGroup.remove(l));
         molGroup.remove(central);
         scene.remove(molGroup);
     };
@@ -2686,6 +2872,8 @@ function initHybridSim(engine, controlsContainer, overlayEl) {
                 <option value="sp">sp (linear, 180°)</option>
                 <option value="sp2">sp² (trigonal, 120°)</option>
                 <option value="sp3" selected>sp³ (tetrahedral, 109.5°)</option>
+                <option value="sp3d">sp³d (trig. bipyramidal, 90°/120°)</option>
+                <option value="sp3d2">sp³d² (octahedral, 90°)</option>
             </select>
             <div class="sim-stats-grid" style="margin-top:10px;">
                 <div class="sim-stat-card"><div class="sim-stat-label">Type</div><div class="sim-stat-value" id="hybType">sp³</div></div>
@@ -2702,7 +2890,7 @@ function initHybridSim(engine, controlsContainer, overlayEl) {
     const countEl = controlsContainer.querySelector('#hybCount');
     const infoEl = controlsContainer.querySelector('#hybInfo');
 
-    const colors = [0x8b5cf6, 0x22d3ee, 0xf97316, 0x10b981];
+    const colors = [0x8b5cf6, 0x22d3ee, 0xf97316, 0x10b981, 0xef4444, 0x84cc16];
 
     function createLobe(dir, color) {
         // Elongated lobe shape using scaled sphere
@@ -2746,8 +2934,31 @@ function initHybridSim(engine, controlsContainer, overlayEl) {
                 directions.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)));
             }
             angle = '120°'; count = '3'; info = 'Trigonal: 1 s + 2 p → 3 sp² orbitals. e.g. BF₃, C₂H₄';
+        } else if (type === 'sp3') {
+            directions.push(
+                new THREE.Vector3(1, 1, 1).normalize(),
+                new THREE.Vector3(-1, -1, 1).normalize(),
+                new THREE.Vector3(-1, 1, -1).normalize(),
+                new THREE.Vector3(1, -1, -1).normalize()
+            );
+            angle = '109.5°'; count = '4'; info = 'Tetrahedral: 1 s + 3 p → 4 sp³ orbitals. e.g. CH₄, NH₃';
+        } else if (type === 'sp3d') {
+            // 3 equatorial (120° apart in XZ plane) + 2 axial (±Y)
+            for (let i = 0; i < 3; i++) {
+                const a = (i * 2 * Math.PI) / 3;
+                directions.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)));
+            }
+            directions.push(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0));
+            angle = '90°/120°'; count = '5'; info = 'Trig. Bipyramidal: 1 s + 3 p + 1 d → 5 sp³d orbitals. e.g. PCl₅, SF₄';
+        } else if (type === 'sp3d2') {
+            // 6 octahedral directions: ±X, ±Y, ±Z
+            directions.push(
+                new THREE.Vector3(1, 0, 0), new THREE.Vector3(-1, 0, 0),
+                new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0),
+                new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, -1)
+            );
+            angle = '90°'; count = '6'; info = 'Octahedral: 1 s + 3 p + 2 d → 6 sp³d² orbitals. e.g. SF₆, XeF₄';
         } else {
-            // Tetrahedral
             directions.push(
                 new THREE.Vector3(1, 1, 1).normalize(),
                 new THREE.Vector3(-1, -1, 1).normalize(),
@@ -2952,6 +3163,856 @@ function randNormal() {
     while (u === 0) u = Math.random();
     while (v === 0) v = Math.random();
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+function randNormal() {
+    let u = 0;
+    let v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+// =====================================================================
+// SHM PENDULUM SIMULATOR
+// =====================================================================
+function initSHMSim(engine, controlsContainer, overlayEl) {
+    const { scene, camera } = engine;
+    camera.position.set(0, 6, 14);
+    camera.lookAt(0, 4, 0);
+
+    const pendGroup = new THREE.Group();
+    pendGroup.position.set(0, 10, 0);
+    scene.add(pendGroup);
+
+    // Pivot
+    const pivotMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 })
+    );
+    pendGroup.add(pivotMesh);
+
+    // Rod (line bar)
+    const rodGeom = new THREE.CylinderGeometry(0.04, 0.04, 1, 8);
+    const rodMesh = new THREE.Mesh(rodGeom, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.6 }));
+    pendGroup.add(rodMesh);
+
+    // Bob
+    const bobMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 32, 32),
+        new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.35, metalness: 0.7 })
+    );
+    pendGroup.add(bobMesh);
+
+    // Trace trail
+    const trailPoints = [];
+    const trailMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 });
+    let trailLine = null;
+
+    // Wall / support bar
+    const wallMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(3.5, 0.18, 0.35),
+        new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.7 })
+    );
+    wallMesh.position.set(0, 10, 0);
+    scene.add(wallMesh);
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-circle-notch"></i> 🔵 Simple Harmonic Motion</div>
+            <div class="sim-control-row">
+                <label>📏 Length (L): <strong id="lVal">3.0</strong> m</label>
+                <input type="range" class="game-slider" id="pendLen" min="1" max="6" step="0.1" value="3.0">
+            </div>
+            <div class="sim-control-row">
+                <label>📐 Amplitude: <strong id="aVal">30</strong>°</label>
+                <input type="range" class="game-slider" id="pendAmp" min="5" max="60" step="1" value="30">
+            </div>
+            <div class="sim-control-row">
+                <label>🌍 Gravity (g): <strong id="gVal">9.8</strong> m/s²</label>
+                <input type="range" class="game-slider" id="pendGrav" min="1" max="20" step="0.1" value="9.8">
+            </div>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
+                    <div class="sim-stat-label">⏱ Period T</div>
+                    <div class="sim-stat-value" id="periodVal">--</div>
+                    <div class="sim-stat-unit">s</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #f59e0b">
+                    <div class="sim-stat-label">📐 Angle θ</div>
+                    <div class="sim-stat-value" id="angleVal">--</div>
+                    <div class="sim-stat-unit">°</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #10b981">
+                    <div class="sim-stat-label">💨 Velocity</div>
+                    <div class="sim-stat-value" id="velVal">--</div>
+                    <div class="sim-stat-unit">m/s</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #a78bfa">
+                    <div class="sim-stat-label">⚡ KE</div>
+                    <div class="sim-stat-value" id="keValShm">--</div>
+                    <div class="sim-stat-unit">J</div>
+                </div>
+            </div>
+            <canvas id="shmGraph" width="300" height="100" style="margin-top:10px;border-radius:8px;background:#0f1419;"></canvas>
+            <div class="sim-status" id="shmFormula" style="margin-top:8px;font-size:0.82rem;color:#94a3b8;">θ(t) = A·cos(ωt) | T = 2π√(L/g)</div>
+            <button class="btn-primary sim-action-btn" id="shmResetBtn"><i class="fas fa-redo"></i> Reset</button>
+        </div>
+    `;
+
+    const shmCanvas = controlsContainer.querySelector('#shmGraph');
+    const shmCtx = shmCanvas.getContext('2d');
+
+    let L = 3.0, ampDeg = 30, grav = 9.8;
+    let theta = 0, omega = 0;
+    let simTime = 0;
+    const angleHistory = [];
+
+    function resetPendulum() {
+        theta = (ampDeg * Math.PI) / 180;
+        omega = 0;
+        simTime = 0;
+        angleHistory.length = 0;
+        trailPoints.length = 0;
+        if (trailLine) { scene.remove(trailLine); trailLine = null; }
+    }
+    resetPendulum();
+
+    function updateSliders() {
+        L = parseFloat(controlsContainer.querySelector('#pendLen').value);
+        ampDeg = parseFloat(controlsContainer.querySelector('#pendAmp').value);
+        grav = parseFloat(controlsContainer.querySelector('#pendGrav').value);
+        controlsContainer.querySelector('#lVal').textContent = L.toFixed(1);
+        controlsContainer.querySelector('#aVal').textContent = ampDeg;
+        controlsContainer.querySelector('#gVal').textContent = grav.toFixed(1);
+        resetPendulum();
+    }
+
+    ['#pendLen','#pendAmp','#pendGrav'].forEach(id => {
+        controlsContainer.querySelector(id).addEventListener('input', updateSliders);
+    });
+    controlsContainer.querySelector('#shmResetBtn').addEventListener('click', resetPendulum);
+
+    engine.setUpdate(() => {
+        const dt = 0.016;
+        // Runge-Kutta 4 for accuracy
+        const alphaDot = (t, w) => -(grav / L) * Math.sin(t);
+        const k1t = omega * dt, k1w = alphaDot(theta, omega) * dt;
+        const k2t = (omega + k1w/2) * dt, k2w = alphaDot(theta + k1t/2, omega + k1w/2) * dt;
+        const k3t = (omega + k2w/2) * dt, k3w = alphaDot(theta + k2t/2, omega + k2w/2) * dt;
+        const k4t = (omega + k3w) * dt, k4w = alphaDot(theta + k3t, omega + k3w) * dt;
+        theta += (k1t + 2*k2t + 2*k3t + k4t) / 6;
+        omega += (k1w + 2*k2w + 2*k3w + k4w) / 6;
+        // Slight damping
+        omega *= 0.9998;
+        simTime += dt;
+
+        // 3D positions: pivot at origin, bob swings in XY plane
+        const bobX = L * Math.sin(theta) * 2.2; // scale up for visibility
+        const bobY = -L * Math.cos(theta) * 2.2;
+
+        rodMesh.position.set(bobX / 2, bobY / 2, 0);
+        rodMesh.scale.y = Math.sqrt(bobX * bobX + bobY * bobY) / 1;
+        rodMesh.lookAt(new THREE.Vector3(bobX, bobY, 0));
+        rodMesh.rotateX(Math.PI / 2);
+
+        bobMesh.position.set(bobX, bobY, 0);
+
+        // Trail
+        trailPoints.push(new THREE.Vector3(bobX, bobY, 0).add(pendGroup.position));
+        if (trailPoints.length > 120) trailPoints.shift();
+        if (trailLine) scene.remove(trailLine);
+        if (trailPoints.length > 2) {
+            const tg = new THREE.BufferGeometry().setFromPoints(trailPoints);
+            trailLine = new THREE.Line(tg, trailMat);
+            scene.add(trailLine);
+        }
+
+        const T = 2 * Math.PI * Math.sqrt(L / grav);
+        const v = omega * L;
+        const ke = 0.5 * 1.0 * v * v;
+        controlsContainer.querySelector('#periodVal').textContent = T.toFixed(2);
+        controlsContainer.querySelector('#angleVal').textContent = (theta * 180 / Math.PI).toFixed(1);
+        controlsContainer.querySelector('#velVal').textContent = Math.abs(v).toFixed(2);
+        controlsContainer.querySelector('#keValShm').textContent = ke.toFixed(3);
+
+        angleHistory.push((theta * 180) / Math.PI);
+        if (angleHistory.length > 150) angleHistory.shift();
+
+        // Draw wave
+        const w = shmCanvas.width, h = shmCanvas.height;
+        shmCtx.fillStyle = '#0f1419'; shmCtx.fillRect(0, 0, w, h);
+        shmCtx.strokeStyle = '#1e293b'; shmCtx.lineWidth = 1;
+        shmCtx.beginPath(); shmCtx.moveTo(0, h/2); shmCtx.lineTo(w, h/2); shmCtx.stroke();
+        if (angleHistory.length > 2) {
+            const maxA = Math.max(...angleHistory.map(Math.abs), 1);
+            const step = w / (angleHistory.length - 1);
+            shmCtx.strokeStyle = '#f59e0b'; shmCtx.lineWidth = 2;
+            shmCtx.beginPath();
+            angleHistory.forEach((a, i) => {
+                const x = i * step, y = h/2 - (a / maxA) * (h/2 - 8);
+                i === 0 ? shmCtx.moveTo(x, y) : shmCtx.lineTo(x, y);
+            });
+            shmCtx.stroke();
+        }
+        shmCtx.fillStyle = '#94a3b8'; shmCtx.font = '10px sans-serif';
+        shmCtx.fillText('θ(t) — displacement wave', 8, 12);
+    });
+
+    overlayEl.innerHTML += `<span class="sim-badge">🔵 SHM Pendulum</span><span class="sim-badge">T = 2π√(L/g)</span>`;
+
+    return () => {
+        scene.remove(pendGroup, wallMesh);
+        if (trailLine) scene.remove(trailLine);
+    };
+}
+
+// =====================================================================
+// LPP (LINEAR PROGRAMMING) GRAPH SIMULATOR — 2D canvas
+// =====================================================================
+function initLPPSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const constraints = [
+        { a: 2, b: 1, c: 10, op: '≤' },
+        { a: 1, b: 3, c: 12, op: '≤' },
+        { a: 1, b: 0, c: 6,  op: '≤' },
+    ];
+    const objective = { cx: 3, cy: 5, goal: 'max' };
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel" style="min-width:280px;">
+            <div class="game-section-title"><i class="fas fa-chart-line"></i> 📊 Linear Programming</div>
+            <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:6px;">Objective: Z = <strong id="lppObjLabel">${objective.cx}x + ${objective.cy}y</strong> (<span id="lppGoalLabel">${objective.goal}</span>imize)</div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+                <span style="font-size:0.8rem;color:#f59e0b;">Z = </span>
+                <input type="number" class="game-input" id="lppCx" value="${objective.cx}" style="width:52px;" placeholder="cx">
+                <span style="font-size:0.8rem;color:#94a3b8;">x +</span>
+                <input type="number" class="game-input" id="lppCy" value="${objective.cy}" style="width:52px;" placeholder="cy">
+                <span style="font-size:0.8rem;color:#94a3b8;">y</span>
+                <select class="game-select" id="lppGoal" style="font-size:0.78rem;padding:2px 6px;">
+                    <option value="max">Max</option>
+                    <option value="min">Min</option>
+                </select>
+            </div>
+            <div style="font-size:0.82rem;font-weight:700;color:#a78bfa;margin-bottom:4px;">📏 Constraints (ax + by ≤/≥ c):</div>
+            <div id="lppConstraintList" style="display:flex;flex-direction:column;gap:4px;"></div>
+            <button class="btn-primary sim-action-btn" id="lppAddBtn" style="margin-top:8px;padding:6px 12px;font-size:0.8rem;">
+                <i class="fas fa-plus"></i> Add Constraint
+            </button>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card" style="border-left:3px solid #10b981;grid-column:span 2;">
+                    <div class="sim-stat-label">🎯 Optimal Point</div>
+                    <div class="sim-stat-value" id="lppOptPt" style="font-size:0.85rem;">--</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #f59e0b;grid-column:span 2;">
+                    <div class="sim-stat-label">Z (Optimal)</div>
+                    <div class="sim-stat-value" id="lppOptZ">--</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Canvas is the THREE.js canvas — we handle LPP as overlay in controlsContainer
+    // Create a dedicated canvas in the sim area overlay
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let lppCanvas = document.getElementById('lppCanvas');
+    if (!lppCanvas) {
+        lppCanvas = document.createElement('canvas');
+        lppCanvas.id = 'lppCanvas';
+        lppCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
+        if (simArea) simArea.style.position = 'relative';
+        if (simArea) simArea.appendChild(lppCanvas);
+    }
+    const ctx = lppCanvas.getContext('2d');
+
+    function renderConstraintList() {
+        const list = controlsContainer.querySelector('#lppConstraintList');
+        list.innerHTML = constraints.map((c, i) => `
+            <div style="display:flex;gap:4px;align-items:center;" data-idx="${i}">
+                <input type="number" class="game-input lpp-a" value="${c.a}" style="width:44px;" title="coeff of x">
+                <span style="color:#94a3b8;font-size:0.8rem;">x +</span>
+                <input type="number" class="game-input lpp-b" value="${c.b}" style="width:44px;" title="coeff of y">
+                <span style="color:#94a3b8;font-size:0.8rem;">y</span>
+                <select class="game-select lpp-op" style="font-size:0.76rem;padding:2px 4px;">
+                    <option value="≤" ${c.op==='≤'?'selected':''}>≤</option>
+                    <option value="≥" ${c.op==='≥'?'selected':''}>≥</option>
+                    <option value="=" ${c.op==='='?'selected':''}>= </option>
+                </select>
+                <input type="number" class="game-input lpp-c" value="${c.c}" style="width:44px;" title="RHS constant">
+                <button class="sim-delete-btn" data-del="${i}" style="background:#ef4444;border:none;color:#fff;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:0.8rem;">✕</button>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('[data-del]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                constraints.splice(parseInt(btn.getAttribute('data-del')), 1);
+                renderConstraintList();
+                drawLPP();
+            });
+        });
+
+        list.querySelectorAll('[data-idx]').forEach(row => {
+            const idx = parseInt(row.getAttribute('data-idx'));
+            row.querySelector('.lpp-a').addEventListener('input', e => { constraints[idx].a = parseFloat(e.target.value)||0; drawLPP(); });
+            row.querySelector('.lpp-b').addEventListener('input', e => { constraints[idx].b = parseFloat(e.target.value)||0; drawLPP(); });
+            row.querySelector('.lpp-c').addEventListener('input', e => { constraints[idx].c = parseFloat(e.target.value)||0; drawLPP(); });
+            row.querySelector('.lpp-op').addEventListener('change', e => { constraints[idx].op = e.target.value; drawLPP(); });
+        });
+    }
+
+    function drawLPP() {
+        const W = lppCanvas.width = lppCanvas.offsetWidth || 600;
+        const H = lppCanvas.height = lppCanvas.offsetHeight || 500;
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+
+        const pad = 60;
+        const scale = (W - pad * 2) / 16;
+        const ox = pad, oy = H - pad;
+
+        function toScreen(x, y) { return [ox + x * scale, oy - y * scale]; }
+
+        // Grid
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+        for (let v = 0; v <= 16; v++) {
+            const [sx] = toScreen(v, 0); const [, sy] = toScreen(0, v);
+            ctx.beginPath(); ctx.moveTo(sx, pad); ctx.lineTo(sx, oy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(ox, sy); ctx.lineTo(W - pad, sy); ctx.stroke();
+        }
+        // Axes
+        ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(ox, pad); ctx.lineTo(ox, oy); ctx.lineTo(W - pad, oy); ctx.stroke();
+        ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('x', W - pad + 6, oy + 4);
+        ctx.fillText('y', ox - 4, pad - 8);
+        for (let v = 0; v <= 16; v += 2) {
+            const [sx] = toScreen(v, 0); const [, sy] = toScreen(0, v);
+            ctx.fillStyle = '#475569'; ctx.font = '10px sans-serif';
+            ctx.fillText(v, sx - 4, oy + 14);
+            if (v > 0) ctx.fillText(v, ox - 22, sy + 4);
+        }
+
+        const lineColors = ['#f97316','#22d3ee','#a78bfa','#10b981','#ec4899','#f59e0b'];
+
+        // Draw constraint lines
+        constraints.forEach((c, i) => {
+            if (c.b !== 0) {
+                const x0 = 0, y0 = (c.c - c.a * x0) / c.b;
+                const x1 = 16, y1 = (c.c - c.a * x1) / c.b;
+                const [sx0, sy0] = toScreen(x0, y0); const [sx1, sy1] = toScreen(x1, y1);
+                ctx.strokeStyle = lineColors[i % lineColors.length]; ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx1, sy1); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = lineColors[i % lineColors.length]; ctx.font = '11px sans-serif';
+                const midX = 8, midY = (c.c - c.a * midX) / c.b + 0.3;
+                if (midY >= 0 && midY <= 16) {
+                    const [lx, ly] = toScreen(midX, midY);
+                    ctx.fillText(`${c.a}x+${c.b}y${c.op}${c.c}`, lx, ly - 4);
+                }
+            } else if (c.a !== 0) {
+                const xv = c.c / c.a;
+                const [sx, sy0] = toScreen(xv, 0); const [, sy1] = toScreen(xv, 16);
+                ctx.strokeStyle = lineColors[i % lineColors.length]; ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath(); ctx.moveTo(sx, sy0); ctx.lineTo(sx, sy1); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        });
+
+        // Find corner vertices (feasible region intersections)
+        const pts = [[0, 0]];
+        // axis intercepts 
+        constraints.forEach(c => {
+            if (c.b !== 0) pts.push([0, c.c / c.b], [c.c / c.a || 0, 0]);
+            else if (c.a !== 0) pts.push([c.c / c.a, 0]);
+        });
+        // All intersections between constraint pairs
+        for (let i = 0; i < constraints.length; i++) {
+            for (let j = i + 1; j < constraints.length; j++) {
+                const {a: a1, b: b1, c: c1} = constraints[i];
+                const {a: a2, b: b2, c: c2} = constraints[j];
+                const det = a1 * b2 - a2 * b1;
+                if (Math.abs(det) > 1e-10) {
+                    const xI = (c1 * b2 - c2 * b1) / det;
+                    const yI = (a1 * c2 - a2 * c1) / det;
+                    pts.push([xI, yI]);
+                }
+            }
+        }
+
+        // Filter feasible points (x≥0, y≥0, all constraints satisfied)
+        function isFeasible(x, y) {
+            if (x < -0.001 || y < -0.001) return false;
+            return constraints.every(c => {
+                const lhs = c.a * x + c.b * y;
+                if (c.op === '≤') return lhs <= c.c + 0.001;
+                if (c.op === '≥') return lhs >= c.c - 0.001;
+                return Math.abs(lhs - c.c) < 0.01;
+            });
+        }
+        const feasible = pts.filter(([x, y]) => isFeasible(x, y) && x <= 20 && y <= 20);
+
+        // Shade feasible region (convex hull)
+        if (feasible.length > 2) {
+            const cx_ = feasible.reduce((s, p) => s + p[0], 0) / feasible.length;
+            const cy_ = feasible.reduce((s, p) => s + p[1], 0) / feasible.length;
+            const sorted = [...feasible].sort((a, b) => Math.atan2(a[1]-cy_, a[0]-cx_) - Math.atan2(b[1]-cy_, b[0]-cx_));
+            ctx.fillStyle = 'rgba(34,211,238,0.12)';
+            ctx.beginPath();
+            sorted.forEach(([x, y], i) => {
+                const [sx, sy] = toScreen(x, y);
+                i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+            });
+            ctx.closePath(); ctx.fill();
+            // Draw outline
+            ctx.strokeStyle = 'rgba(34,211,238,0.4)'; ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Evaluate objective at feasible corners
+        const cxV = parseFloat(controlsContainer.querySelector('#lppCx').value) || 0;
+        const cyV = parseFloat(controlsContainer.querySelector('#lppCy').value) || 0;
+        const goal = controlsContainer.querySelector('#lppGoal').value;
+        controlsContainer.querySelector('#lppObjLabel').textContent = `${cxV}x + ${cyV}y`;
+        controlsContainer.querySelector('#lppGoalLabel').textContent = goal;
+
+        let optPt = null, optZ = goal === 'max' ? -Infinity : Infinity;
+        feasible.forEach(([x, y]) => {
+            const z = cxV * x + cyV * y;
+            if (goal === 'max' ? z > optZ : z < optZ) { optZ = z; optPt = [x, y]; }
+        });
+
+        // Vertex dots
+        feasible.forEach(([x, y]) => {
+            const [sx, sy] = toScreen(x, y);
+            ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#64748b'; ctx.fill();
+        });
+
+        // Optimal point highlight
+        if (optPt) {
+            const [sx, sy] = toScreen(optPt[0], optPt[1]);
+            ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#10b981'; ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(`(${optPt[0].toFixed(1)}, ${optPt[1].toFixed(1)})`, sx + 10, sy - 8);
+            controlsContainer.querySelector('#lppOptPt').textContent = `(${optPt[0].toFixed(2)}, ${optPt[1].toFixed(2)})`;
+            controlsContainer.querySelector('#lppOptZ').textContent = optZ.toFixed(2);
+
+            // Objective line through optimal
+            if (cxV !== 0 || cyV !== 0) {
+                const x0 = 0, y0 = cyV !== 0 ? optZ / cyV : 0;
+                const x1 = cxV !== 0 ? optZ / cxV : 16, y1 = 0;
+                const [sx0, sy0_] = toScreen(x0, y0); const [sx1, sy1] = toScreen(x1, y1);
+                ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.setLineDash([8, 4]);
+                ctx.beginPath(); ctx.moveTo(sx0, sy0_); ctx.lineTo(sx1, sy1); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        } else {
+            controlsContainer.querySelector('#lppOptPt').textContent = 'Infeasible / None';
+            controlsContainer.querySelector('#lppOptZ').textContent = '--';
+        }
+
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(ox, 0, W - ox - pad + 10, pad - 10);
+        ctx.fillStyle = '#64748b'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(`LPP Graph — Z = ${cxV}x + ${cyV}y (${goal}imize)`, ox + 8, pad - 14);
+    }
+
+    renderConstraintList();
+    drawLPP();
+
+    controlsContainer.querySelector('#lppAddBtn').addEventListener('click', () => {
+        constraints.push({ a: 1, b: 1, c: 8, op: '≤' });
+        renderConstraintList();
+        drawLPP();
+    });
+    ['#lppCx','#lppCy'].forEach(id => {
+        controlsContainer.querySelector(id).addEventListener('input', drawLPP);
+    });
+    controlsContainer.querySelector('#lppGoal').addEventListener('change', drawLPP);
+
+    // Resize observer
+    const resizeObs = new ResizeObserver(() => drawLPP());
+    if (simArea) resizeObs.observe(simArea);
+
+    overlayEl.innerHTML += `<span class="sim-badge">📊 Feasible Region</span><span class="sim-badge">🎯 Corner Point</span>`;
+
+    return () => {
+        if (lppCanvas && lppCanvas.parentNode) lppCanvas.parentNode.removeChild(lppCanvas);
+        resizeObs.disconnect();
+    };
+}
+
+// =====================================================================
+// MOLECULAR ORBITAL DIAGRAM SIMULATOR — Canvas 2D
+// =====================================================================
+function initMOSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    // Pre-coded MO data for 5 molecules
+    // Each level: { label, y (0=bottom), x (center=0, neg=left atom, pos=right atom), electrons }
+    // x: 0 = MO (center), -1 = left atomic, +1 = right atomic
+    // electrons: 0,1,2
+    const MO_DATA = {
+        N2: {
+            name: 'N₂', left: 'N', right: 'N',
+            bondOrder: 3, magnetic: 'Diamagnetic',
+            config: 'σ1s² σ*1s² σ2s² σ*2s² π2p⁴ σ2p² (10 BMO, 4 ABMO)',
+            levels: [
+                // Bottom: 1s AOs
+                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
+                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
+                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
+                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
+                // 2s
+                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
+                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
+                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2,  e: 2 },
+                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6,  e: 2 },
+                // 2p (NOTE: N2 has π below σ2p)
+                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
+                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
+                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.1, e: 2 },
+                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.1, e: 2 },
+                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.7,   e: 2 },
+                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 0 },
+                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 0 },
+                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
+            ]
+        },
+        O2: {
+            name: 'O₂', left: 'O', right: 'O',
+            bondOrder: 2, magnetic: 'Paramagnetic (2 unpaired e⁻)',
+            config: 'σ1s² σ*1s² σ2s² σ*2s² σ2p² π2p⁴ π*2p²',
+            levels: [
+                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
+                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
+                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
+                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
+                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
+                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
+                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
+                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
+                // O2: σ2p below π2p
+                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
+                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
+                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.0,  e: 2 },
+                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.7, e: 2 },
+                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.7, e: 2 },
+                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 1 },
+                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 1 },
+                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
+            ]
+        },
+        F2: {
+            name: 'F₂', left: 'F', right: 'F',
+            bondOrder: 1, magnetic: 'Diamagnetic',
+            config: 'σ1s² σ*1s² σ2s² σ*2s² σ2p² π2p⁴ π*2p⁴',
+            levels: [
+                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
+                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
+                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
+                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
+                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
+                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
+                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
+                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
+                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
+                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
+                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.0,  e: 2 },
+                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.7, e: 2 },
+                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.7, e: 2 },
+                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 2 },
+                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 2 },
+                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
+            ]
+        },
+        NO: {
+            name: 'NO', left: 'N', right: 'O',
+            bondOrder: 2.5, magnetic: 'Paramagnetic (1 unpaired e⁻)',
+            config: 'σ1s² σ*1s² σ2s² σ*2s² π2p⁴ σ2p² π*2p¹',
+            levels: [
+                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
+                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
+                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
+                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
+                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
+                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
+                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
+                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
+                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
+                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
+                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.1, e: 2 },
+                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.1, e: 2 },
+                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.7,    e: 2 },
+                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 1 },
+                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 0 },
+                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
+            ]
+        },
+        CO: {
+            name: 'CO', left: 'C', right: 'O',
+            bondOrder: 3, magnetic: 'Diamagnetic',
+            config: 'σ1s² σ*1s² σ2s² σ*2s² π2p⁴ σ2p²',
+            levels: [
+                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
+                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
+                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
+                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
+                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
+                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
+                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
+                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
+                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
+                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
+                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.1, e: 2 },
+                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.1, e: 2 },
+                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.7,    e: 2 },
+                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 0 },
+                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 0 },
+                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
+            ]
+        }
+    };
+
+    let currentMol = 'N2';
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-atom"></i> ⚛️ Molecular Orbital Diagram</div>
+            <div class="sim-control-row">
+                <label style="font-weight:700;color:#a78bfa;">🔬 Select Molecule</label>
+                <select class="game-select" id="moMolSelect" style="margin-top:4px;">
+                    ${Object.keys(MO_DATA).map(k => `<option value="${k}">${MO_DATA[k].name}</option>`).join('')}
+                </select>
+            </div>
+            <div class="sim-stats-grid" style="margin-top:10px;">
+                <div class="sim-stat-card" style="border-left:3px solid #10b981">
+                    <div class="sim-stat-label">🔗 Bond Order</div>
+                    <div class="sim-stat-value" id="moBondOrder">--</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #f97316">
+                    <div class="sim-stat-label">🧲 Magnetic</div>
+                    <div class="sim-stat-value" id="moMagnetic" style="font-size:0.7rem;">--</div>
+                </div>
+            </div>
+            <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:6px;">
+                <div class="sim-stat-label">📋 Configuration</div>
+                <div style="font-size:0.72rem;color:#94a3b8;margin-top:4px;" id="moConfig">--</div>
+            </div>
+            <div style="margin-top:8px;font-size:0.75rem;color:#475569;">
+                <span style="display:inline-block;width:12px;height:12px;background:#e8d5a3;border:1px solid #b0904a;margin-right:4px;"></span>MO (bonding/antibonding)
+                <span style="display:inline-block;width:12px;height:12px;background:#9db5d6;border:1px solid #5a7fa8;margin-left:8px;margin-right:4px;"></span>Atomic orbital
+            </div>
+        </div>
+    `;
+
+    const simArea2 = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let moCanvas = document.getElementById('moCanvas');
+    if (!moCanvas) {
+        moCanvas = document.createElement('canvas');
+        moCanvas.id = 'moCanvas';
+        moCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#ffffff;';
+        if (simArea2) simArea2.style.position = 'relative';
+        if (simArea2) simArea2.appendChild(moCanvas);
+    }
+    const ctx2 = moCanvas.getContext('2d');
+
+    function drawMO(molKey) {
+        const mol = MO_DATA[molKey];
+        const W = moCanvas.width = moCanvas.offsetWidth || 600;
+        const H = moCanvas.height = moCanvas.offsetHeight || 600;
+
+        // White background (like the attached image)
+        ctx2.fillStyle = '#ffffff';
+        ctx2.fillRect(0, 0, W, H);
+
+        // Layout constants
+        const cx = W / 2;        // center x for MO column
+        const lx = W * 0.18;     // left atom x
+        const rx = W * 0.82;     // right atom x
+        const topPad = 40, botPad = 50;
+        const availH = H - topPad - botPad;
+        const maxY = 8.0;
+
+        function toY(yVal) { return topPad + availH * (1 - yVal / maxY); }
+
+        // Arrow label — ENERGY
+        ctx2.fillStyle = '#222'; ctx2.font = 'bold 12px sans-serif';
+        ctx2.save();
+        ctx2.translate(14, H / 2);
+        ctx2.rotate(-Math.PI / 2);
+        ctx2.fillText('ENERGY', -20, 0);
+        ctx2.restore();
+        ctx2.strokeStyle = '#333'; ctx2.lineWidth = 2;
+        ctx2.beginPath(); ctx2.moveTo(22, H - botPad - 5); ctx2.lineTo(22, topPad);
+        ctx2.stroke();
+        // arrowhead
+        ctx2.beginPath(); ctx2.moveTo(17, topPad + 6); ctx2.lineTo(22, topPad); ctx2.lineTo(27, topPad + 6); ctx2.stroke();
+
+        // Column labels
+        ctx2.fillStyle = '#333'; ctx2.font = 'bold 14px sans-serif'; ctx2.textAlign = 'center';
+        ctx2.fillText(mol.left, lx, H - 28);
+        ctx2.fillText(mol.name, cx, H - 28);
+        ctx2.fillText(mol.right, rx, H - 28);
+
+        const boxW = 36, boxH = 22;
+
+        // Dashed connector lines colour
+        const dashColor = '#999';
+
+        // Group levels by label+side for triple 2p AOs
+        const drawn = {};
+
+        mol.levels.forEach(lvl => {
+            const x = lvl.side === 'mo' ? cx + lvl.x * W * 0.14 : (lvl.side === 'left' ? lx : rx);
+            const y = toY(lvl.y + 0.5);
+            const boxColor = lvl.side === 'mo' ? '#e8d5a3' : '#9db5d6';
+            const borderColor = lvl.side === 'mo' ? '#b0904a' : '#5a7fa8';
+
+            // For triple 2p AOs: draw 3 boxes side by side
+            if (lvl.triple) {
+                const key = `${lvl.side}-${lvl.y}`;
+                if (!drawn[key]) {
+                    drawn[key] = true;
+                    for (let k = -1; k <= 1; k++) {
+                        const bx = x + k * (boxW + 4) - boxW / 2;
+                        ctx2.fillStyle = boxColor;
+                        ctx2.strokeStyle = borderColor; ctx2.lineWidth = 1.5;
+                        ctx2.fillRect(bx, y - boxH / 2, boxW, boxH);
+                        ctx2.strokeRect(bx, y - boxH / 2, boxW, boxH);
+                        // 1 electron (up arrow) in middle box
+                        if (k === 0) drawArrows(ctx2, bx + boxW/2, y, 1, false);
+                    }
+                    // Label
+                    ctx2.fillStyle = '#333'; ctx2.font = '11px sans-serif'; ctx2.textAlign = 'left';
+                    ctx2.fillText('2p 2p 2p', x - boxW + 4, y - boxH / 2 - 4);
+                    // Horizontal level line
+                    ctx2.strokeStyle = '#333'; ctx2.lineWidth = 1;
+                    ctx2.beginPath(); ctx2.moveTo(x - boxW*1.8, y); ctx2.lineTo(x - boxW - 4, y); ctx2.stroke();
+                    ctx2.beginPath(); ctx2.moveTo(x + boxW + 4, y); ctx2.lineTo(x + boxW*1.8, y); ctx2.stroke();
+                }
+                return;
+            }
+
+            // Single box
+            const bx = x - boxW / 2;
+            ctx2.fillStyle = boxColor;
+            ctx2.strokeStyle = borderColor; ctx2.lineWidth = 1.5;
+            ctx2.fillRect(bx, y - boxH / 2, boxW, boxH);
+            ctx2.strokeRect(bx, y - boxH / 2, boxW, boxH);
+
+            // Electrons
+            const paired = lvl.e === 2;
+            const single = lvl.e === 1;
+            if (paired) drawArrows(ctx2, x, y, 2, true);
+            else if (single) drawArrows(ctx2, x, y, 1, false);
+
+            // Label
+            const isAbMO = lvl.label.includes('*');
+            ctx2.fillStyle = isAbMO ? '#c0392b' : '#2c3e50';
+            ctx2.font = '10px sans-serif'; ctx2.textAlign = 'left';
+
+            // Position label to left for left AO, right for right AO, right-side for MOs
+            if (lvl.side === 'left') {
+                ctx2.fillText(lvl.label, bx - 24, y + 4);
+            } else if (lvl.side === 'right') {
+                ctx2.textAlign = 'left';
+                ctx2.fillText(lvl.label, bx + boxW + 4, y + 4);
+            } else {
+                // MO label: left side of box
+                ctx2.textAlign = 'right';
+                ctx2.fillText(lvl.label, bx - 4, y + 4);
+            }
+
+            // Level line stubs
+            ctx2.strokeStyle = '#333'; ctx2.lineWidth = 1;
+            if (lvl.side !== 'mo') {
+                ctx2.beginPath(); ctx2.moveTo(bx - 10, y); ctx2.lineTo(bx, y); ctx2.stroke();
+                ctx2.beginPath(); ctx2.moveTo(bx + boxW, y); ctx2.lineTo(bx + boxW + 10, y); ctx2.stroke();
+            }
+        });
+
+        // Draw dashed connector lines from AO levels to MO levels
+        // Connect by matching shell group (1s→σ1s, σ*1s; 2s→σ2s,σ*2s; 2p→π2p,σ2p,etc.)
+        const groups = [
+            { aoY: 0,   moYs: [-0.6, 0.9] },
+            { aoY: 2.8, moYs: [2.2, 3.6] },
+            { aoY: 5.5, moYs: [5.0, 5.1, 5.7, 6.5, 6.5, 7.2] },
+        ];
+        ctx2.setLineDash([4, 5]);
+        ctx2.strokeStyle = dashColor; ctx2.lineWidth = 1;
+        groups.forEach(g => {
+            const ayL = toY(g.aoY + 0.5), ayR = toY(g.aoY + 0.5);
+            g.moYs.forEach(my => {
+                const moy = toY(my + 0.5);
+                // Left AO → MO
+                ctx2.beginPath();
+                ctx2.moveTo(lx + boxW / 2 + 22, ayL);
+                ctx2.lineTo(cx - boxW * 0.7, moy);
+                ctx2.stroke();
+                // Right AO → MO
+                ctx2.beginPath();
+                ctx2.moveTo(rx - boxW / 2 - 22, ayR);
+                ctx2.lineTo(cx + boxW * 0.7, moy);
+                ctx2.stroke();
+            });
+        });
+        ctx2.setLineDash([]);
+
+        controlsContainer.querySelector('#moBondOrder').textContent = mol.bondOrder;
+        controlsContainer.querySelector('#moMagnetic').textContent = mol.magnetic;
+        controlsContainer.querySelector('#moConfig').textContent = mol.config;
+    }
+
+    function drawArrows(ctx, cx, cy, count, paired) {
+        // count: 1 or 2. paired: if 2, draw ↑↓; if 1, draw ↑
+        const arrowH = 12;
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5;
+        if (count === 2) {
+            // ↑ on left, ↓ on right
+            [-5, 5].forEach((dx, i) => {
+                const up = i === 0;
+                ctx.beginPath();
+                ctx.moveTo(cx + dx, cy + (up ? 6 : -6));
+                ctx.lineTo(cx + dx, cy + (up ? -6 : 6));
+                ctx.stroke();
+                // arrowhead
+                const tip = cy + (up ? -6 : 6);
+                const dir = up ? -1 : 1;
+                ctx.beginPath();
+                ctx.moveTo(cx + dx - 3, tip - dir * 4);
+                ctx.lineTo(cx + dx, tip);
+                ctx.lineTo(cx + dx + 3, tip - dir * 4);
+                ctx.stroke();
+            });
+        } else {
+            // single ↑
+            ctx.beginPath(); ctx.moveTo(cx, cy + 6); ctx.lineTo(cx, cy - 6); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx - 3, cy - 2); ctx.lineTo(cx, cy - 6); ctx.lineTo(cx + 3, cy - 2);
+            ctx.stroke();
+        }
+    }
+
+    controlsContainer.querySelector('#moMolSelect').addEventListener('change', e => {
+        currentMol = e.target.value;
+        drawMO(currentMol);
+    });
+
+    drawMO(currentMol);
+
+    const moResizeObs = new ResizeObserver(() => drawMO(currentMol));
+    if (simArea2) moResizeObs.observe(simArea2);
+
+    overlayEl.innerHTML += `<span class="sim-badge">⚛️ MO Diagram</span><span class="sim-badge">🔗 Bond Order</span>`;
+
+    return () => {
+        if (moCanvas && moCanvas.parentNode) moCanvas.parentNode.removeChild(moCanvas);
+        moResizeObs.disconnect();
+    };
 }
 
 // Expose to global scope (module doesn't auto-export to window)

@@ -122,12 +122,14 @@ export async function handleOAuthCallback() {
         }
         
         const { user, accessToken, csrfToken } = await response.json();
-        
+
         // Store tokens
         localStorage.setItem('access_token', accessToken);
         if (csrfToken) {
             localStorage.setItem('csrf_token', csrfToken);
         }
+        // Cache user to avoid re-login on page refresh
+        if (user) localStorage.setItem('cached_user', JSON.stringify(user));
         
         // Clear OAuth state
         sessionStorage.removeItem('oauth_code_verifier');
@@ -182,6 +184,7 @@ export async function handleEmailSignup(email, password) {
         if (accessToken) {
             // Store token
             localStorage.setItem('access_token', accessToken);
+            if (user) localStorage.setItem('cached_user', JSON.stringify(user));
             
             // User signed up successfully without email verification
             showSuccess('Account created successfully!');
@@ -219,6 +222,7 @@ export async function handleEmailLogin(email, password) {
             if (csrfToken) {
                 localStorage.setItem('csrf_token', csrfToken);
             }
+            if (user) localStorage.setItem('cached_user', JSON.stringify(user));
             
             showSuccess('Welcome back!');
             await checkAndSetupProfile(user);
@@ -342,42 +346,112 @@ function showProfileSetupModal(user) {
 export async function getCurrentUser() {
     try {
         const accessToken = localStorage.getItem('access_token');
-        if (!accessToken) return null;
+        
+        // If we have a cached user and a token, return cached immediately (avoids re-login on refresh)
+        const cachedUser = localStorage.getItem('cached_user');
+        if (cachedUser && accessToken) {
+            // Fire a background verification; if 401, only clear after confirming expired
+            verifySessionInBackground(accessToken);
+            return JSON.parse(cachedUser);
+        }
+        
+        if (!accessToken) {
+            // Try to refresh session via httpOnly cookie
+            const refreshed = await tryRefreshSession();
+            return refreshed;
+        }
 
+        // Validate the token with server
         const response = await fetch(`${BASE_URL}/api/auth/sessions/current`, {
+            credentials: 'include',
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
         });
         
         if (!response.ok) {
-            // Clear stale tokens on 401
             if (response.status === 401) {
+                // Try session refresh via cookie before giving up
+                const refreshed = await tryRefreshSession();
+                if (refreshed) return refreshed;
+                // Truly expired - clear everything
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('csrf_token');
+                localStorage.removeItem('cached_user');
             }
             return null;
         }
         
         const { user } = await response.json();
+        // Cache user data so subsequent page loads don't require server round-trip
+        if (user) localStorage.setItem('cached_user', JSON.stringify(user));
         return user;
     } catch (error) {
+        // Network error - return cached user if available to avoid logout on bad connection
+        const cachedUser = localStorage.getItem('cached_user');
+        if (cachedUser) return JSON.parse(cachedUser);
         return null;
     }
 }
 
+async function tryRefreshSession() {
+    try {
+        const response = await fetch(`${BASE_URL}/api/auth/sessions/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const { user, accessToken, csrfToken } = data;
+        if (accessToken) {
+            localStorage.setItem('access_token', accessToken);
+            if (csrfToken) localStorage.setItem('csrf_token', csrfToken);
+            if (user) localStorage.setItem('cached_user', JSON.stringify(user));
+            return user;
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function verifySessionInBackground(accessToken) {
+    fetch(`${BASE_URL}/api/auth/sessions/current`, {
+        credentials: 'include',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    }).then(async res => {
+        if (res.ok) {
+            const { user } = await res.json();
+            if (user) localStorage.setItem('cached_user', JSON.stringify(user));
+        } else if (res.status === 401) {
+            // Try to refresh silently
+            tryRefreshSession().then(user => {
+                if (!user) {
+                    // Session truly expired; clear only if on a protected page
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('csrf_token');
+                    localStorage.removeItem('cached_user');
+                }
+            });
+        }
+    }).catch(() => {/* ignore network errors in background */});
+}
+
 export async function signOut() {
     try {
+        const accessToken = localStorage.getItem('access_token');
         await fetch(`${BASE_URL}/api/auth/logout`, {
-            method: 'POST'
+            method: 'POST',
+            credentials: 'include',
+            headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}
         });
-        
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('csrf_token');
-        
-        window.location.href = 'landing.html';
     } catch (error) {
         console.error('Sign out error:', error);
+    } finally {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('csrf_token');
+        localStorage.removeItem('cached_user');
         window.location.href = 'landing.html';
     }
 }
