@@ -4032,84 +4032,68 @@ function initMOSim(engine, controlsContainer, overlayEl) {
 }
 
 // =====================================================================
-// PHOTOELECTRIC EFFECT SIMULATOR (no user controls — pure animation)
+// HELPER: make a 2D canvas that covers the sim panel (hides THREE.js canvas)
+// =====================================================================
+function make2DCanvas(engine, id, bg) {
+    const host = engine.renderer.domElement.parentElement;
+    host.style.position = 'relative';
+    let c = document.getElementById(id);
+    if (c) c.remove(); // always fresh
+    c = document.createElement('canvas');
+    c.id = id;
+    c.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;border-radius:12px;background:${bg || '#0d1117'};`;
+    host.appendChild(c);
+    return c;
+}
+
+// =====================================================================
+// PHOTOELECTRIC EFFECT SIMULATOR — animated visual
 // =====================================================================
 function initPhotoelectricSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
-
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let peCanvas = document.getElementById('peCanvas');
-    if (!peCanvas) {
-        peCanvas = document.createElement('canvas');
-        peCanvas.id = 'peCanvas';
-        peCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
-        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(peCanvas); }
-    }
+    const peCanvas = make2DCanvas(engine, 'peCanvas', '#0d1117');
     const ctx = peCanvas.getContext('2d');
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-bolt"></i> ⚡ Photoelectric Effect</div>
-            <div style="font-size:0.82rem;color:#94a3b8;line-height:1.6;margin-bottom:8px;">
-                When light of <strong style="color:#fbbf24;">sufficient frequency</strong> strikes a metal surface,
-                electrons are ejected. Below the threshold frequency — no electrons, no matter the intensity.
-            </div>
+            <div class="game-section-title">⚡ Photoelectric Effect</div>
             <div class="sim-stat-card" style="border-left:3px solid #f59e0b;">
-                <div class="sim-stat-label">⚙️ Phase</div>
-                <div class="sim-stat-value" id="pePhaseLabel" style="font-size:0.8rem;">—</div>
+                <div class="sim-stat-label">Current Phase</div>
+                <div class="sim-stat-value" id="pePhaseLabel" style="font-size:0.8rem;color:#fbbf24;">—</div>
             </div>
             <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:6px;">
-                <div class="sim-stat-label">📋 Key Concept</div>
-                <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;" id="peConceptLabel">—</div>
+                <div class="sim-stat-label">Key Concept</div>
+                <div style="font-size:0.74rem;color:#94a3b8;margin-top:4px;line-height:1.5;" id="peConceptLabel">—</div>
             </div>
-            <div style="margin-top:10px;background:#1e293b;border-radius:8px;padding:10px;font-size:0.75rem;color:#64748b;line-height:1.8;">
-                <div>🔴 <strong style="color:#f87171;">Phase 1:</strong> Low frequency — no ejection</div>
-                <div>🟡 <strong style="color:#fbbf24;">Phase 2:</strong> Threshold frequency — barely ejected</div>
-                <div>🟢 <strong style="color:#4ade80;">Phase 3:</strong> High frequency — fast electrons</div>
-                <div>🔵 <strong style="color:#22d3ee;">Phase 4:</strong> Higher intensity — more electrons</div>
+            <div style="margin-top:10px;font-size:0.75rem;color:#64748b;background:#1e293b;border-radius:6px;padding:8px;line-height:1.9;">
+                <div>🔴 Phase 1 — Infrared (low freq): no ejection</div>
+                <div>🟡 Phase 2 — Threshold: barely ejected</div>
+                <div>🟢 Phase 3 — UV (high freq): fast electrons</div>
+                <div>🔵 Phase 4 — UV + high intensity: more e⁻</div>
             </div>
-        </div>
-    `;
+            <div class="sim-stat-card" style="margin-top:6px;border-left:3px solid #a78bfa;">
+                <div class="sim-stat-label">Photon Energy</div>
+                <div class="sim-stat-value" id="peELabel">—</div>
+            </div>
+        </div>`;
 
     const phases = [
-        { label: 'Low Frequency Light', concept: 'Even with high intensity, photon energy E=hf is below work function φ. No electrons ejected.', color: '#f87171', freq: 0.4, intensity: 3, ejectsElectrons: false },
-        { label: 'Threshold Frequency', concept: 'Photon energy exactly equals work function. Electrons just barely escape with zero kinetic energy.', color: '#fbbf24', freq: 1.0, intensity: 2, ejectsElectrons: true, slow: true },
-        { label: 'Above Threshold Frequency', concept: 'Extra energy (hf − φ) goes to kinetic energy of photoelectrons. Faster ejection!', color: '#4ade80', freq: 1.8, intensity: 2, ejectsElectrons: true, slow: false },
-        { label: 'High Intensity + High Frequency', concept: 'More photons → more electrons ejected per second, but speed stays the same (depends only on frequency).', color: '#22d3ee', freq: 1.8, intensity: 5, ejectsElectrons: true, slow: false },
+        { label:'Infrared — E < φ (no ejection)', concept:'Photon energy E=hf is below work function φ. No matter how many photons — zero electrons ejected.', color:'#f87171', waveLen:6, numPhotons:3, ejects:false, speed:0 },
+        { label:'Threshold — E = φ (barely ejected)', concept:'Photon energy exactly matches work function. Electrons escape with KE ≈ 0.', color:'#fbbf24', waveLen:3.5, numPhotons:2, ejects:true, speed:0.6 },
+        { label:'UV — E > φ (fast ejection)', concept:'Surplus energy (hf − φ) converts directly to kinetic energy of photoelectron.', color:'#4ade80', waveLen:2.0, numPhotons:2, ejects:true, speed:3.5 },
+        { label:'High Intensity UV — more electrons', concept:'More photons hit per second → more electrons ejected, but SPEED depends only on frequency!', color:'#22d3ee', waveLen:2.0, numPhotons:6, ejects:true, speed:3.5 },
     ];
 
-    let phaseIdx = 0, phaseTimer = 0;
-    const PHASE_DUR = 220; // frames per phase
+    const photons = [], electrons = [], sparks = [];
+    let phaseIdx = 0, phaseTimer = 0, frameCount = 0;
+    const PHASE_DUR = 280;
 
-    // Photon particles & electrons
-    const photons = [], electrons = [];
-    let frameCount = 0;
-
-    function spawnPhoton(phase) {
+    function spawnPhoton(ph) {
         const W = peCanvas.width, H = peCanvas.height;
-        for (let i = 0; i < phase.intensity; i++) {
-            photons.push({
-                x: W * 0.08 + Math.random() * 20,
-                y: H * 0.25 + Math.random() * H * 0.5,
-                vx: 3.5 + Math.random(),
-                vy: (Math.random() - 0.5) * 0.5,
-                color: phase.color,
-                alive: true,
-                radius: 5,
-                hit: false,
-            });
-        }
-    }
-
-    function spawnElectron(x, y, phase) {
-        const speed = phase.slow ? 0.8 : 3 + Math.random() * 2;
-        electrons.push({
-            x, y,
-            vx: speed * (0.6 + Math.random() * 0.4),
-            vy: (Math.random() - 0.5) * speed,
-            alpha: 1.0,
-            color: '#a78bfa',
-            alive: true
+        photons.push({
+            x: 5, y: H * 0.2 + Math.random() * H * 0.6,
+            vx: 4 + Math.random() * 1.5, vy: (Math.random()-0.5)*0.6,
+            color: ph.color, waveLen: ph.waveLen, hit: false, alive: true
         });
     }
 
@@ -4118,316 +4102,365 @@ function initPhotoelectricSim(engine, controlsContainer, overlayEl) {
         animId = requestAnimationFrame(draw);
         const W = peCanvas.width = peCanvas.offsetWidth || 700;
         const H = peCanvas.height = peCanvas.offsetHeight || 500;
+        ctx.fillStyle = '#08090f'; ctx.fillRect(0, 0, W, H);
 
-        ctx.fillStyle = 'rgba(13,17,23,0.85)';
-        ctx.fillRect(0, 0, W, H);
+        const ph = phases[phaseIdx];
+        const surfX = Math.floor(W * 0.58);
 
-        const phase = phases[phaseIdx];
+        // === METAL SURFACE (realistic slab) ===
+        const metalGrad = ctx.createLinearGradient(surfX, 0, surfX + 90, 0);
+        metalGrad.addColorStop(0, '#7f8fa6'); metalGrad.addColorStop(0.3, '#4a5568');
+        metalGrad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = metalGrad;
+        ctx.fillRect(surfX, H * 0.08, 90, H * 0.84);
+        // Shine stripe
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(surfX + 2, H * 0.08, 10, H * 0.84);
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+        ctx.strokeRect(surfX, H * 0.08, 90, H * 0.84);
+        ctx.fillStyle = '#cbd5e1'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Metal', surfX + 45, H * 0.08 + 18);
+        ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif';
+        ctx.fillText('φ = work fn', surfX + 45, H * 0.08 + 32);
 
-        // Metal surface
-        const surfX = W * 0.52;
-        const grad = ctx.createLinearGradient(surfX, 0, surfX + 80, 0);
-        grad.addColorStop(0, '#475569');
-        grad.addColorStop(1, '#1e293b');
-        ctx.fillStyle = grad;
-        ctx.fillRect(surfX, H * 0.1, 80, H * 0.8);
-        ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
-        ctx.strokeRect(surfX, H * 0.1, 80, H * 0.8);
-        ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('Metal', surfX + 40, H * 0.1 + 20);
-        ctx.fillText('Surface', surfX + 40, H * 0.1 + 34);
+        // Free electron cloud on surface (animated dots)
+        for (let i = 0; i < 12; i++) {
+            const ey = H * 0.12 + (i / 12) * H * 0.76;
+            const ex = surfX - 4 + Math.sin(frameCount * 0.04 + i) * 2;
+            ctx.beginPath(); ctx.arc(ex, ey, 2.5, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(167,139,250,${0.4 + 0.3*Math.sin(frameCount*0.05+i)})`; ctx.fill();
+        }
+
+        // === PHOTON SOURCE (light source box) ===
+        const srcGrad = ctx.createLinearGradient(10, 0, 80, 0);
+        srcGrad.addColorStop(0, '#1e293b'); srcGrad.addColorStop(1, ph.color.replace('#','') ? ph.color : '#888');
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath(); ctx.roundRect(8, H/2 - 34, 60, 68, 8); ctx.fill();
+        ctx.strokeStyle = ph.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(8, H/2 - 34, 60, 68, 8); ctx.stroke();
+        ctx.fillStyle = ph.color; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('LIGHT', 38, H/2 - 12);
+        ctx.fillText('SOURCE', 38, H/2 + 2);
+        // Glow
+        const glRad = ctx.createRadialGradient(68, H/2, 0, 68, H/2, 35);
+        glRad.addColorStop(0, ph.color + '66'); glRad.addColorStop(1, 'transparent');
+        ctx.fillStyle = glRad; ctx.beginPath(); ctx.arc(68, H/2, 35, 0, Math.PI*2); ctx.fill();
 
         // Spawn photons
         frameCount++;
-        if (frameCount % Math.max(1, Math.floor(8 / phase.intensity)) === 0) spawnPhoton(phase);
+        if (frameCount % Math.max(1, Math.round(18 / ph.numPhotons)) === 0) spawnPhoton(ph);
 
-        // Update & draw photons
+        // === DRAW & UPDATE PHOTONS ===
         for (let i = photons.length - 1; i >= 0; i--) {
             const p = photons[i];
             if (!p.alive) { photons.splice(i, 1); continue; }
             p.x += p.vx; p.y += p.vy;
-            if (p.x >= surfX && !p.hit) {
-                p.hit = true;
-                if (phase.ejectsElectrons) spawnElectron(surfX, p.y, phase);
-                p.alive = false;
-                // Flash
-                ctx.beginPath(); ctx.arc(surfX, p.y, 14, 0, Math.PI*2);
-                ctx.fillStyle = 'rgba(255,255,180,0.55)'; ctx.fill();
-            }
-            if (p.x > W || p.y < 0 || p.y > H) p.alive = false;
-            // Draw photon as wave packet
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
-            ctx.fillStyle = p.color; ctx.fill();
-            // Wave trail
+
+            // Wave beam behind photon
             ctx.strokeStyle = p.color; ctx.lineWidth = 1.5;
             ctx.beginPath();
-            for (let w = 0; w < 24; w++) {
-                const wx = p.x - w * 3;
-                const wy = p.y + Math.sin(w * phase.freq * 1.2) * 5;
+            for (let w = 0; w < 32; w++) {
+                const wx = p.x - w * 2.8;
+                const wy = p.y + Math.sin((w + frameCount * 0.4) * (0.6/p.waveLen)) * (p.waveLen * 1.5);
                 w === 0 ? ctx.moveTo(wx, wy) : ctx.lineTo(wx, wy);
             }
             ctx.stroke();
+
+            // Photon head glow
+            const pg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 8);
+            pg.addColorStop(0, p.color + 'ff'); pg.addColorStop(1, p.color + '00');
+            ctx.fillStyle = pg; ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+            ctx.fillStyle = '#fff'; ctx.fill();
+
+            // Frequency tag above photon
+            ctx.fillStyle = p.color; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'left';
+            ctx.fillText(`λ=${p.waveLen.toFixed(1)}`, p.x - 10, p.y - 12);
+
+            // HIT surface
+            if (!p.hit && p.x >= surfX - 2) {
+                p.hit = true; p.alive = false;
+                // Spark at impact
+                for (let s = 0; s < 8; s++) sparks.push({ x: surfX, y: p.y, vx: -Math.random()*2, vy: (Math.random()-0.5)*4, alpha:1, color: p.color });
+                if (ph.ejects) {
+                    // Eject electron
+                    const spd = ph.speed;
+                    electrons.push({ x: surfX - 5, y: p.y, vx: -(spd + Math.random()*1.5), vy: (Math.random()-0.5)*spd*0.6, alpha:1.0, trail:[] });
+                }
+            }
+            if (p.x > W || p.y < 0 || p.y > H) p.alive = false;
         }
 
-        // Update & draw electrons
+        // === IMPACT SPARKS ===
+        for (let i = sparks.length - 1; i >= 0; i--) {
+            const s = sparks[i];
+            s.x += s.vx; s.y += s.vy; s.alpha -= 0.06;
+            if (s.alpha <= 0) { sparks.splice(i, 1); continue; }
+            ctx.beginPath(); ctx.arc(s.x, s.y, 2, 0, Math.PI*2);
+            ctx.fillStyle = s.color + Math.floor(s.alpha*255).toString(16).padStart(2,'0'); ctx.fill();
+        }
+
+        // === DRAW ELECTRONS with trail ===
         for (let i = electrons.length - 1; i >= 0; i--) {
             const e = electrons[i];
-            if (!e.alive) { electrons.splice(i, 1); continue; }
+            e.trail.push({ x: e.x, y: e.y });
+            if (e.trail.length > 18) e.trail.shift();
             e.x += e.vx; e.y += e.vy;
-            e.alpha -= 0.012;
-            if (e.alpha <= 0 || e.x > W) e.alive = false;
-            ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI*2);
-            ctx.fillStyle = `rgba(167,139,250,${e.alpha})`; ctx.fill();
+            e.vy *= 0.995; // tiny gravity
+            e.alpha -= 0.008;
+            if (e.alpha <= 0 || e.x < -20) { electrons.splice(i, 1); continue; }
+            // Trail
+            e.trail.forEach((pt, ti) => {
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 1.5 + (ti/e.trail.length)*2, 0, Math.PI*2);
+                ctx.fillStyle = `rgba(167,139,250,${(ti/e.trail.length)*e.alpha*0.6})`; ctx.fill();
+            });
+            // Electron
+            const eg = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, 7);
+            eg.addColorStop(0, '#c4b5fd'); eg.addColorStop(1, '#7c3aed00');
+            ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(e.x, e.y, 7, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(e.x, e.y, 3.5, 0, Math.PI*2);
+            ctx.fillStyle = '#a78bfa'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('e⁻', e.x, e.y + 3);
+            // KE label
+            if (ph.speed > 0) {
+                const ke = (0.5 * 9.1e-31 * (ph.speed * 1e5)**2 / 1.6e-19).toFixed(2);
+                ctx.fillStyle = '#4ade80'; ctx.font = '9px monospace';
+                ctx.fillText(`KE=${ke}eV`, e.x - 10, e.y - 12);
+            }
         }
 
-        // No-ejection indicator
-        if (!phase.ejectsElectrons) {
-            ctx.fillStyle = 'rgba(248,113,113,0.12)';
-            ctx.fillRect(surfX + 82, H * 0.1, W - surfX - 82, H * 0.8);
-            ctx.fillStyle = '#f87171'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText('❌ No electron ejection', W * 0.8, H * 0.5);
+        // No-ejection X indicator
+        if (!ph.ejects) {
+            ctx.fillStyle = 'rgba(239,68,68,0.08)';
+            ctx.fillRect(surfX + 92, H * 0.08, W - surfX - 92, H * 0.84);
+            ctx.fillStyle = '#f87171'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('✗ No electron ejected', W * 0.83, H * 0.46);
+            ctx.font = '11px sans-serif'; ctx.fillStyle = '#f87171aa';
+            ctx.fillText('E < φ', W * 0.83, H * 0.52);
         }
 
-        // Phase progress bar
+        // === ENERGY EQUATION DISPLAY ===
+        const eqY = 22;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath(); ctx.roundRect(W/2 - 180, 6, 360, 30, 6); ctx.fill();
+        ctx.textAlign = 'center'; ctx.font = 'bold 12px monospace';
+        const eqColor = ph.ejects ? '#4ade80' : '#f87171';
+        const eqText = ph.ejects ? `E = hf > φ   →   KE = hf − φ = ${(ph.speed**2 * 0.5).toFixed(1)} eV` : `E = hf < φ   →   No ejection`;
+        ctx.fillStyle = eqColor; ctx.fillText(eqText, W/2, eqY);
+
+        // Phase label on canvas
+        ctx.fillStyle = ph.color + 'cc'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(`Phase ${phaseIdx+1}: ${ph.label}`, 14, H - 38);
+
+        // Progress bar
         const pct = phaseTimer / PHASE_DUR;
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(20, H - 28, W - 40, 8);
-        ctx.fillStyle = phase.color; ctx.fillRect(20, H - 28, (W - 40) * pct, 8);
-        ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
-        ctx.fillText(`Phase ${phaseIdx+1}/4: ${phase.label}`, 20, H - 34);
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(14, H - 26, W - 28, 6); ctx.beginPath(); ctx.roundRect(14, H-26, (W-28)*pct, 6, 3); ctx.fillStyle = ph.color; ctx.fill();
 
-        // Update phase label
-        const pl = document.getElementById('pePhaseLabel');
-        const cl = document.getElementById('peConceptLabel');
-        if (pl) { pl.textContent = phase.label; pl.style.color = phase.color; }
-        if (cl) cl.textContent = phase.concept;
+        // Sidebar update
+        const pl = document.getElementById('pePhaseLabel'), cl = document.getElementById('peConceptLabel'), el = document.getElementById('peELabel');
+        if (pl) { pl.textContent = ph.label; pl.style.color = ph.color; }
+        if (cl) cl.textContent = ph.concept;
+        if (el) { el.textContent = ph.ejects ? `hf > φ  →  KE = hf − φ` : `hf < φ  →  blocked`; el.style.color = ph.ejects ? '#4ade80' : '#f87171'; }
 
         phaseTimer++;
         if (phaseTimer >= PHASE_DUR) {
-            phaseTimer = 0;
-            phaseIdx = (phaseIdx + 1) % phases.length;
-            photons.length = 0; electrons.length = 0;
+            phaseTimer = 0; phaseIdx = (phaseIdx + 1) % phases.length;
+            photons.length = 0; electrons.length = 0; sparks.length = 0;
         }
     }
     draw();
-
     overlayEl.innerHTML += `<span class="sim-badge">⚡ Photoelectric</span><span class="sim-badge">E=hf</span>`;
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        if (peCanvas && peCanvas.parentNode) peCanvas.parentNode.removeChild(peCanvas);
-    };
+    return () => { cancelAnimationFrame(animId); peCanvas.remove(); };
 }
 
 // =====================================================================
-// ORBITAL OVERLAP SIMULATOR (s and p orbitals, refer image)
+// ORBITAL OVERLAP SIMULATOR — animated shapes
 // =====================================================================
 function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
-
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let ooCanvas = document.getElementById('ooCanvas');
-    if (!ooCanvas) {
-        ooCanvas = document.createElement('canvas');
-        ooCanvas.id = 'ooCanvas';
-        ooCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#f8fafc;';
-        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(ooCanvas); }
-    }
+    const ooCanvas = make2DCanvas(engine, 'ooCanvas', '#f8fafc');
     const ctx = ooCanvas.getContext('2d');
 
-    const OVERLAPS = [
-        { id: 'ss_pos',   label: 's–s (in phase)',        type: 'positive', desc: 'Both s orbitals in phase → constructive interference → σ bonding MO (lower energy)' },
-        { id: 'sp_pos',   label: 's–p (in phase)',        type: 'positive', desc: 's orbital overlaps with lobe of p orbital in phase → σ bonding MO' },
-        { id: 'pp_pos',   label: 'p–p end-on (in phase)', type: 'positive', desc: 'p orbitals, end-on, same phase → σ bonding MO (highest σ overlap)' },
-        { id: 'pp_side',  label: 'p–p side-on (in phase)',type: 'positive', desc: 'p orbitals side-on, parallel, same phase → π bonding MO' },
-        { id: 'ss_neg',   label: 's–s (out of phase)',    type: 'negative', desc: 'Both s orbitals out of phase → destructive interference → σ* antibonding MO (higher energy)' },
-        { id: 'sp_neg',   label: 's–p (out of phase)',    type: 'negative', desc: 's orbital overlaps with p lobe out of phase → σ* antibonding MO (nodal plane between them)' },
-        { id: 'pp_neg',   label: 'p–p side-on (anti)',    type: 'negative', desc: 'p orbitals side-on, opposite phase → π* antibonding MO (nodal plane between them)' },
-        { id: 'sp_zero',  label: 's–p⊥ (zero overlap)',   type: 'zero',     desc: 'p orbital perpendicular to approach direction → net overlap = 0 (+ cancels −)' },
-        { id: 'pp_zero',  label: 'p–p⊥ (zero overlap)',   type: 'zero',     desc: 'p orbitals at right angles → positive and negative regions cancel exactly → no bonding' },
+    const CASES = [
+        { id:'ss_bond',  label:'s–s (in phase)',          type:'bonding',    typeLabel:'σ Bonding MO',     desc:'Both s orbitals in phase → constructive interference → bond forms (lower energy)',    bond:'σ' },
+        { id:'sp_bond',  label:'s–p (in phase)',          type:'bonding',    typeLabel:'σ Bonding MO',     desc:'s orbital overlaps with a lobe of p in phase → σ bonding (head-on overlap)',           bond:'σ' },
+        { id:'pp_sigma', label:'p–p end-on (in phase)',   type:'bonding',    typeLabel:'σ Bonding MO',     desc:'Two p orbitals end-on in phase → strongest σ overlap',                                bond:'σ' },
+        { id:'pp_pi',    label:'p–p side-on (in phase)',  type:'bonding',    typeLabel:'π Bonding MO',     desc:'Two p orbitals side-on parallel same phase → π bonding MO',                           bond:'π' },
+        { id:'ss_anti',  label:'s–s (out of phase)',      type:'antibonding', typeLabel:'σ* Antibonding',  desc:'Opposite phases → destructive interference → node between nuclei → antibonding',      bond:'σ*' },
+        { id:'sp_anti',  label:'s–p (out of phase)',      type:'antibonding', typeLabel:'σ* Antibonding',  desc:'s and p out of phase → nodal plane forms between them → antibonding',                 bond:'σ*' },
+        { id:'pp_pi_a',  label:'p–p side-on (anti)',      type:'antibonding', typeLabel:'π* Antibonding',  desc:'Side-on p orbitals opposite phases → nodal plane between lobes → π* antibonding',     bond:'π*' },
+        { id:'sp_zero',  label:'s–p⊥ (zero overlap)',     type:'zero',        typeLabel:'Zero Overlap',    desc:'s orbital approaches p perpendicularly — + and − lobes cancel exactly → no MO formed', bond:'0' },
+        { id:'pp_zero',  label:'p–p⊥ (zero overlap)',     type:'zero',        typeLabel:'Zero Overlap',    desc:'Orthogonal p orbitals — equal + and − contributions cancel → no net overlap',           bond:'0' },
     ];
 
-    let current = 'ss_pos';
-    let animT = 0;
-    let animId = null;
+    let caseIdx = 0, animT = 0, animId = null;
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-circle"></i> 🔵 Orbital Overlap</div>
-            <select class="game-select" id="ooSelect">
-                ${OVERLAPS.map(o => `<option value="${o.id}">${o.label}</option>`).join('')}
-            </select>
-            <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:10px;">
-                <div class="sim-stat-label">🔗 Type</div>
-                <div class="sim-stat-value" id="ooTypeLabel" style="font-size:0.78rem;"></div>
+            <div class="game-section-title">🔵 Orbital Overlap</div>
+            <select class="game-select" id="ooSel">${CASES.map((c,i)=>`<option value="${i}">${c.label}</option>`).join('')}</select>
+            <div class="sim-stat-card" style="margin-top:8px;border-left:3px solid #22d3ee;">
+                <div class="sim-stat-label">Result</div>
+                <div class="sim-stat-value" id="ooType" style="font-size:0.82rem;"></div>
             </div>
-            <div style="font-size:0.78rem;color:#94a3b8;margin-top:8px;line-height:1.6;" id="ooDesc"></div>
-            <div style="margin-top:10px;font-size:0.75rem;color:#475569;background:#1e293b;border-radius:6px;padding:8px;line-height:1.9;">
-                <div><span style="color:#6ea8d5;">■</span> Negative phase lobe (grey/blue)</div>
-                <div><span style="color:#e8c46e;">■</span> Positive phase lobe (yellow/orange)</div>
-                <div><span style="color:#f87171;">■</span> Node plane (no electron density)</div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:8px;line-height:1.6;" id="ooDesc"></div>
+            <div style="margin-top:10px;font-size:0.73rem;color:#475569;background:#1e293b;border-radius:6px;padding:8px;line-height:1.9;">
+                <span style="color:#e8c46e;">■</span> (+) phase &nbsp;
+                <span style="color:#6ea8d5;">■</span> (−) phase &nbsp;
+                <span style="color:#f87171;">═</span> nodal plane
             </div>
-        </div>
-    `;
+        </div>`;
 
-    function updateInfo(id) {
-        const o = OVERLAPS.find(x => x.id === id);
-        if (!o) return;
-        const tl = document.getElementById('ooTypeLabel');
-        const dl = document.getElementById('ooDesc');
-        const typeColors = { positive: '#4ade80', negative: '#f87171', zero: '#94a3b8' };
-        const typeLabels = { positive: '✅ Bonding (Constructive)', negative: '❌ Antibonding (Destructive)', zero: '⚪ Zero Overlap' };
-        if (tl) { tl.textContent = typeLabels[o.type]; tl.style.color = typeColors[o.type]; }
-        if (dl) dl.textContent = o.desc;
+    function updateSidebar(idx) {
+        const c = CASES[idx];
+        const tl = document.getElementById('ooType'), dl = document.getElementById('ooDesc');
+        const col = c.type==='bonding'?'#4ade80':c.type==='antibonding'?'#f87171':'#94a3b8';
+        if (tl) { tl.textContent = c.typeLabel; tl.style.color = col; }
+        if (dl) dl.textContent = c.desc;
     }
+    updateSidebar(0);
+    document.getElementById('ooSel').addEventListener('change', e => { caseIdx = parseInt(e.target.value); animT = 0; updateSidebar(caseIdx); });
 
-    // Draw an s orbital (filled circle with phase colour)
-    function drawS(cx, cy, R, phase, alpha = 0.7) {
-        const col = phase === '+' ? '#e8c46e' : '#6ea8d5';
-        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-        ctx.fillStyle = col.replace(')', `,${alpha})`).replace('rgb', 'rgba').replace('#', 'rgba(') + ')';
-        // Use hex directly
-        ctx.fillStyle = phase === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
-        ctx.fill();
-        ctx.strokeStyle = phase === '+' ? '#b8881a' : '#3a6ea0'; ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.fillStyle = '#333'; ctx.font = `bold ${Math.max(10, R/2.2)}px sans-serif`; ctx.textAlign = 'center';
-        ctx.fillText(phase === '+' ? '+' : '−', cx, cy + R / 5);
+    // Draw helpers
+    function drawS(cx, cy, R, phase, alpha=0.75) {
+        const col = phase==='+' ? [232,196,110] : [110,168,213];
+        const g = ctx.createRadialGradient(cx-R*0.25, cy-R*0.25, R*0.1, cx, cy, R);
+        g.addColorStop(0, `rgba(255,255,255,${alpha*0.8})`);
+        g.addColorStop(0.4, `rgba(${col},${alpha})`);
+        g.addColorStop(1, `rgba(${col},${alpha*0.3})`);
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = phase==='+'?'#b8881a':'#3a6ea0'; ctx.lineWidth = 1.8; ctx.stroke();
+        ctx.fillStyle = phase==='+'?'#5a3a00':'#1a3a5a'; ctx.font = `bold ${Math.max(11,R*0.45)}px serif`; ctx.textAlign = 'center';
+        ctx.fillText(phase, cx, cy + R*0.15);
     }
-
-    // Draw a p orbital (two lobes)
-    function drawP(cx, cy, R, dir, phase1, phase2, alpha = 0.7) {
-        // dir: 'h'=horizontal (along x), 'v'=vertical (along y)
-        const off = R * 0.7;
-        if (dir === 'h') {
-            // Right lobe (phase1), left lobe (phase2)
-            ctx.beginPath();
-            ctx.ellipse(cx + off, cy, R, R * 0.55, 0, 0, Math.PI * 2);
-            ctx.fillStyle = phase1 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
-            ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(cx - off, cy, R, R * 0.55, 0, 0, Math.PI * 2);
-            ctx.fillStyle = phase2 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
-            ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#333'; ctx.font = `bold ${Math.max(9, R/2.5)}px sans-serif`; ctx.textAlign = 'center';
-            ctx.fillText(phase1 === '+' ? '+' : '−', cx + off, cy + 4);
-            ctx.fillText(phase2 === '+' ? '+' : '−', cx - off, cy + 4);
-        } else {
-            // Upper lobe (phase1), lower lobe (phase2)
-            ctx.beginPath();
-            ctx.ellipse(cx, cy - off, R * 0.55, R, 0, 0, Math.PI * 2);
-            ctx.fillStyle = phase1 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
-            ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
-            ctx.beginPath();
-            ctx.ellipse(cx, cy + off, R * 0.55, R, 0, 0, Math.PI * 2);
-            ctx.fillStyle = phase2 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
-            ctx.fill(); ctx.stroke();
-            ctx.fillStyle = '#333'; ctx.font = `bold ${Math.max(9, R/2.5)}px sans-serif`; ctx.textAlign = 'center';
-            ctx.fillText(phase1 === '+' ? '+' : '−', cx, cy - off + 4);
-            ctx.fillText(phase2 === '+' ? '+' : '−', cx, cy + off + 4);
-        }
+    function lobe(cx, cy, rx, ry, phase, alpha=0.75) {
+        const col = phase==='+' ? [232,196,110] : [110,168,213];
+        const g = ctx.createRadialGradient(cx - rx*0.2, cy - ry*0.2, rx*0.05, cx, cy, Math.max(rx,ry));
+        g.addColorStop(0, `rgba(255,255,255,${alpha*0.7})`);
+        g.addColorStop(0.4, `rgba(${col},${alpha})`);
+        g.addColorStop(1, `rgba(${col},${alpha*0.2})`);
+        ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = phase==='+'?'#b8881a':'#3a6ea0'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = phase==='+'?'#5a3a00':'#1a3a5a'; ctx.font = `bold ${Math.max(10, Math.min(rx,ry)*0.5)}px serif`; ctx.textAlign = 'center';
+        ctx.fillText(phase, cx, cy + Math.min(rx,ry)*0.2);
     }
-
-    function drawAxis(W, H, cy) {
-        ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(W - 20, cy); ctx.stroke();
+    function nucleus(cx, cy) {
+        ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2);
+        ctx.fillStyle = '#1e293b'; ctx.fill();
+        ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    function nodePlane(x1,y1,x2,y2) {
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2.5; ctx.setLineDash([6,4]);
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#666'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
-        ctx.fillText('→ z', W - 30, cy - 6);
     }
-
-    function drawLabel(x, y, text, color = '#333') {
-        ctx.fillStyle = color; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+    function label(x, y, text, color='#1e293b', size=12) {
+        ctx.fillStyle = color; ctx.font = `bold ${size}px sans-serif`; ctx.textAlign = 'center';
         ctx.fillText(text, x, y);
     }
 
-    function renderOverlap(id, W, H, pulse) {
-        const R = Math.min(W, H) * 0.1;
-        const midY = H * 0.48;
-        const midX = W / 2;
+    function renderCase(id, W, H, t) {
+        ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0,W,H);
+        const cx = W/2, cy = H/2;
+        const R = Math.min(W,H) * 0.11;
+        // Breathe animation — orbitals gently pulse toward/away
+        const breathe = 0.94 + 0.06 * Math.sin(t * 0.03);
+        const gap = R * 1.55 * breathe;
 
-        ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, W, H);
-        drawAxis(W, H, midY);
+        const c = CASES.find(x=>x.id===id);
+        const typeColor = c.type==='bonding'?'#166534':c.type==='antibonding'?'#991b1b':'#475569';
+        label(cx, 28, c.typeLabel, typeColor, 14);
 
-        // Overlap pulse (animation)
-        const sep = Math.max(0, Math.abs(Math.sin(pulse * 0.04)) * R * 0.7);
-
-        if (id === 'ss_pos') {
-            drawS(midX - R * 1.6 - sep, midY, R, '+');
-            drawLabel(midX - R * 1.6 - sep, midY - R - 10, 'p₁ (s)');
-            drawS(midX + R * 1.6 + sep, midY, R, '+');
-            drawLabel(midX + R * 1.6 + sep, midY - R - 10, 'p₂ (s)');
-            drawLabel(midX, midY - R * 2.2, '✅ Positive / Bonding Overlap', '#2a7a3b');
-        } else if (id === 'ss_neg') {
-            drawS(midX - R * 1.6 - sep, midY, R, '+');
-            drawLabel(midX - R * 1.6 - sep, midY - R - 10, 'p₁ (s)');
-            drawS(midX + R * 1.6 + sep, midY, R, '-');
-            drawLabel(midX + R * 1.6 + sep, midY - R - 10, 'p₂ (s)');
-            if (sep < R * 0.05) {
-                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 3]);
-                ctx.beginPath(); ctx.moveTo(midX, midY - R); ctx.lineTo(midX, midY + R); ctx.stroke();
-                ctx.setLineDash([]);
-                drawLabel(midX, midY + R + 18, 'Nodal plane', '#f87171');
-            }
-            drawLabel(midX, midY - R * 2.2, '❌ Negative / Antibonding Overlap', '#c0392b');
-        } else if (id === 'sp_pos') {
-            drawS(midX - R * 2.0 - sep, midY, R, '+');
-            drawLabel(midX - R * 2.0 - sep, midY - R - 10, 's');
-            drawP(midX + R * 1.2 + sep, midY, R, 'h', '+', '-');
-            drawLabel(midX + R * 1.2 + sep, midY - R * 1.6 - 10, 'p');
-            drawLabel(midX, midY - R * 2.2, '✅ s–p bonding overlap', '#2a7a3b');
-        } else if (id === 'sp_neg') {
-            drawS(midX - R * 2.0 - sep, midY, R, '+');
-            drawLabel(midX - R * 2.0 - sep, midY - R - 10, 's');
-            drawP(midX + R * 1.2 + sep, midY, R, 'h', '-', '+');
-            drawLabel(midX + R * 1.2 + sep, midY - R * 1.6 - 10, 'p');
-            if (sep < R * 0.05) {
-                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 3]);
-                ctx.beginPath(); ctx.moveTo(midX, midY - R); ctx.lineTo(midX, midY + R); ctx.stroke();
-                ctx.setLineDash([]);
-            }
-            drawLabel(midX, midY - R * 2.2, '❌ s–p antibonding overlap', '#c0392b');
-        } else if (id === 'pp_pos') {
-            drawP(midX - R * 2.2 - sep, midY, R, 'h', '+', '-');
-            drawLabel(midX - R * 2.2 - sep, midY - R * 1.6 - 10, 'p₁');
-            drawP(midX + R * 2.2 + sep, midY, R, 'h', '+', '-');
-            drawLabel(midX + R * 2.2 + sep, midY - R * 1.6 - 10, 'p₂');
-            drawLabel(midX, midY - R * 2.4, '✅ p–p σ bonding (end-on, in phase)', '#2a7a3b');
-        } else if (id === 'pp_side') {
-            const vOff = H * 0.14;
-            drawP(midX - R * 0.8, midY - vOff - sep * 0.5, R, 'v', '+', '-');
-            drawLabel(midX - R * 0.8, midY - vOff - R * 1.9 - sep * 0.5, 'p₁');
-            drawP(midX + R * 0.8, midY + vOff + sep * 0.5, R, 'v', '+', '-');
-            drawLabel(midX + R * 0.8, midY + vOff + R * 1.9 + sep * 0.5, 'p₂');
-            drawLabel(midX, H * 0.08, '✅ p–p π bonding (side-on, in phase)', '#2a7a3b');
-        } else if (id === 'pp_neg') {
-            const vOff = H * 0.14;
-            drawP(midX - R * 0.8, midY - vOff - sep * 0.5, R, 'v', '+', '-');
-            drawP(midX + R * 0.8, midY + vOff + sep * 0.5, R, 'v', '-', '+');
-            if (sep < R * 0.05) {
-                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
-                ctx.beginPath(); ctx.moveTo(midX - R * 2, midY); ctx.lineTo(midX + R * 2, midY); ctx.stroke();
-                ctx.setLineDash([]);
-                drawLabel(midX, midY + 14, 'Nodal plane', '#f87171');
-            }
-            drawLabel(midX, H * 0.08, '❌ p–p π* antibonding (side-on, anti)', '#c0392b');
-        } else if (id === 'sp_zero') {
-            drawS(midX - R * 2.0 - sep, midY, R, '+');
-            drawLabel(midX - R * 2.0 - sep, midY - R - 10, 's');
-            drawP(midX + R * 0.8 + sep, midY, R * 1.1, 'v', '+', '-');
-            drawLabel(midX + R * 0.8 + sep, midY - R * 1.9, 'p⊥');
-            drawLabel(midX, H * 0.08, '⚪ Zero overlap (perpendicular approach)', '#666');
-            drawLabel(midX, H - 30, '+ and − lobes cancel → net overlap = 0', '#888');
-        } else if (id === 'pp_zero') {
-            drawP(midX - R * 2.2 - sep, midY, R, 'h', '+', '-');
-            drawP(midX + R * 0.8 + sep, midY, R * 1.1, 'v', '+', '-');
-            drawLabel(midX, H * 0.08, '⚪ Zero overlap (p ⊥ to approach)', '#666');
-            drawLabel(midX, H - 30, 'Orthogonal orbitals: net overlap = 0', '#888');
+        if (id==='ss_bond') {
+            drawS(cx - gap, cy, R, '+'); drawS(cx + gap, cy, R, '+');
+            nucleus(cx - gap, cy); nucleus(cx + gap, cy);
+            if (gap < R * 1.2) label(cx, cy, '⊕', '#166534', 18);
+        }
+        else if (id==='sp_bond') {
+            drawS(cx - gap - R*0.5, cy, R*0.9, '+');
+            nucleus(cx - gap - R*0.5, cy);
+            lobe(cx + gap + R*0.8, cy, R*1.3, R*0.7, '+');
+            lobe(cx + gap + R*0.8 + R*2.6, cy, R*1.1, R*0.65, '-');
+            nucleus(cx + gap + R*0.8 + R*1.3, cy);
+        }
+        else if (id==='pp_sigma') {
+            lobe(cx - gap - R, cy, R*1.3, R*0.7, '+');
+            lobe(cx - gap - R - R*2.6, cy, R*1.1, R*0.65, '-');
+            nucleus(cx - gap - R - R*1.3 + R*2.6, cy);
+            lobe(cx + gap + R, cy, R*1.3, R*0.7, '+');
+            lobe(cx + gap + R + R*2.6, cy, R*1.1, R*0.65, '-');
+            nucleus(cx + gap + R - R*0.1, cy);
+        }
+        else if (id==='pp_pi') {
+            const vGap = R * 1.4 * breathe;
+            lobe(cx - R*0.6, cy - vGap - R*0.5, R*0.6, R*1.1, '+');
+            lobe(cx - R*0.6, cy - vGap + R*1.1, R*0.6, R*0.9, '-');
+            nucleus(cx - R*0.6, cy - vGap + R*0.1);
+            lobe(cx + R*0.6, cy + vGap - R*0.5, R*0.6, R*1.1, '+');
+            lobe(cx + R*0.6, cy + vGap + R*1.1, R*0.6, R*0.9, '-');
+            nucleus(cx + R*0.6, cy + vGap + R*0.1);
+            label(cx, cy, '// π', '#166534', 13);
+        }
+        else if (id==='ss_anti') {
+            drawS(cx - gap, cy, R, '+'); drawS(cx + gap, cy, R, '-');
+            nucleus(cx - gap, cy); nucleus(cx + gap, cy);
+            nodePlane(cx, cy - R*1.8, cx, cy + R*1.8);
+            label(cx, cy + R*2.1, 'Node', '#ef4444', 11);
+        }
+        else if (id==='sp_anti') {
+            drawS(cx - gap - R*0.5, cy, R*0.9, '+');
+            nucleus(cx - gap - R*0.5, cy);
+            lobe(cx + gap + R*0.8, cy, R*1.3, R*0.7, '-');
+            lobe(cx + gap + R*0.8 + R*2.6, cy, R*1.1, R*0.65, '+');
+            nucleus(cx + gap + R*0.8 + R*1.3, cy);
+            nodePlane(cx + gap - R*0.3, cy - R*1.8, cx + gap - R*0.3, cy + R*1.8);
+        }
+        else if (id==='pp_pi_a') {
+            const vGap = R * 1.4 * breathe;
+            lobe(cx - R*0.6, cy - vGap - R*0.5, R*0.6, R*1.1, '+');
+            lobe(cx - R*0.6, cy - vGap + R*1.1, R*0.6, R*0.9, '-');
+            nucleus(cx - R*0.6, cy - vGap + R*0.1);
+            lobe(cx + R*0.6, cy + vGap - R*0.5, R*0.6, R*1.1, '-');
+            lobe(cx + R*0.6, cy + vGap + R*1.1, R*0.6, R*0.9, '+');
+            nucleus(cx + R*0.6, cy + vGap + R*0.1);
+            nodePlane(cx - R*2, cy, cx + R*2, cy);
+            label(cx, cy + 14, 'π* node', '#ef4444', 11);
+        }
+        else if (id==='sp_zero') {
+            drawS(cx - gap*1.2, cy, R*0.9, '+');
+            nucleus(cx - gap*1.2, cy);
+            // p orbital rotated 90° — vertical
+            lobe(cx + R*0.5, cy - R*1.2, R*0.65, R*1.1, '+');
+            lobe(cx + R*0.5, cy + R*1.2, R*0.65, R*1.1, '-');
+            nucleus(cx + R*0.5, cy);
+            // cancel arrows
+            ctx.fillStyle = '#999'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('+ and − cancel → 0', cx + R, cy + R*2.6);
+        }
+        else if (id==='pp_zero') {
+            // horizontal p on left
+            lobe(cx - gap - R, cy, R*1.3, R*0.7, '+');
+            lobe(cx - gap - R - R*2.6, cy, R*1.1, R*0.65, '-');
+            nucleus(cx - gap - R - R*1.3 + R*2.6, cy);
+            // vertical p on right
+            lobe(cx + R*0.5, cy - R*1.2, R*0.65, R*1.1, '+');
+            lobe(cx + R*0.5, cy + R*1.2, R*0.65, R*1.1, '-');
+            nucleus(cx + R*0.5, cy);
+            ctx.fillStyle = '#999'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('Orthogonal → net overlap = 0', cx, cy + R*2.8);
         }
 
-        // Atom dots at positions
-        ctx.beginPath(); ctx.arc(midX - R * 1.6 - sep, midY, 4, 0, Math.PI*2);
-        ctx.fillStyle = '#333'; ctx.fill();
-        ctx.beginPath(); ctx.arc(midX + R * 1.6 + sep, midY, 4, 0, Math.PI*2);
-        ctx.fillStyle = '#333'; ctx.fill();
+        // Bond type badge
+        const bdCol = c.type==='bonding'?'#d1fae5':c.type==='antibonding'?'#fee2e2':'#f1f5f9';
+        const bdBdr = c.type==='bonding'?'#10b981':c.type==='antibonding'?'#ef4444':'#94a3b8';
+        ctx.fillStyle = bdCol;
+        ctx.beginPath(); ctx.roundRect(W - 80, H-38, 72, 26, 6); ctx.fill();
+        ctx.strokeStyle = bdBdr; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = bdBdr; ctx.font = 'bold 13px serif'; ctx.textAlign = 'center';
+        ctx.fillText(c.bond, W - 44, H - 20);
     }
 
     function animate() {
@@ -4435,774 +4468,597 @@ function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
         const W = ooCanvas.width = ooCanvas.offsetWidth || 600;
         const H = ooCanvas.height = ooCanvas.offsetHeight || 500;
         animT++;
-        renderOverlap(current, W, H, animT);
+        renderCase(CASES[caseIdx].id, W, H, animT);
     }
     animate();
-    updateInfo(current);
-
-    document.getElementById('ooSelect').addEventListener('change', e => {
-        current = e.target.value;
-        updateInfo(current);
-        animT = 0;
-    });
-
     overlayEl.innerHTML += `<span class="sim-badge">🔵 Orbital Overlap</span><span class="sim-badge">σ/π bonds</span>`;
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        if (ooCanvas && ooCanvas.parentNode) ooCanvas.parentNode.removeChild(ooCanvas);
-    };
+    return () => { cancelAnimationFrame(animId); ooCanvas.remove(); };
 }
 
 // =====================================================================
-// REDOX BALANCING SIMULATOR (5 reactions, step-by-step teaching)
+// REDOX BALANCING SIMULATOR — step-by-step visual
 // =====================================================================
 function initRedoxSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
-
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let rxCanvas = document.getElementById('rxCanvas');
-    if (!rxCanvas) {
-        rxCanvas = document.createElement('canvas');
-        rxCanvas.id = 'rxCanvas';
-        rxCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
-        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(rxCanvas); }
-    }
+    const rxCanvas = make2DCanvas(engine, 'rxCanvas', '#0d1117');
     const ctx = rxCanvas.getContext('2d');
 
     const REACTIONS = [
-        {
-            name: 'KMnO₄ + FeSO₄ (Acidic)',
-            unbalanced: 'MnO₄⁻ + Fe²⁺ → Mn²⁺ + Fe³⁺',
-            balanced: '10Fe²⁺ + 2MnO₄⁻ + 16H⁺ → 10Fe³⁺ + 2Mn²⁺ + 8H₂O',
-            half: [
-                { type: 'oxidation', label: 'Oxidation Half-Reaction', steps: ['Fe²⁺ → Fe³⁺', 'Fe²⁺ → Fe³⁺ + e⁻  (×5, removing 1e⁻ each)'] },
-                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['MnO₄⁻ → Mn²⁺', 'MnO₄⁻ + 8H⁺ → Mn²⁺ + 4H₂O', 'MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O'] },
-                { type: 'combine', label: 'Equalise electrons (×5 and ×1), Add:', steps: ['5Fe²⁺ → 5Fe³⁺ + 5e⁻', 'MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O', '─────────────────────────────', 'Net: 5Fe²⁺ + MnO₄⁻ + 8H⁺ → 5Fe³⁺ + Mn²⁺ + 4H₂O', '(×2 for full balanced)'] }
-            ],
-            os: [
-                { step: 'Assign OS:', detail: 'Fe: +2 → +3 (oxidised, loses e⁻) | Mn: +7 → +2 (reduced, gains e⁻)' },
-                { step: 'Change in OS:', detail: 'Fe: increases by 1 | Mn: decreases by 5' },
-                { step: 'Balance change (ratio 5:1):', detail: '10 × Fe, 2 × Mn changes balance (both contribute 10 e⁻)' },
-                { step: 'Final balanced:', detail: '10Fe²⁺ + 2MnO₄⁻ + 16H⁺ → 10Fe³⁺ + 2Mn²⁺ + 8H₂O ✅' }
-            ]
-        },
-        {
-            name: 'Cr₂O₇²⁻ + I⁻ (Acidic)',
-            unbalanced: 'Cr₂O₇²⁻ + I⁻ → Cr³⁺ + I₂',
-            balanced: 'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O',
-            half: [
-                { type: 'oxidation', label: 'Oxidation Half-Reaction', steps: ['2I⁻ → I₂ + 2e⁻  (×3)'] },
-                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['Cr₂O₇²⁻ → 2Cr³⁺', 'Cr₂O₇²⁻ + 14H⁺ → 2Cr³⁺ + 7H₂O', 'Cr₂O₇²⁻ + 14H⁺ + 6e⁻ → 2Cr³⁺ + 7H₂O'] },
-                { type: 'combine', label: 'Add both (electrons cancel):', steps: ['6I⁻ → 3I₂ + 6e⁻', 'Cr₂O₇²⁻ + 14H⁺ + 6e⁻ → 2Cr³⁺ + 7H₂O', '─────────', 'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O ✅'] }
-            ],
-            os: [
-                { step: 'Assign OS:', detail: 'I: −1 → 0 (oxidised) | Cr: +6 → +3 (reduced)' },
-                { step: 'Change in OS:', detail: 'I increases by 1 | Cr decreases by 3 (×2 Cr atoms = 6 total)' },
-                { step: 'Balance:', detail: '6 I⁻ and 1 Cr₂O₇²⁻ (6 e⁻ each side)' },
-                { step: 'Final balanced:', detail: 'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O ✅' }
-            ]
-        },
-        {
-            name: 'Zn + H₂SO₄ (Dilute)',
-            unbalanced: 'Zn + H₂SO₄ → ZnSO₄ + H₂',
-            balanced: 'Zn + H₂SO₄ → ZnSO₄ + H₂↑',
-            half: [
-                { type: 'oxidation', label: 'Oxidation Half-Reaction', steps: ['Zn → Zn²⁺ + 2e⁻'] },
-                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['2H⁺ + 2e⁻ → H₂↑'] },
-                { type: 'combine', label: 'Add (2e⁻ cancel):', steps: ['Zn + 2H⁺ → Zn²⁺ + H₂', 'With SO₄²⁻ spectator ion:', 'Zn + H₂SO₄ → ZnSO₄ + H₂↑ ✅'] }
-            ],
-            os: [
-                { step: 'Assign OS:', detail: 'Zn: 0 → +2 (oxidised) | H: +1 → 0 (reduced)' },
-                { step: 'Change in OS:', detail: 'Zn increases by 2 | H decreases by 1 (×2 = 2 total)' },
-                { step: 'Balance:', detail: '1 Zn : 2 H → already balanced!' },
-                { step: 'Final balanced:', detail: 'Zn + H₂SO₄ → ZnSO₄ + H₂↑ ✅' }
-            ]
-        },
-        {
-            name: 'Cl₂ Disproportionation (Basic)',
-            unbalanced: 'Cl₂ → Cl⁻ + ClO₃⁻',
-            balanced: '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O',
-            half: [
-                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['Cl₂ + 2e⁻ → 2Cl⁻  (×5)'] },
-                { type: 'oxidation', label: 'Oxidation Half-Reaction (basic medium add OH⁻):', steps: ['Cl₂ + 12OH⁻ → 2ClO₃⁻ + 6H₂O + 10e⁻  (×1)'] },
-                { type: 'combine', label: 'Equalise (×5 and ×1) then add:', steps: ['5Cl₂ + 10e⁻ → 10Cl⁻', 'Cl₂ + 12OH⁻ → 2ClO₃⁻ + 6H₂O + 10e⁻', '─────────', '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O ✅'] }
-            ],
-            os: [
-                { step: 'Assign OS:', detail: 'Cl₂ (0) → Cl⁻ (−1) reduced | Cl₂ (0) → ClO₃⁻ (Cl=+5) oxidised' },
-                { step: 'This is DISPROPORTIONATION:', detail: 'Same element simultaneously oxidised AND reduced!' },
-                { step: 'Change:', detail: 'Reduction: 0 → −1 (gain 1e⁻, ×5) | Oxidation: 0 → +5 (lose 5e⁻, ×1)' },
-                { step: 'Final balanced:', detail: '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O ✅' }
-            ]
-        },
-        {
-            name: 'MnO₄⁻ + C₂O₄²⁻ (Acidic)',
-            unbalanced: 'MnO₄⁻ + C₂O₄²⁻ → Mn²⁺ + CO₂',
-            balanced: '2KMnO₄ + 5H₂C₂O₄ + 3H₂SO₄ → 2MnSO₄ + K₂SO₄ + 10CO₂ + 8H₂O',
-            half: [
-                { type: 'oxidation', label: 'Oxidation (Oxalate → CO₂):', steps: ['C₂O₄²⁻ → 2CO₂ + 2e⁻  (×5)'] },
-                { type: 'reduction', label: 'Reduction (MnO₄⁻):', steps: ['MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O  (×2)'] },
-                { type: 'combine', label: 'Equalise (×5 and ×2):', steps: ['5C₂O₄²⁻ → 10CO₂ + 10e⁻', '2MnO₄⁻ + 16H⁺ + 10e⁻ → 2Mn²⁺ + 8H₂O', '─────────', '2MnO₄⁻ + 5C₂O₄²⁻ + 16H⁺ → 2Mn²⁺ + 10CO₂ + 8H₂O ✅'] }
-            ],
-            os: [
-                { step: 'Assign OS:', detail: 'C in C₂O₄²⁻: +3 → +4 (oxidised) | Mn: +7 → +2 (reduced)' },
-                { step: 'Change:', detail: 'C increases by 1 ×10 = 10 | Mn decreases by 5 ×2 = 10 ✅' },
-                { step: 'Balance ratio:', detail: '2 Mn : 5 C₂O₄²⁻ (i.e., 10 C atoms)' },
-                { step: 'Final balanced:', detail: '2MnO₄⁻ + 5C₂O₄²⁻ + 16H⁺ → 2Mn²⁺ + 10CO₂ + 8H₂O ✅' }
-            ]
-        }
+        { name:'MnO₄⁻ + Fe²⁺ → Mn²⁺ + Fe³⁺', short:'Permanganate + Iron', half:[
+            { title:'① Identify change', text:'Mn: +7 → +2 (gains 5e⁻, REDUCTION)\nFe: +2 → +3 (loses 1e⁻, OXIDATION)', highlight:['Mn','Fe'] },
+            { title:'② Write half-reactions', text:'Oxidation:   Fe²⁺ → Fe³⁺ + e⁻\nReduction: MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O' },
+            { title:'③ Balance electrons', text:'Multiply oxidation ×5:\n5Fe²⁺ → 5Fe³⁺ + 5e⁻\nMnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O' },
+            { title:'④ Add half-reactions', text:'5Fe²⁺ + MnO₄⁻ + 8H⁺ → 5Fe³⁺ + Mn²⁺ + 4H₂O', final:true },
+            { title:'✅ Balanced Equation', text:'10Fe²⁺ + 2MnO₄⁻ + 16H⁺ → 10Fe³⁺ + 2Mn²⁺ + 8H₂O', final:true, balanced:true },
+        ]},
+        { name:'Cr₂O₇²⁻ + I⁻ → Cr³⁺ + I₂', short:'Dichromate + Iodide', half:[
+            { title:'① Identify change', text:'Cr: +6 → +3 (gains 3e⁻ × 2Cr = 6e⁻, REDUCTION)\nI: −1 → 0 (loses 1e⁻, OXIDATION)', highlight:['Cr','I'] },
+            { title:'② Write half-reactions', text:'Oxidation:   2I⁻ → I₂ + 2e⁻\nReduction: Cr₂O₇²⁻ + 14H⁺ + 6e⁻ → 2Cr³⁺ + 7H₂O' },
+            { title:'③ Balance electrons', text:'Multiply oxidation ×3:\n6I⁻ → 3I₂ + 6e⁻\nCr₂O₇²⁻ + 14H⁺ + 6e⁻ → 2Cr³⁺ + 7H₂O' },
+            { title:'④ Add & cancel electrons', text:'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O', final:true, balanced:true },
+        ]},
+        { name:'MnO₄⁻ + C₂O₄²⁻ → Mn²⁺ + CO₂', short:'Permanganate + Oxalate', half:[
+            { title:'① Identify change', text:'Mn: +7 → +2 (gains 5e⁻, REDUCTION)\nC: +3 → +4 (loses 1e⁻, OXIDATION)', highlight:['Mn','C'] },
+            { title:'② Write half-reactions', text:'Oxidation:   C₂O₄²⁻ → 2CO₂ + 2e⁻\nReduction: MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O' },
+            { title:'③ Balance electrons (×5 and ×2)', text:'5C₂O₄²⁻ → 10CO₂ + 10e⁻\n2MnO₄⁻ + 16H⁺ + 10e⁻ → 2Mn²⁺ + 8H₂O' },
+            { title:'✅ Balanced', text:'2MnO₄⁻ + 5C₂O₄²⁻ + 16H⁺ → 2Mn²⁺ + 10CO₂ + 8H₂O', final:true, balanced:true },
+        ]},
+        { name:'Zn + H₂SO₄ → ZnSO₄ + H₂', short:'Zinc + Dilute Acid', half:[
+            { title:'① Identify change', text:'Zn: 0 → +2 (loses 2e⁻, OXIDATION)\nH: +1 → 0 (gains 1e⁻ × 2H, REDUCTION)', highlight:['Zn','H'] },
+            { title:'② Write half-reactions', text:'Oxidation:   Zn → Zn²⁺ + 2e⁻\nReduction: 2H⁺ + 2e⁻ → H₂↑' },
+            { title:'✅ Balanced (add both)', text:'Zn + H₂SO₄ → ZnSO₄ + H₂↑', final:true, balanced:true },
+        ]},
+        { name:'Cl₂ (disproportionation, basic)', short:'Chlorine in Base', half:[
+            { title:'① Disproportionation!', text:'SAME element oxidised AND reduced:\nCl₂ (0) → Cl⁻ (−1): REDUCTION\nCl₂ (0) → ClO₃⁻ (Cl=+5): OXIDATION', highlight:['Cl'] },
+            { title:'② Half-reactions (basic medium)', text:'Reduction:  Cl₂ + 2e⁻ → 2Cl⁻  (×5)\nOxidation: Cl₂+12OH⁻ → 2ClO₃⁻+6H₂O+10e⁻ (×1)' },
+            { title:'✅ Balanced', text:'3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O', final:true, balanced:true },
+        ]},
     ];
 
-    let rxIdx = 0, method = 'half', stepIdx = 0, stepTimer = 0;
-    const STEP_FRAMES = 120; // auto-advance speed
+    let rxIdx = 0, stepIdx = 0, autoTimer = 0; const AUTO_DUR = 150;
     let animId = null;
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-flask"></i> ⚗️ Redox Balancing</div>
-            <div class="sim-control-row">
-                <label style="color:#a78bfa;">🧪 Reaction</label>
-                <select class="game-select" id="rxSelect">
-                    ${REACTIONS.map((r, i) => `<option value="${i}">${r.name}</option>`).join('')}
-                </select>
+            <div class="game-section-title">⚗️ Redox Balancing</div>
+            <select class="game-select" id="rxSel">${REACTIONS.map((r,i)=>`<option value="${i}">${r.short}</option>`).join('')}</select>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+                <button class="btn-primary" id="rxPrev" style="flex:1;font-size:0.8rem;padding:6px;">◀ Prev</button>
+                <button class="btn-primary" id="rxNext" style="flex:1;font-size:0.8rem;padding:6px;background:#10b981;">Next ▶</button>
             </div>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-                <button class="btn-primary" id="halfBtn" style="flex:1;font-size:0.8rem;padding:6px;">Half-Reaction</button>
-                <button class="btn-secondary" id="osBtn" style="flex:1;font-size:0.8rem;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;">OS Method</button>
+            <button class="btn-primary sim-action-btn" id="rxReset" style="margin-top:6px;"><i class="fas fa-redo"></i> Restart</button>
+            <div class="sim-stat-card" style="margin-top:8px;border-left:3px solid #a78bfa;">
+                <div class="sim-stat-label">Step</div>
+                <div class="sim-stat-value" id="rxStepLbl" style="font-size:0.78rem;"></div>
             </div>
-            <button class="btn-primary sim-action-btn" id="rxResetBtn" style="margin-top:8px;"><i class="fas fa-redo"></i> Restart Steps</button>
-            <button class="btn-primary sim-action-btn" id="rxNextBtn" style="margin-top:4px;background:#10b981;"><i class="fas fa-forward"></i> Next Step</button>
-        </div>
-    `;
+        </div>`;
 
-    controlsContainer.querySelector('#rxSelect').addEventListener('change', e => {
-        rxIdx = parseInt(e.target.value); stepIdx = 0; stepTimer = 0;
-    });
-    controlsContainer.querySelector('#halfBtn').addEventListener('click', () => {
-        method = 'half'; stepIdx = 0; stepTimer = 0;
-        controlsContainer.querySelector('#halfBtn').style.background = '';
-        controlsContainer.querySelector('#osBtn').style.background = '#1e293b';
-    });
-    controlsContainer.querySelector('#osBtn').addEventListener('click', () => {
-        method = 'os'; stepIdx = 0; stepTimer = 0;
-        controlsContainer.querySelector('#osBtn').style.background = '#7c3aed';
-        controlsContainer.querySelector('#halfBtn').style.background = '#1e293b';
-    });
-    controlsContainer.querySelector('#rxResetBtn').addEventListener('click', () => { stepIdx = 0; stepTimer = 0; });
-    controlsContainer.querySelector('#rxNextBtn').addEventListener('click', () => {
-        const maxStep = method === 'half' ? REACTIONS[rxIdx].half.length : REACTIONS[rxIdx].os.length;
-        stepIdx = Math.min(stepIdx + 1, maxStep - 1);
-        stepTimer = 0;
-    });
+    document.getElementById('rxSel').addEventListener('change', e => { rxIdx = +e.target.value; stepIdx = 0; autoTimer = 0; });
+    document.getElementById('rxNext').addEventListener('click', () => { const mx = REACTIONS[rxIdx].half.length-1; if (stepIdx<mx) { stepIdx++; autoTimer=0; } });
+    document.getElementById('rxPrev').addEventListener('click', () => { if (stepIdx>0) { stepIdx--; autoTimer=0; } });
+    document.getElementById('rxReset').addEventListener('click', () => { stepIdx=0; autoTimer=0; });
 
-    function wrapText(ctx2, text, x, y, maxW, lineH) {
-        const words = text.split(' ');
-        let line = '';
-        for (const word of words) {
-            const test = line + word + ' ';
-            if (ctx2.measureText(test).width > maxW && line) {
-                ctx2.fillText(line, x, y); y += lineH; line = word + ' ';
-            } else { line = test; }
-        }
-        if (line) ctx2.fillText(line.trim(), x, y);
-        return y + lineH;
+    // Electron transfer animation
+    const eTrans = [];
+    function spawnElectronTransfer(W, H) {
+        for (let i=0;i<3;i++) eTrans.push({ x: W*0.35, y: H*0.55 + (Math.random()-0.5)*40, vx: 2.5+Math.random(), vy: (Math.random()-0.5)*1.5, alpha:1, t:0 });
     }
 
+    let fc = 0;
     function draw() {
         animId = requestAnimationFrame(draw);
         const W = rxCanvas.width = rxCanvas.offsetWidth || 700;
         const H = rxCanvas.height = rxCanvas.offsetHeight || 500;
-        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,W,H);
+        fc++;
 
         const rx = REACTIONS[rxIdx];
-        const pad = 30;
+        const steps = rx.half;
+        const maxStep = steps.length - 1;
+        autoTimer++;
+        if (autoTimer >= AUTO_DUR && stepIdx < maxStep) { stepIdx++; autoTimer = 0; }
 
-        // Title
-        ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(rx.name, W / 2, 30);
+        // Reaction title
+        ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(rx.name, W/2, 26);
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(20, 34); ctx.lineTo(W-20, 34); ctx.stroke();
 
-        // Unbalanced equation
-        ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif';
-        ctx.fillText('Unbalanced: ' + rx.unbalanced, W / 2, 52);
-
-        // Method label
-        const methodLabel = method === 'half' ? '⚗️ Half-Reaction Method' : '🔢 Oxidation State Method';
-        ctx.fillStyle = '#22d3ee'; ctx.font = 'bold 13px sans-serif';
-        ctx.fillText(methodLabel, W / 2, 76);
-
-        // Steps area
-        ctx.textAlign = 'left';
-        let y = 100;
-        const steps = method === 'half' ? rx.half : rx.os;
-        const maxStep = method === 'half' ? REACTIONS[rxIdx].half.length : REACTIONS[rxIdx].os.length;
-
-        // Auto advance
-        stepTimer++;
-        if (stepTimer > STEP_FRAMES) { stepTimer = 0; if (stepIdx < maxStep - 1) stepIdx++; }
-
-        steps.forEach((step, i) => {
-            const visible = i <= stepIdx;
-            if (!visible) return;
-            const isActive = i === stepIdx;
-            const alpha = isActive ? 1 : 0.6;
-
-            // Card bg
-            const cardH = method === 'half' ? 90 : 72;
-            ctx.fillStyle = isActive ? 'rgba(59,130,246,0.12)' : 'rgba(30,41,59,0.5)';
-            ctx.beginPath();
-            ctx.roundRect(pad, y, W - pad * 2, cardH, 8);
-            ctx.fill();
-            ctx.strokeStyle = isActive ? '#3b82f6' : '#334155';
-            ctx.lineWidth = isActive ? 2 : 1;
-            ctx.stroke();
-
-            // Step header
-            const header = method === 'half' ? step.label : step.step;
-            const stepColors = { oxidation: '#f97316', reduction: '#22d3ee', combine: '#10b981' };
-            ctx.fillStyle = method === 'half' ? (stepColors[step.type] || '#a78bfa') : '#fbbf24';
-            ctx.font = `bold 12px monospace`;
-            ctx.globalAlpha = alpha;
-            ctx.fillText(header, pad + 12, y + 20);
-
-            // Step content
-            ctx.fillStyle = '#e2e8f0'; ctx.font = '11px monospace';
-            if (method === 'half') {
-                step.steps.forEach((s, si) => {
-                    ctx.fillText(s, pad + 18, y + 36 + si * 16);
-                });
-            } else {
-                y = wrapText(ctx, step.detail, pad + 18, y + 34, W - pad * 2 - 30, 16) - 16;
-            }
-            ctx.globalAlpha = 1;
-            y += cardH + 8;
+        // Draw atom boxes (reactants → products)
+        const atoms = rx.half[0].highlight || [];
+        const bW = 100, bH = 56, bY = H*0.14;
+        const nAtoms = Math.min(atoms.length, 4);
+        atoms.slice(0,nAtoms).forEach((a,i) => {
+            const bX = 30 + i * (bW + 18);
+            const isReduced = i % 2 === 1;
+            ctx.fillStyle = isReduced ? 'rgba(34,211,238,0.1)' : 'rgba(249,115,22,0.1)';
+            ctx.beginPath(); ctx.roundRect(bX, bY, bW, bH, 8); ctx.fill();
+            ctx.strokeStyle = isReduced ? '#22d3ee' : '#f97316'; ctx.lineWidth = 1.8; ctx.stroke();
+            ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center';
+            ctx.fillText(a, bX+bW/2, bY+28);
+            ctx.fillStyle = isReduced ? '#22d3ee' : '#f97316'; ctx.font = '10px sans-serif';
+            ctx.fillText(isReduced ? '← gains e⁻' : 'loses e⁻ →', bX+bW/2, bY+46);
         });
 
-        // Final balanced (show when all steps done)
-        if (stepIdx >= maxStep - 1) {
-            ctx.fillStyle = 'rgba(16,185,129,0.15)';
-            ctx.beginPath(); ctx.roundRect(pad, y + 5, W - pad * 2, 44, 8); ctx.fill();
-            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.fillStyle = '#4ade80'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
-            ctx.fillText('✅ Balanced: ' + rx.balanced, W / 2, y + 26);
+        // Arrow between reactants
+        if (nAtoms >= 2) {
+            const arX = 130 + (bW + 18)/2;
+            ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2; ctx.setLineDash([4,4]);
+            ctx.beginPath(); ctx.moveTo(arX, bY+bH/2); ctx.lineTo(arX+bW+18, bY+bH/2); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#64748b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('e⁻ transfer', arX+bW/2+9, bY+bH/2 - 6);
         }
+
+        // Electron transfer animation
+        if (fc % 40 === 0 && nAtoms >= 2 && stepIdx >= 1) spawnElectronTransfer(W, H*0.17 + bH*0.5);
+        for (let i=eTrans.length-1;i>=0;i--) {
+            const e=eTrans[i]; e.x+=e.vx; e.y+=e.vy; e.alpha-=0.025; e.t++;
+            if (e.alpha<=0||e.x>W*0.7) { eTrans.splice(i,1); continue; }
+            ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(167,139,250,${e.alpha})`; ctx.fill();
+            ctx.fillStyle = `rgba(220,200,255,${e.alpha})`; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('e⁻', e.x, e.y-7);
+        }
+
+        // Step cards
+        const cardStartY = H * 0.36;
+        steps.slice(0, stepIdx+1).forEach((step, si) => {
+            const isActive = si === stepIdx;
+            const cardH = 72 + (step.text.split('\n').length - 1)*17;
+            const yOff = si === stepIdx ? 0 : Math.min(si, stepIdx-1) * 92;
+            const cardY = cardStartY + si * 92;
+
+            if (cardY + cardH > H - 10) return; // clip off-screen
+
+            // Animated card entrance
+            const entProgress = isActive ? Math.min(1, autoTimer / 20) : 1;
+            ctx.globalAlpha = entProgress;
+
+            ctx.fillStyle = isActive ? 'rgba(59,130,246,0.14)' : 'rgba(30,41,59,0.6)';
+            ctx.beginPath(); ctx.roundRect(18, cardY, W-36, cardH, 10); ctx.fill();
+            ctx.strokeStyle = isActive ? (step.balanced?'#10b981':'#3b82f6') : '#334155';
+            ctx.lineWidth = isActive ? 2.2 : 1;
+            ctx.stroke();
+
+            // Step title
+            const titleCol = step.balanced ? '#4ade80' : (isActive ? '#fbbf24' : '#94a3b8');
+            ctx.fillStyle = titleCol; ctx.font = `bold 12px monospace`; ctx.textAlign = 'left';
+            ctx.fillText(step.title, 30, cardY + 20);
+
+            // Step text
+            const lines = step.text.split('\n');
+            lines.forEach((ln, li) => {
+                ctx.fillStyle = step.final ? '#4ade80' : '#e2e8f0';
+                ctx.font = step.final ? 'bold 12px monospace' : '11.5px monospace';
+                ctx.fillText(ln, 30, cardY + 38 + li * 17);
+            });
+            ctx.globalAlpha = 1;
+        });
 
         // Progress dots
-        const dotY = H - 20;
-        for (let i = 0; i < maxStep; i++) {
-            ctx.beginPath(); ctx.arc(W / 2 - (maxStep - 1) * 10 + i * 20, dotY, 5, 0, Math.PI * 2);
-            ctx.fillStyle = i <= stepIdx ? '#3b82f6' : '#334155'; ctx.fill();
-        }
+        const dotY = H - 18;
+        steps.forEach((_,i) => {
+            ctx.beginPath(); ctx.arc(W/2 - (maxStep)*10 + i*20, dotY, 5, 0, Math.PI*2);
+            ctx.fillStyle = i<=stepIdx ? '#3b82f6' : '#334155'; ctx.fill();
+        });
+
+        // Sidebar step label
+        const sl = document.getElementById('rxStepLbl');
+        if (sl) sl.textContent = `${stepIdx+1} / ${maxStep+1}: ${steps[stepIdx].title}`;
     }
     draw();
-
-    overlayEl.innerHTML += `<span class="sim-badge">⚗️ Redox</span><span class="sim-badge">📋 Step-by-step</span>`;
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        if (rxCanvas && rxCanvas.parentNode) rxCanvas.parentNode.removeChild(rxCanvas);
-    };
+    overlayEl.innerHTML += `<span class="sim-badge">⚗️ Redox</span><span class="sim-badge">Step-by-step</span>`;
+    return () => { cancelAnimationFrame(animId); rxCanvas.remove(); };
 }
 
 // =====================================================================
-// ELASTIC vs INELASTIC COLLISION SIMULATOR
+// ELASTIC vs INELASTIC COLLISION SIMULATOR — 2D canvas animated
 // =====================================================================
 function initCollisionSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
-
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let colCanvas = document.getElementById('colCanvas');
-    if (!colCanvas) {
-        colCanvas = document.createElement('canvas');
-        colCanvas.id = 'colCanvas';
-        colCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
-        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(colCanvas); }
-    }
+    const colCanvas = make2DCanvas(engine, 'colCanvas', '#0d1117');
     const ctx = colCanvas.getContext('2d');
 
-    let m1 = 2, m2 = 3, u1 = 6, u2 = -2, ctype = 'elastic';
-    let state = 'before'; // 'before', 'colliding', 'after'
-    let animT = 0, animId = null;
+    let m1=3, m2=2, u1=6, u2=-3, ctype='elastic';
+    let simT=0, animId=null, running=true;
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-atom"></i> 💥 Collision Simulator</div>
-            <div style="display:flex;gap:6px;margin-bottom:8px;">
-                <button class="btn-primary" id="elasticBtn" style="flex:1;font-size:0.8rem;padding:6px;">⚡ Elastic</button>
-                <button class="btn-secondary" id="inelasticBtn" style="flex:1;font-size:0.8rem;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;">💧 Inelastic</button>
+            <div class="game-section-title">💥 Collision Simulator</div>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+                <button class="btn-primary" id="elBtn" style="flex:1;font-size:0.8rem;padding:7px;">⚡ Elastic</button>
+                <button id="inBtn" style="flex:1;font-size:0.8rem;padding:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;">💧 Inelastic</button>
             </div>
-            <div class="sim-control-row">
-                <label>Mass 1: <strong id="m1Lbl">${m1}</strong> kg</label>
-                <input type="range" class="game-slider" id="m1Sl" min="1" max="8" step="0.5" value="${m1}">
-            </div>
-            <div class="sim-control-row">
-                <label>Mass 2: <strong id="m2Lbl">${m2}</strong> kg</label>
-                <input type="range" class="game-slider" id="m2Sl" min="1" max="8" step="0.5" value="${m2}">
-            </div>
-            <div class="sim-control-row">
-                <label>v₁ initial: <strong id="u1Lbl">${u1}</strong> m/s →</label>
-                <input type="range" class="game-slider" id="u1Sl" min="1" max="12" step="0.5" value="${u1}">
-            </div>
-            <div class="sim-control-row">
-                <label>v₂ initial: <strong id="u2Lbl">${Math.abs(u2)}</strong> m/s ← </label>
-                <input type="range" class="game-slider" id="u2Sl" min="0" max="8" step="0.5" value="${Math.abs(u2)}">
-            </div>
+            <div class="sim-control-row"><label>Mass₁: <strong id="m1L">${m1}</strong> kg</label><input type="range" class="game-slider" id="m1S" min="1" max="8" step="0.5" value="${m1}"></div>
+            <div class="sim-control-row"><label>Mass₂: <strong id="m2L">${m2}</strong> kg</label><input type="range" class="game-slider" id="m2S" min="1" max="8" step="0.5" value="${m2}"></div>
+            <div class="sim-control-row"><label>v₁: <strong id="u1L">${u1}</strong> m/s →</label><input type="range" class="game-slider" id="u1S" min="1" max="12" step="0.5" value="${u1}"></div>
+            <div class="sim-control-row"><label>v₂: <strong id="u2L">${Math.abs(u2)}</strong> m/s ←</label><input type="range" class="game-slider" id="u2S" min="0" max="10" step="0.5" value="${Math.abs(u2)}"></div>
+            <button class="btn-primary sim-action-btn" id="colReplay"><i class="fas fa-redo"></i> Replay</button>
             <div class="sim-stats-grid" style="margin-top:8px;">
-                <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
-                    <div class="sim-stat-label">p (before)</div>
-                    <div class="sim-stat-value" id="pBefore" style="font-size:0.8rem;">--</div>
-                </div>
-                <div class="sim-stat-card" style="border-left:3px solid #10b981">
-                    <div class="sim-stat-label">p (after)</div>
-                    <div class="sim-stat-value" id="pAfter" style="font-size:0.8rem;">--</div>
-                </div>
-                <div class="sim-stat-card" style="border-left:3px solid #f59e0b">
-                    <div class="sim-stat-label">KE (before)</div>
-                    <div class="sim-stat-value" id="keBefore" style="font-size:0.8rem;">--</div>
-                </div>
-                <div class="sim-stat-card" style="border-left:3px solid #f97316">
-                    <div class="sim-stat-label">KE (after)</div>
-                    <div class="sim-stat-value" id="keAfter" style="font-size:0.8rem;">--</div>
-                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #22d3ee"><div class="sim-stat-label">p before</div><div class="sim-stat-value" id="pBef" style="font-size:0.82rem;">—</div></div>
+                <div class="sim-stat-card" style="border-left:3px solid #10b981"><div class="sim-stat-label">p after</div><div class="sim-stat-value" id="pAft" style="font-size:0.82rem;">—</div></div>
+                <div class="sim-stat-card" style="border-left:3px solid #f59e0b"><div class="sim-stat-label">KE before</div><div class="sim-stat-value" id="keBef" style="font-size:0.82rem;">—</div></div>
+                <div class="sim-stat-card" style="border-left:3px solid #f97316"><div class="sim-stat-label">KE after</div><div class="sim-stat-value" id="keAft" style="font-size:0.82rem;">—</div></div>
             </div>
-            <div class="sim-status" id="colStatus" style="margin-top:8px;"></div>
-            <button class="btn-primary sim-action-btn" id="colResetBtn"><i class="fas fa-redo"></i> Replay</button>
-        </div>
-    `;
+        </div>`;
 
-    function calcFinals() {
+    ['#m1S','#m2S','#u1S','#u2S'].forEach(id => {
+        document.getElementById(id.slice(1)).addEventListener('input', e => {
+            const v = parseFloat(e.target.value);
+            if (id==='#m1S') { m1=v; document.getElementById('m1L').textContent=v; }
+            if (id==='#m2S') { m2=v; document.getElementById('m2L').textContent=v; }
+            if (id==='#u1S') { u1=v; document.getElementById('u1L').textContent=v; }
+            if (id==='#u2S') { u2=-v; document.getElementById('u2L').textContent=v; }
+            simT=0;
+        });
+    });
+    document.getElementById('elBtn').addEventListener('click', () => { ctype='elastic'; simT=0; document.getElementById('elBtn').style.background=''; document.getElementById('inBtn').style.background='#1e293b'; });
+    document.getElementById('inBtn').addEventListener('click', () => { ctype='inelastic'; simT=0; document.getElementById('inBtn').style.background='#7c3aed'; document.getElementById('elBtn').style.background='#1e293b'; });
+    document.getElementById('colReplay').addEventListener('click', () => { simT=0; });
+
+    function calcAfter() {
         let v1f, v2f;
-        if (ctype === 'elastic') {
-            v1f = ((m1 - m2) * u1 + 2 * m2 * u2) / (m1 + m2);
-            v2f = ((m2 - m1) * u2 + 2 * m1 * u1) / (m1 + m2);
+        if (ctype==='elastic') {
+            v1f = ((m1-m2)*u1 + 2*m2*u2) / (m1+m2);
+            v2f = ((m2-m1)*u2 + 2*m1*u1) / (m1+m2);
         } else {
-            // perfectly inelastic: stick together
-            v1f = v2f = (m1 * u1 + m2 * u2) / (m1 + m2);
+            v1f = v2f = (m1*u1 + m2*u2) / (m1+m2);
         }
         return { v1f, v2f };
     }
 
-    function reset() { animT = 0; state = 'before'; }
-
-    function updateSliders() {
-        m1 = parseFloat(controlsContainer.querySelector('#m1Sl').value);
-        m2 = parseFloat(controlsContainer.querySelector('#m2Sl').value);
-        u1 = parseFloat(controlsContainer.querySelector('#u1Sl').value);
-        u2 = -parseFloat(controlsContainer.querySelector('#u2Sl').value);
-        controlsContainer.querySelector('#m1Lbl').textContent = m1;
-        controlsContainer.querySelector('#m2Lbl').textContent = m2;
-        controlsContainer.querySelector('#u1Lbl').textContent = u1;
-        controlsContainer.querySelector('#u2Lbl').textContent = Math.abs(u2);
-        reset();
+    const sparks2 = [];
+    function spawnSparks2(cx, cy) {
+        for (let i=0;i<16;i++) {
+            const angle = (i/16)*Math.PI*2;
+            sparks2.push({ x:cx, y:cy, vx:Math.cos(angle)*(3+Math.random()*4), vy:Math.sin(angle)*(3+Math.random()*4), alpha:1, color: ctype==='elastic'?'#fbbf24':'#f97316' });
+        }
     }
 
-    ['#m1Sl','#m2Sl','#u1Sl','#u2Sl'].forEach(id => controlsContainer.querySelector(id).addEventListener('input', updateSliders));
-    controlsContainer.querySelector('#colResetBtn').addEventListener('click', reset);
-    controlsContainer.querySelector('#elasticBtn').addEventListener('click', () => {
-        ctype = 'elastic'; reset();
-        controlsContainer.querySelector('#elasticBtn').style.background = '';
-        controlsContainer.querySelector('#inelasticBtn').style.background = '#1e293b';
-    });
-    controlsContainer.querySelector('#inelasticBtn').addEventListener('click', () => {
-        ctype = 'inelastic'; reset();
-        controlsContainer.querySelector('#inelasticBtn').style.background = '#7c3aed';
-        controlsContainer.querySelector('#elasticBtn').style.background = '#1e293b';
-    });
-
-    let KEbeforeGraphHistory = [], KEafterGraphHistory = [];
-
+    let hitDone = false;
     function draw() {
         animId = requestAnimationFrame(draw);
         const W = colCanvas.width = colCanvas.offsetWidth || 700;
         const H = colCanvas.height = colCanvas.offsetHeight || 500;
-        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,W,H);
 
-        const { v1f, v2f } = calcFinals();
-        const pBefore = m1 * u1 + m2 * u2;
-        const pAfter = m1 * v1f + m2 * v2f;
-        const keBefore = 0.5 * m1 * u1 * u1 + 0.5 * m2 * u2 * u2;
-        const keAfter = 0.5 * m1 * v1f * v1f + 0.5 * m2 * v2f * v2f;
+        const { v1f, v2f } = calcAfter();
+        const floorY = H * 0.68;
+        const SCALE = W / 220;
+        const TOTAL = 260, HIT_AT = 100;
 
-        document.getElementById('pBefore').textContent = pBefore.toFixed(1) + ' kg·m/s';
-        document.getElementById('pAfter').textContent = pAfter.toFixed(1) + ' kg·m/s';
-        document.getElementById('keBefore').textContent = keBefore.toFixed(1) + ' J';
-        document.getElementById('keAfter').textContent = keAfter.toFixed(1) + ' J';
+        simT += 0.7;
+        if (simT > TOTAL) simT = TOTAL;
 
-        const floorY = H * 0.72;
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(0, floorY, W, 3);
+        // Floor / track
+        const fgrad = ctx.createLinearGradient(0, floorY, 0, floorY+16);
+        fgrad.addColorStop(0,'#334155'); fgrad.addColorStop(1,'#1e293b');
+        ctx.fillStyle = fgrad; ctx.fillRect(0, floorY, W, 16);
+        ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+        for (let tx=0;tx<W;tx+=20) {
+            ctx.beginPath(); ctx.moveTo(tx, floorY); ctx.lineTo(tx+10, floorY+8); ctx.stroke();
+        }
 
-        const r1 = 20 + m1 * 5, r2 = 20 + m2 * 5;
-        const TOTAL_FRAMES = 180;
-        const COLLIDE_AT = 80;
-        animT++;
-        if (animT > TOTAL_FRAMES + 60) animT = 0;
-
+        const r1 = 18 + m1 * 4, r2 = 18 + m2 * 4;
         let x1, x2;
-        const t = animT;
-        if (t < COLLIDE_AT) {
-            state = 'before';
-            const pct = t / COLLIDE_AT;
-            x1 = W * 0.15 + pct * (W * 0.4 - W * 0.15 - r1 - r2);
-            x2 = W * 0.85 - pct * (W * 0.85 - W * 0.6 - r1 - r2);
-        } else if (t < COLLIDE_AT + 20) {
-            state = 'colliding';
-            x1 = W * 0.4 - r1;
-            x2 = W * 0.4 + r2;
+        const t = simT;
+
+        if (t < HIT_AT) {
+            const pct = t / HIT_AT;
+            x1 = W*0.12 + pct * (W*0.46 - W*0.12 - r1 - r2 - 4);
+            x2 = W*0.88 - pct * (W*0.88 - W*0.54 - r1 - r2 - 4);
+            hitDone = false;
+        } else if (t < HIT_AT + 14) {
+            x1 = W*0.46 - r1 - 2;
+            x2 = W*0.46 + r2 + 2;
+            if (!hitDone) { spawnSparks2(W*0.46, floorY - (r1+r2)/2); hitDone = true; }
         } else {
-            state = 'after';
-            const tPost = t - COLLIDE_AT - 20;
-            const pctPost = tPost / (TOTAL_FRAMES - COLLIDE_AT);
-            x1 = W * 0.4 - r1 + pctPost * (v1f * 12);
-            x2 = W * 0.4 + r2 + pctPost * (v2f * 12);
+            const tPost = (t - HIT_AT - 14) / (TOTAL - HIT_AT - 14);
+            x1 = W*0.46 - r1 - 2 + v1f * tPost * 14 * SCALE;
+            if (ctype==='inelastic') {
+                // stick together
+                x2 = x1 + r1 + r2;
+            } else {
+                x2 = W*0.46 + r2 + 2 + v2f * tPost * 14 * SCALE;
+            }
         }
 
-        // Ball 1 (blue)
-        ctx.beginPath(); ctx.arc(x1, floorY - r1, r1, 0, Math.PI * 2);
-        ctx.fillStyle = '#22d3ee'; ctx.fill();
-        ctx.strokeStyle = state === 'colliding' ? '#fff' : '#0891b2'; ctx.lineWidth = 2.5; ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, r1 * 0.5)}px sans-serif`; ctx.textAlign = 'center';
-        ctx.fillText(`${m1}kg`, x1, floorY - r1 + 5);
-
-        // Ball 2 (orange)
-        ctx.beginPath(); ctx.arc(x2, floorY - r2, r2, 0, Math.PI * 2);
-        ctx.fillStyle = '#f97316'; ctx.fill();
-        ctx.strokeStyle = state === 'colliding' ? '#fff' : '#c2410c'; ctx.lineWidth = 2.5; ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, r2 * 0.5)}px sans-serif`; ctx.textAlign = 'center';
-        ctx.fillText(`${m2}kg`, x2, floorY - r2 + 5);
-
-        // Collision flash
-        if (state === 'colliding') {
-            ctx.beginPath(); ctx.arc((x1 + x2) / 2, floorY - (r1 + r2) / 2, (r1 + r2) * 0.8, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,200,0.25)'; ctx.fill();
-            ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText('💥', (x1 + x2) / 2, floorY - r1 - r2 - 8);
+        // Draw sparks
+        for (let i=sparks2.length-1;i>=0;i--) {
+            const s=sparks2[i]; s.x+=s.vx; s.y+=s.vy; s.vy+=0.15; s.alpha-=0.035;
+            if (s.alpha<=0) { sparks2.splice(i,1); continue; }
+            ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI*2);
+            ctx.fillStyle = s.color+Math.floor(s.alpha*255).toString(16).padStart(2,'0'); ctx.fill();
         }
+
+        function drawBall(x, cy, r, col, lbl) {
+            const bg = ctx.createRadialGradient(x-r*0.3, cy-r*0.3, r*0.1, x, cy, r);
+            bg.addColorStop(0, '#fff'); bg.addColorStop(0.3, col); bg.addColorStop(1, col+'66');
+            ctx.beginPath(); ctx.arc(x, cy, r, 0, Math.PI*2);
+            ctx.fillStyle = bg; ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10,r*0.5)}px sans-serif`; ctx.textAlign = 'center';
+            ctx.fillText(lbl, x, cy + r*0.18);
+        }
+
+        const cy1 = floorY - r1, cy2 = floorY - r2;
+        drawBall(x1, cy1, r1, '#22d3ee', `${m1}kg`);
+        drawBall(x2, cy2, r2, '#f97316', `${m2}kg`);
 
         // Velocity arrows
-        function drawArrowV(x, y, vx, color, label) {
-            if (Math.abs(vx) < 0.1) return;
-            const len = vx * 6;
-            ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke();
-            const dir = len > 0 ? 1 : -1;
-            ctx.beginPath(); ctx.moveTo(x + len, y); ctx.lineTo(x + len - dir * 8, y - 5);
-            ctx.lineTo(x + len - dir * 8, y + 5); ctx.fillStyle = color; ctx.fill();
-            ctx.fillStyle = color; ctx.font = '11px sans-serif'; ctx.textAlign = len > 0 ? 'left' : 'right';
-            ctx.fillText(label, x + len + dir * 6, y + 4);
+        function velArrow(x, y, v, col, label) {
+            if (Math.abs(v)<0.05) return;
+            const len = v * SCALE * 5; const dir = len>0?1:-1;
+            ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+len, y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x+len,y); ctx.lineTo(x+len-dir*8,y-5); ctx.lineTo(x+len-dir*8,y+5); ctx.closePath();
+            ctx.fillStyle = col; ctx.fill();
+            ctx.fillStyle = col; ctx.font = '10px monospace'; ctx.textAlign = len>0?'left':'right';
+            ctx.fillText(label, x+len+dir*6, y+3);
         }
 
-        const v1disp = state === 'before' ? u1 : (state === 'colliding' ? 0 : v1f);
-        const v2disp = state === 'before' ? u2 : (state === 'colliding' ? 0 : v2f);
-        drawArrowV(x1, floorY - r1 * 2 - 15, v1disp, '#22d3ee', `v₁=${v1disp.toFixed(1)}`);
-        drawArrowV(x2, floorY - r2 * 2 - 15, v2disp, '#f97316', `v₂=${v2disp.toFixed(1)}`);
+        const phase = t < HIT_AT ? 'before' : t < HIT_AT+14 ? 'hit' : 'after';
+        const v1d = phase==='before'?u1:(phase==='hit'?0:v1f);
+        const v2d = phase==='before'?u2:(phase==='hit'?0:v2f);
+        velArrow(x1, cy1 - r1 - 12, v1d, '#22d3ee', `${v1d.toFixed(1)}m/s`);
+        if (ctype!=='inelastic'||phase!=='after') velArrow(x2, cy2 - r2 - 12, v2d, '#f97316', `${v2d.toFixed(1)}m/s`);
 
-        // KE bar chart (bottom)
-        const chartY = H - 20, chartH = 60;
-        const maxKE = Math.max(keBefore, 1);
-        const barW = 55;
-        [[keBefore, '#22d3ee', 'KE before', W / 2 - 80], [keAfter, '#10b981', 'KE after', W / 2 + 10]].forEach(([ke, col, lbl, bx]) => {
-            const bh = (ke / maxKE) * chartH;
-            ctx.fillStyle = col;
-            ctx.fillRect(bx, chartY - bh, barW, bh);
-            ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(lbl, bx + barW / 2, chartY + 14);
-            ctx.fillStyle = '#fff'; ctx.fillText(ke.toFixed(1) + 'J', bx + barW / 2, chartY - bh - 4);
-        });
+        // Collision flash
+        if (phase==='hit') {
+            ctx.beginPath(); ctx.arc((x1+x2)/2, (cy1+cy2)/2, (r1+r2)*0.9, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255,255,180,0.2)'; ctx.fill();
+            ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('💥', (x1+x2)/2, (cy1+cy2)/2 - r1);
+        }
 
         // Type label
-        ctx.fillStyle = ctype === 'elastic' ? '#4ade80' : '#f97316';
-        ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(ctype === 'elastic' ? '⚡ Elastic — KE conserved' : `💧 Inelastic — KE lost: ${(keBefore - keAfter).toFixed(1)} J`, W / 2, 24);
+        const typeCol = ctype==='elastic'?'#4ade80':'#f97316';
+        ctx.fillStyle = typeCol; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(ctype==='elastic'?'⚡ ELASTIC — KE conserved':'💧 PERFECTLY INELASTIC — KE lost as heat/sound', W/2, 22);
 
-        const cs = document.getElementById('colStatus');
-        if (cs) cs.innerHTML = state === 'colliding' ? '<strong style="color:#fbbf24;">💥 Collision happening!</strong>' :
-            state === 'after' ? `<strong style="color:#10b981;">After:</strong> v₁=${v1f.toFixed(2)} m/s | v₂=${v2f.toFixed(2)} m/s` :
-            '<strong style="color:#64748b;">Approaching...</strong>';
+        // KE / Momentum bars (bottom panel)
+        const barPanel = floorY + 28;
+        const panH = H - barPanel - 10;
+        const keBefore = 0.5*m1*u1**2 + 0.5*m2*u2**2;
+        const keAfter  = 0.5*m1*v1f**2 + (ctype==='inelastic'?0.5*m2*v1f**2:0.5*m2*v2f**2);
+        const pBefore  = m1*u1 + m2*u2;
+        const pAfter   = m1*v1f + m2*v2f;
+
+        const maxKE = Math.max(keBefore, 0.1);
+        const barW2 = 55, yB = H - 18;
+
+        [['KE before',keBefore,'#f59e0b',W/2-160],[`KE after\n(${((keAfter/keBefore)*100).toFixed(0)}%)`,keAfter,'#f97316',W/2-95],
+         ['p before',Math.abs(pBefore)*0.6,'#22d3ee',W/2+20],['p after',Math.abs(pAfter)*0.6,'#10b981',W/2+85]].forEach(([lbl,val,col,bx]) => {
+            const bh = Math.min((val/maxKE)*panH*0.9, panH*0.9);
+            ctx.fillStyle = col+'55'; ctx.fillRect(bx, yB-bh, barW2, bh);
+            ctx.fillStyle = col; ctx.fillRect(bx, yB-bh, barW2, 3);
+            ctx.fillStyle = '#94a3b8'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+            lbl.split('\n').forEach((ll,li) => ctx.fillText(ll, bx+barW2/2, yB+12+li*12));
+            ctx.fillStyle = '#fff'; ctx.fillText(val.toFixed(1), bx+barW2/2, yB-bh-5);
+        });
+
+        // Sidebar stats
+        const pb=document.getElementById('pBef'),pa=document.getElementById('pAft'),kb=document.getElementById('keBef'),ka=document.getElementById('keAft');
+        if (pb) pb.textContent = pBefore.toFixed(1)+' kg·m/s';
+        if (pa) pa.textContent = pAfter.toFixed(1)+' kg·m/s';
+        if (kb) kb.textContent = keBefore.toFixed(1)+' J';
+        if (ka) { ka.textContent = keAfter.toFixed(1)+' J'; ka.style.color = Math.abs(keAfter-keBefore)<0.5?'#4ade80':'#f97316'; }
+
+        if (simT >= TOTAL) simT = TOTAL;
     }
     draw();
-
     overlayEl.innerHTML += `<span class="sim-badge">💥 Collision</span><span class="sim-badge">p & KE</span>`;
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        if (colCanvas && colCanvas.parentNode) colCanvas.parentNode.removeChild(colCanvas);
-    };
+    return () => { cancelAnimationFrame(animId); colCanvas.remove(); };
 }
 
 // =====================================================================
-// FUNCTION GRAPHS — Relations & Functions (Maths)
+// FUNCTION GRAPHS — Plotly powered
 // =====================================================================
 function initFunctionGraphSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
-
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let fgCanvas = document.getElementById('fgCanvas');
-    if (!fgCanvas) {
-        fgCanvas = document.createElement('canvas');
-        fgCanvas.id = 'fgCanvas';
-        fgCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
-        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(fgCanvas); }
-    }
-    const ctx = fgCanvas.getContext('2d');
+    const simArea = engine.renderer.domElement.parentElement;
+    simArea.style.position = 'relative';
+    // Hide THREE.js canvas, use a div for Plotly
+    let fgDiv = document.getElementById('fgPlotDiv');
+    if (fgDiv) fgDiv.remove();
+    fgDiv = document.createElement('div');
+    fgDiv.id = 'fgPlotDiv';
+    fgDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;border-radius:12px;overflow:hidden;background:#0d1117;';
+    simArea.appendChild(fgDiv);
 
     const FUNCTIONS = [
-        { id: 'linear',    label: 'Linear: f(x) = mx + c',          fn: (x,p) => p[0]*x + p[1],           params: [{name:'m',min:-5,max:5,step:0.5,val:1},{name:'c',min:-10,max:10,step:1,val:0}] },
-        { id: 'quad',      label: 'Quadratic: f(x) = ax² + bx + c', fn: (x,p) => p[0]*x*x + p[1]*x + p[2], params: [{name:'a',min:-3,max:3,step:0.5,val:1},{name:'b',min:-5,max:5,step:0.5,val:0},{name:'c',min:-10,max:10,step:1,val:0}] },
-        { id: 'sqrt',      label: 'Square root: f(x) = √(x + k)',   fn: (x,p) => Math.sqrt(Math.max(0, x + p[0])), params: [{name:'k',min:-5,max:5,step:0.5,val:0}] },
-        { id: 'abs',       label: 'Absolute: f(x) = |x + a| + b',   fn: (x,p) => Math.abs(x + p[0]) + p[1], params: [{name:'a',min:-5,max:5,step:0.5,val:0},{name:'b',min:-5,max:5,step:0.5,val:0}] },
-        { id: 'rational',  label: 'Rational: f(x) = 1/(x + a)',      fn: (x,p) => 1 / (x + p[0]),           params: [{name:'a',min:-4,max:4,step:0.5,val:1}] },
-        { id: 'cubic',     label: 'Cubic: f(x) = x³ + ax',          fn: (x,p) => x*x*x + p[0]*x,           params: [{name:'a',min:-5,max:5,step:0.5,val:0}] },
-        { id: 'expo',      label: 'Exponential: f(x) = aᵉˣ',        fn: (x,p) => Math.pow(Math.max(0.01, p[0]), x), params: [{name:'a(base)',min:0.1,max:5,step:0.1,val:2}] },
-        { id: 'log',       label: 'Logarithmic: f(x) = log_a(x)',    fn: (x,p) => x > 0 ? Math.log(x) / Math.log(Math.max(1.01, p[0])) : NaN, params: [{name:'a(base)',min:1.1,max:10,step:0.5,val:10}] },
+        { id:'linear',   label:'Linear: f(x)=mx+c',          params:[{n:'m',min:-5,max:5,step:0.5,val:1},{n:'c',min:-10,max:10,step:1,val:0}],   fn:(x,p)=>p[0]*x+p[1] },
+        { id:'quad',     label:'Quadratic: f(x)=ax²+bx+c',   params:[{n:'a',min:-3,max:3,step:0.25,val:1},{n:'b',min:-5,max:5,step:0.5,val:0},{n:'c',min:-10,max:10,step:1,val:0}], fn:(x,p)=>p[0]*x*x+p[1]*x+p[2] },
+        { id:'cubic',    label:'Cubic: f(x)=ax³+bx+c',       params:[{n:'a',min:-2,max:2,step:0.25,val:1},{n:'b',min:-5,max:5,step:0.5,val:0},{n:'c',min:-5,max:5,step:1,val:0}],  fn:(x,p)=>p[0]*x**3+p[1]*x+p[2] },
+        { id:'abs',      label:'Absolute: f(x)=|ax+b|+c',    params:[{n:'a',min:-3,max:3,step:0.5,val:1},{n:'b',min:-5,max:5,step:0.5,val:0},{n:'c',min:-5,max:5,step:1,val:0}],   fn:(x,p)=>Math.abs(p[0]*x+p[1])+p[2] },
+        { id:'sqrt',     label:'Square Root: f(x)=√(ax+b)',   params:[{n:'a',min:0.1,max:4,step:0.25,val:1},{n:'b',min:-5,max:5,step:0.5,val:0}],  fn:(x,p)=>p[0]*x+p[1]>=0?Math.sqrt(p[0]*x+p[1]):null },
+        { id:'rational', label:'Rational: f(x)=a/(x+b)',      params:[{n:'a',min:-5,max:5,step:0.5,val:1},{n:'b',min:-4,max:4,step:0.5,val:1}],    fn:(x,p)=>Math.abs(x+p[1])<0.05?null:p[0]/(x+p[1]) },
+        { id:'expo',     label:'Exponential: f(x)=aˣ',        params:[{n:'a(base)',min:0.1,max:5,step:0.1,val:2}],                                   fn:(x,p)=>Math.pow(Math.max(0.01,p[0]),x) },
+        { id:'log',      label:'Logarithm: f(x)=logₐ(x)',     params:[{n:'a(base)',min:1.1,max:10,step:0.5,val:10}],                                 fn:(x,p)=>x>0.01?Math.log(x)/Math.log(Math.max(1.01,p[0])):null },
     ];
 
-    let currentFn = FUNCTIONS[0];
-    let paramVals = currentFn.params.map(p => p.val);
+    let curFn = FUNCTIONS[0], pVals = curFn.params.map(p=>p.val);
+    let needsRedraw = true;
 
-    function buildParamUI() {
-        const pc = controlsContainer.querySelector('#fgParams');
+    function buildUI() {
+        const pc = document.getElementById('fgParamArea');
         if (!pc) return;
-        pc.innerHTML = currentFn.params.map((p, i) => `
+        pc.innerHTML = curFn.params.map((p,i)=>`
             <div class="sim-control-row">
-                <label>${p.name}: <strong id="fgP${i}Lbl">${paramVals[i]}</strong></label>
-                <input type="range" class="game-slider" id="fgP${i}" min="${p.min}" max="${p.max}" step="${p.step}" value="${paramVals[i]}">
-            </div>
-        `).join('');
-        currentFn.params.forEach((p, i) => {
-            const sl = controlsContainer.querySelector(`#fgP${i}`);
-            if (sl) sl.addEventListener('input', e => {
-                paramVals[i] = parseFloat(e.target.value);
-                const lbl = controlsContainer.querySelector(`#fgP${i}Lbl`);
-                if (lbl) lbl.textContent = paramVals[i];
-            });
+                <label>${p.n}: <strong id="fgpL${i}">${pVals[i]}</strong></label>
+                <input type="range" class="game-slider" id="fgpS${i}" min="${p.min}" max="${p.max}" step="${p.step}" value="${pVals[i]}">
+            </div>`).join('');
+        curFn.params.forEach((_,i) => {
+            const sl = document.getElementById(`fgpS${i}`);
+            if (sl) sl.addEventListener('input', e => { pVals[i]=parseFloat(e.target.value); document.getElementById(`fgpL${i}`).textContent=pVals[i]; needsRedraw=true; });
         });
     }
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-chart-line"></i> 📈 Function Graphs</div>
-            <select class="game-select" id="fgSelect">
-                ${FUNCTIONS.map(f => `<option value="${f.id}">${f.label}</option>`).join('')}
-            </select>
-            <div id="fgParams" style="margin-top:8px;"></div>
-            <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:8px;">
-                <div class="sim-stat-label">f(x) at x=0</div>
-                <div class="sim-stat-value" id="fgAtZero">--</div>
+            <div class="game-section-title">📈 Function Graphs</div>
+            <select class="game-select" id="fgFnSel">${FUNCTIONS.map(f=>`<option value="${f.id}">${f.label}</option>`).join('')}</select>
+            <div id="fgParamArea" style="margin-top:8px;"></div>
+            <div class="sim-stat-card" style="margin-top:8px;border-left:3px solid #22d3ee;">
+                <div class="sim-stat-label">f(0)</div>
+                <div class="sim-stat-value" id="fgAt0">—</div>
             </div>
-        </div>
-    `;
+            <div class="sim-stat-card" style="margin-top:6px;border-left:3px solid #a78bfa;">
+                <div class="sim-stat-label">Domain note</div>
+                <div style="font-size:0.75rem;color:#94a3b8;" id="fgDomainNote">—</div>
+            </div>
+        </div>`;
 
-    controlsContainer.querySelector('#fgSelect').addEventListener('change', e => {
-        currentFn = FUNCTIONS.find(f => f.id === e.target.value) || FUNCTIONS[0];
-        paramVals = currentFn.params.map(p => p.val);
-        buildParamUI();
+    document.getElementById('fgFnSel').addEventListener('change', e => {
+        curFn = FUNCTIONS.find(f=>f.id===e.target.value)||FUNCTIONS[0];
+        pVals = curFn.params.map(p=>p.val);
+        buildUI();
+        needsRedraw = true;
     });
-    buildParamUI();
+    buildUI();
 
-    function drawGrid(W, H, ox, oy, scale) {
-        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
-        for (let gx = ox % scale; gx < W; gx += scale) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
-        for (let gy = oy % scale; gy < H; gy += scale) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
-        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke(); // Y axis
-        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke(); // X axis
-        ctx.fillStyle = '#475569'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-        for (let gv = 1; gv * scale < Math.max(W, H); gv++) {
-            const px = ox + gv * scale, nx = ox - gv * scale;
-            const py = oy - gv * scale, ny = oy + gv * scale;
-            if (px < W) ctx.fillText(gv, px, oy + 14);
-            if (nx > 0) ctx.fillText(-gv, nx, oy + 14);
-            if (py > 0) { ctx.textAlign = 'right'; ctx.fillText(gv, ox - 4, py + 4); ctx.textAlign = 'center'; }
-            if (ny < H) { ctx.textAlign = 'right'; ctx.fillText(-gv, ox - 4, ny + 4); ctx.textAlign = 'center'; }
-        }
-        ctx.fillStyle = '#64748b'; ctx.textAlign = 'left';
-        ctx.fillText('x', W - 20, oy - 6);
-        ctx.fillText('y', ox + 6, 16);
-    }
+    const DOMAIN_NOTES = { rational:'Asymptote at x = −b', sqrt:'Defined only for ax+b ≥ 0', log:'Defined only for x > 0', expo:'Base must be positive', linear:'Defined for all x ∈ ℝ', quad:'Defined for all x ∈ ℝ', cubic:'Defined for all x ∈ ℝ', abs:'Defined for all x ∈ ℝ' };
 
-    let animId = null;
-    function draw() {
-        animId = requestAnimationFrame(draw);
-        const W = fgCanvas.width = fgCanvas.offsetWidth || 700;
-        const H = fgCanvas.height = fgCanvas.offsetHeight || 500;
-        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
-
-        const scale = 50;
-        const ox = W / 2, oy = H / 2;
-        drawGrid(W, H, ox, oy, scale);
-
-        // Plot function
-        ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        let started = false;
-        for (let px = 0; px < W; px += 1.5) {
-            const xVal = (px - ox) / scale;
-            const yVal = currentFn.fn(xVal, paramVals);
-            if (!isFinite(yVal) || isNaN(yVal) || Math.abs(yVal) > 1e4) { started = false; continue; }
-            const py = oy - yVal * scale;
-            if (!started) { ctx.moveTo(px, py); started = true; } else { ctx.lineTo(px, py); }
-        }
-        ctx.stroke();
-
-        // f(0) marker
-        const y0 = currentFn.fn(0, paramVals);
-        if (isFinite(y0) && !isNaN(y0)) {
-            ctx.beginPath(); ctx.arc(ox, oy - y0 * scale, 5, 0, Math.PI * 2);
-            ctx.fillStyle = '#f59e0b'; ctx.fill();
-            const az = document.getElementById('fgAtZero');
-            if (az) az.textContent = y0.toFixed(3);
-        }
-
-        ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
-        ctx.fillText(currentFn.label, 16, 22);
-    }
-    draw();
-
-    overlayEl.innerHTML += `<span class="sim-badge">📈 Function Graph</span>`;
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        if (fgCanvas && fgCanvas.parentNode) fgCanvas.parentNode.removeChild(fgCanvas);
+    let rafId;
+    const plotLayout = {
+        paper_bgcolor:'#0d1117', plot_bgcolor:'#0f172a',
+        font:{ color:'#94a3b8', size:11 },
+        margin:{ l:50, r:20, t:30, b:50 },
+        xaxis:{ gridcolor:'#1e293b', zerolinecolor:'#334155', zerolinewidth:2, color:'#64748b', title:'x' },
+        yaxis:{ gridcolor:'#1e293b', zerolinecolor:'#334155', zerolinewidth:2, color:'#64748b', title:'f(x)', range:[-15,15] },
+        showlegend:false,
     };
+
+    function replot() {
+        if (!needsRedraw) { rafId = requestAnimationFrame(replot); return; }
+        needsRedraw = false;
+        const xs = [], ys = [];
+        for (let xi=-12; xi<=12; xi+=0.05) {
+            const y = curFn.fn(xi, pVals);
+            xs.push(xi); ys.push((y===null||!isFinite(y)||Math.abs(y)>50)?null:y);
+        }
+        const trace = { x:xs, y:ys, mode:'lines', type:'scatter',
+            line:{ color:'#22d3ee', width:2.5 }, connectgaps:false };
+        // zero crossing dots
+        const zDots = { x:[], y:[], mode:'markers', type:'scatter',
+            marker:{ color:'#f59e0b', size:8, symbol:'circle' } };
+        for (let j=1;j<xs.length;j++) {
+            if (ys[j-1]!==null&&ys[j]!==null&&Math.sign(ys[j-1])!==Math.sign(ys[j])) {
+                const xz = xs[j-1] - ys[j-1]*(xs[j]-xs[j-1])/(ys[j]-ys[j-1]);
+                zDots.x.push(xz); zDots.y.push(0);
+            }
+        }
+        if (typeof Plotly !== 'undefined') {
+            Plotly.react(fgDiv, [trace, zDots], {...plotLayout, title:{ text: curFn.label, font:{ color:'#a78bfa', size:13 } }}, { responsive:true, displayModeBar:false });
+        }
+        const at0 = curFn.fn(0, pVals);
+        const a0el = document.getElementById('fgAt0'); if(a0el) a0el.textContent = (at0!==null&&isFinite(at0)) ? at0.toFixed(3) : 'undefined';
+        const dn = document.getElementById('fgDomainNote'); if(dn) dn.textContent = DOMAIN_NOTES[curFn.id]||'—';
+        rafId = requestAnimationFrame(replot);
+    }
+    needsRedraw = true;
+    replot();
+
+    overlayEl.innerHTML += `<span class="sim-badge">📈 Functions</span>`;
+    return () => { cancelAnimationFrame(rafId); fgDiv.remove(); };
 }
 
 // =====================================================================
-// SINE & COSINE WAVE GRAPHS
+// SINE & COSINE WAVE GRAPHS — Plotly powered
 // =====================================================================
 function initWaveGraphSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
+    const simArea = engine.renderer.domElement.parentElement;
+    simArea.style.position = 'relative';
+    let wgDiv = document.getElementById('wgPlotDiv');
+    if (wgDiv) wgDiv.remove();
+    wgDiv = document.createElement('div');
+    wgDiv.id = 'wgPlotDiv';
+    wgDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;border-radius:12px;overflow:hidden;background:#0d1117;';
+    simArea.appendChild(wgDiv);
 
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let wgCanvas = document.getElementById('wgCanvas');
-    if (!wgCanvas) {
-        wgCanvas = document.createElement('canvas');
-        wgCanvas.id = 'wgCanvas';
-        wgCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
-        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(wgCanvas); }
-    }
-    const ctx = wgCanvas.getContext('2d');
-
-    let sinA = 1, sinB = 1, sinC = 0, sinD = 0;
-    let cosA = 1, cosB = 1, cosC = 0, cosD = 0;
-    let showSin = true, showCos = true, animOffset = 0;
+    let sA=1,sB=1,sC=0,sD=0, cA=1,cB=1,cC=0,cD=0;
+    let showS=true, showC=true, needsRedraw=true;
 
     controlsContainer.innerHTML = `
-        <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-wave-square"></i> 〜 Sine & Cosine Waves</div>
-            <div style="background:#1e293b;border-radius:6px;padding:6px 10px;margin-bottom:6px;">
-                <div style="color:#22d3ee;font-weight:700;font-size:0.82rem;">y = A·sin(Bx + C) + D</div>
-                <div class="sim-control-row"><label>A (amp): <strong id="sinALbl">${sinA}</strong></label><input type="range" class="game-slider" id="sinASl" min="0.1" max="3" step="0.1" value="${sinA}"></div>
-                <div class="sim-control-row"><label>B (freq): <strong id="sinBLbl">${sinB}</strong></label><input type="range" class="game-slider" id="sinBSl" min="0.1" max="5" step="0.1" value="${sinB}"></div>
-                <div class="sim-control-row"><label>C (phase): <strong id="sinCLbl">${sinC}</strong>π</label><input type="range" class="game-slider" id="sinCSl" min="-2" max="2" step="0.25" value="${sinC}"></div>
-                <div class="sim-control-row"><label>D (shift): <strong id="sinDLbl">${sinD}</strong></label><input type="range" class="game-slider" id="sinDSl" min="-3" max="3" step="0.5" value="${sinD}"></div>
-                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;"><input type="checkbox" id="showSin" checked> Show sin (cyan)</label>
-            </div>
-            <div style="background:#1e293b;border-radius:6px;padding:6px 10px;margin-bottom:6px;">
-                <div style="color:#f97316;font-weight:700;font-size:0.82rem;">y = A·cos(Bx + C) + D</div>
-                <div class="sim-control-row"><label>A: <strong id="cosALbl">${cosA}</strong></label><input type="range" class="game-slider" id="cosASl" min="0.1" max="3" step="0.1" value="${cosA}"></div>
-                <div class="sim-control-row"><label>B: <strong id="cosBLbl">${cosB}</strong></label><input type="range" class="game-slider" id="cosBSl" min="0.1" max="5" step="0.1" value="${cosB}"></div>
-                <div class="sim-control-row"><label>C: <strong id="cosCLbl">${cosC}</strong>π</label><input type="range" class="game-slider" id="cosCSl" min="-2" max="2" step="0.25" value="${cosC}"></div>
-                <div class="sim-control-row"><label>D: <strong id="cosDLbl">${cosD}</strong></label><input type="range" class="game-slider" id="cosDSl" min="-3" max="3" step="0.5" value="${cosD}"></div>
-                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;"><input type="checkbox" id="showCos" checked> Show cos (orange)</label>
-            </div>
+        <div class="game-panel sim-controls-panel" style="overflow-y:auto;max-height:80vh;">
+            <div class="game-section-title">〜 Sine & Cosine</div>
+            <div style="color:#22d3ee;font-weight:700;font-size:0.82rem;margin-bottom:4px;">y = A·sin(Bx + Cπ) + D</div>
+            <div class="sim-control-row"><label>A: <b id="sAL">${sA}</b></label><input type="range" class="game-slider" id="sAS" min="0.1" max="4" step="0.1" value="${sA}"></div>
+            <div class="sim-control-row"><label>B: <b id="sBL">${sB}</b></label><input type="range" class="game-slider" id="sBS" min="0.1" max="6" step="0.1" value="${sB}"></div>
+            <div class="sim-control-row"><label>C: <b id="sCL">${sC}</b>π</label><input type="range" class="game-slider" id="sCS" min="-2" max="2" step="0.25" value="${sC}"></div>
+            <div class="sim-control-row"><label>D: <b id="sDL">${sD}</b></label><input type="range" class="game-slider" id="sDS" min="-4" max="4" step="0.5" value="${sD}"></div>
+            <label style="font-size:0.78rem;display:flex;gap:6px;align-items:center;margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="showSin" checked> Show sin (cyan)</label>
+            <hr style="border-color:#1e293b;">
+            <div style="color:#f97316;font-weight:700;font-size:0.82rem;margin-bottom:4px;">y = A·cos(Bx + Cπ) + D</div>
+            <div class="sim-control-row"><label>A: <b id="cAL">${cA}</b></label><input type="range" class="game-slider" id="cAS" min="0.1" max="4" step="0.1" value="${cA}"></div>
+            <div class="sim-control-row"><label>B: <b id="cBL">${cB}</b></label><input type="range" class="game-slider" id="cBS" min="0.1" max="6" step="0.1" value="${cB}"></div>
+            <div class="sim-control-row"><label>C: <b id="cCL">${cC}</b>π</label><input type="range" class="game-slider" id="cCS" min="-2" max="2" step="0.25" value="${cC}"></div>
+            <div class="sim-control-row"><label>D: <b id="cDL">${cD}</b></label><input type="range" class="game-slider" id="cDS" min="-4" max="4" step="0.5" value="${cD}"></div>
+            <label style="font-size:0.78rem;display:flex;gap:6px;align-items:center;margin-bottom:8px;cursor:pointer;"><input type="checkbox" id="showCos" checked> Show cos (orange)</label>
             <div class="sim-stats-grid" style="margin-top:6px;">
-                <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
-                    <div class="sim-stat-label">sin Period T</div>
-                    <div class="sim-stat-value" id="sinPeriod" style="font-size:0.85rem;">--</div>
-                </div>
-                <div class="sim-stat-card" style="border-left:3px solid #f97316">
-                    <div class="sim-stat-label">cos Period T</div>
-                    <div class="sim-stat-value" id="cosPeriod" style="font-size:0.85rem;">--</div>
-                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #22d3ee"><div class="sim-stat-label">sin Period</div><div class="sim-stat-value" id="sinT" style="font-size:0.85rem;">—</div></div>
+                <div class="sim-stat-card" style="border-left:3px solid #f97316"><div class="sim-stat-label">cos Period</div><div class="sim-stat-value" id="cosT" style="font-size:0.85rem;">—</div></div>
             </div>
-        </div>
-    `;
+        </div>`;
 
-    function bindSlider(id, lblId, setter, getLbl) {
-        const el = controlsContainer.querySelector(id);
-        if (el) el.addEventListener('input', e => {
-            setter(parseFloat(e.target.value));
-            const lbl = controlsContainer.querySelector(lblId);
-            if (lbl) lbl.textContent = getLbl ? getLbl(parseFloat(e.target.value)) : parseFloat(e.target.value);
-        });
+    function bind(slId, lblId, setter) {
+        const el = document.getElementById(slId);
+        if(el) el.addEventListener('input', e => { setter(parseFloat(e.target.value)); document.getElementById(lblId).textContent=e.target.value; needsRedraw=true; });
     }
-    bindSlider('#sinASl','#sinALbl', v => sinA = v);
-    bindSlider('#sinBSl','#sinBLbl', v => sinB = v);
-    bindSlider('#sinCSl','#sinCLbl', v => sinC = v);
-    bindSlider('#sinDSl','#sinDLbl', v => sinD = v);
-    bindSlider('#cosASl','#cosALbl', v => cosA = v);
-    bindSlider('#cosBSl','#cosBLbl', v => cosB = v);
-    bindSlider('#cosCSl','#cosCLbl', v => cosC = v);
-    bindSlider('#cosDSl','#cosDLbl', v => cosD = v);
-    controlsContainer.querySelector('#showSin').addEventListener('change', e => showSin = e.target.checked);
-    controlsContainer.querySelector('#showCos').addEventListener('change', e => showCos = e.target.checked);
+    bind('sAS','sAL', v=>sA=v); bind('sBS','sBL', v=>sB=v); bind('sCS','sCL', v=>sC=v); bind('sDS','sDL', v=>sD=v);
+    bind('cAS','cAL', v=>cA=v); bind('cBS','cBL', v=>cB=v); bind('cCS','cCL', v=>cC=v); bind('cDS','cDL', v=>cD=v);
+    document.getElementById('showSin').addEventListener('change', e => { showS=e.target.checked; needsRedraw=true; });
+    document.getElementById('showCos').addEventListener('change', e => { showC=e.target.checked; needsRedraw=true; });
 
-    let animId = null;
-    function draw() {
-        animId = requestAnimationFrame(draw);
-        const W = wgCanvas.width = wgCanvas.offsetWidth || 700;
-        const H = wgCanvas.height = wgCanvas.offsetHeight || 500;
-        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+    const xs = [];
+    for (let x=-4*Math.PI; x<=4*Math.PI; x+=0.04) xs.push(x);
 
-        const scaleX = W / (4 * Math.PI), scaleY = (H * 0.35);
-        const ox = 0, oy = H / 2;
-        animOffset += 0.012;
-
-        // Grid
-        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
-        for (let g = 0; g <= 4; g++) {
-            const gx = (g * Math.PI) * scaleX;
-            ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
-            ctx.fillStyle = '#334155'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText(g === 0 ? '0' : g + 'π', gx, oy + 18);
-        }
-        for (let g = -3; g <= 3; g++) {
-            const gy = oy - g * scaleY / 3;
-            ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
-            if (g !== 0) { ctx.fillStyle = '#334155'; ctx.textAlign = 'left'; ctx.fillText(g, 4, gy + 4); }
-        }
-        // Axes
-        ctx.strokeStyle = '#475569'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(4, H); ctx.stroke();
-
-        function plotWave(A, B, C, D, fn, color, label) {
-            ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            for (let px = 0; px < W; px += 1.5) {
-                const xRad = px / scaleX;
-                const y = A * fn(B * xRad + C * Math.PI) + D;
-                const py = oy - y * scaleY;
-                px === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-            }
-            ctx.stroke();
-            // Animated tracer dot
-            const tracerX = (animOffset % (2 * Math.PI / B)) * scaleX * B;
-            const tracerXClamped = tracerX % W;
-            const xRad2 = tracerXClamped / scaleX;
-            const tracerY = oy - (A * fn(B * xRad2 + C * Math.PI) + D) * scaleY;
-            ctx.beginPath(); ctx.arc(tracerXClamped, tracerY, 5, 0, Math.PI*2);
-            ctx.fillStyle = color; ctx.fill();
-            ctx.fillStyle = color; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
-            ctx.fillText(label, 12, tracerY - 8);
-        }
-
-        if (showSin) plotWave(sinA, sinB, sinC, sinD, Math.sin, '#22d3ee', `sin: A=${sinA} B=${sinB} C=${sinC}π D=${sinD}`);
-        if (showCos) plotWave(cosA, cosB, cosC, cosD, Math.cos, '#f97316', `cos: A=${cosA} B=${cosB} C=${cosC}π D=${cosD}`);
-
-        // Period labels
-        const sp = document.getElementById('sinPeriod'), cp = document.getElementById('cosPeriod');
-        if (sp) sp.textContent = (2 * Math.PI / sinB).toFixed(2) + ' rad';
-        if (cp) cp.textContent = (2 * Math.PI / cosB).toFixed(2) + ' rad';
-
-        // Key properties annotations
-        ctx.fillStyle = '#22d3ee'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
-        if (showSin) ctx.fillText(`sin: |max|=${sinA}, T=${(2*Math.PI/sinB).toFixed(2)}rad`, 10, H - 40);
-        ctx.fillStyle = '#f97316';
-        if (showCos) ctx.fillText(`cos: |max|=${cosA}, T=${(2*Math.PI/cosB).toFixed(2)}rad`, 10, H - 22);
-    }
-    draw();
-
-    overlayEl.innerHTML += `<span class="sim-badge">〜 sin/cos Waves</span>`;
-    return () => {
-        if (animId) cancelAnimationFrame(animId);
-        if (wgCanvas && wgCanvas.parentNode) wgCanvas.parentNode.removeChild(wgCanvas);
+    const layout = {
+        paper_bgcolor:'#0d1117', plot_bgcolor:'#0f172a',
+        font:{ color:'#94a3b8', size:11 },
+        margin:{ l:55, r:20, t:38, b:50 },
+        xaxis:{ gridcolor:'#1e293b', zerolinecolor:'#334155', zerolinewidth:2, color:'#64748b', title:'x (radians)',
+                tickvals:[-4,-3,-2,-1,0,1,2,3,4].map(v=>v*Math.PI), ticktext:['-4π','-3π','-2π','-π','0','π','2π','3π','4π'] },
+        yaxis:{ gridcolor:'#1e293b', zerolinecolor:'#334155', zerolinewidth:2, color:'#64748b', title:'y', range:[-6,6] },
+        legend:{ font:{ color:'#94a3b8'}, bgcolor:'#0d1117',  bordercolor:'#334155' },
     };
+
+    let rafId;
+    function replot() {
+        if (!needsRedraw) { rafId = requestAnimationFrame(replot); return; }
+        needsRedraw = false;
+        const traces = [];
+        if (showS) {
+            traces.push({ name:`sin: A=${sA} B=${sB} C=${sC}π D=${sD}`,
+                x:xs, y:xs.map(x=>sA*Math.sin(sB*x+sC*Math.PI)+sD),
+                mode:'lines', line:{ color:'#22d3ee', width:2.5 } });
+            // Amplitude dashed markers
+            traces.push({ x:[xs[0],xs[xs.length-1]], y:[sA+sD, sA+sD], mode:'lines', name:'sin peak', line:{ color:'#22d3ee', dash:'dot', width:1 }, showlegend:false });
+            traces.push({ x:[xs[0],xs[xs.length-1]], y:[-sA+sD,-sA+sD], mode:'lines', name:'sin trough', line:{ color:'#22d3ee', dash:'dot', width:1 }, showlegend:false });
+        }
+        if (showC) {
+            traces.push({ name:`cos: A=${cA} B=${cB} C=${cC}π D=${cD}`,
+                x:xs, y:xs.map(x=>cA*Math.cos(cB*x+cC*Math.PI)+cD),
+                mode:'lines', line:{ color:'#f97316', width:2.5 } });
+            traces.push({ x:[xs[0],xs[xs.length-1]], y:[cA+cD, cA+cD], mode:'lines', name:'cos peak', line:{ color:'#f97316', dash:'dot', width:1 }, showlegend:false });
+            traces.push({ x:[xs[0],xs[xs.length-1]], y:[-cA+cD,-cA+cD], mode:'lines', name:'cos trough', line:{ color:'#f97316', dash:'dot', width:1 }, showlegend:false });
+        }
+        if (typeof Plotly !== 'undefined') Plotly.react(wgDiv, traces, layout, { responsive:true, displayModeBar:false });
+
+        const st=document.getElementById('sinT'), ct=document.getElementById('cosT');
+        if (st) st.textContent = (2*Math.PI/sB).toFixed(3)+' rad = '+(360/sB).toFixed(1)+'°';
+        if (ct) ct.textContent = (2*Math.PI/cB).toFixed(3)+' rad = '+(360/cB).toFixed(1)+'°';
+        rafId = requestAnimationFrame(replot);
+    }
+    needsRedraw = true;
+    replot();
+
+    overlayEl.innerHTML += `<span class="sim-badge">〜 sin/cos</span>`;
+    return () => { cancelAnimationFrame(rafId); wgDiv.remove(); };
+}
+
 }
 
 // Expose to global scope (module doesn't auto-export to window)
