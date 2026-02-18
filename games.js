@@ -956,18 +956,24 @@ const SIMULATORS = {
         { id: 'relative-motion', title: 'Relative Motion', summary: 'Switch observer frames and see relative velocity vectors.' },
         { id: 'laws-motion', title: 'Friction Simulator', summary: 'Apply forces, adjust friction, observe static vs kinetic friction.' },
         { id: 'roller-coaster', title: 'Work-Energy Roller Coaster', summary: 'Track motion with KE/PE graphs in sync.' },
-        { id: 'shm', title: 'Simple Harmonic Motion', summary: 'Pendulum: period, amplitude and energy in real time.' }
+        { id: 'shm', title: 'Simple Harmonic Motion', summary: 'Pendulum: period, amplitude and energy in real time.' },
+        { id: 'collision', title: 'Elastic vs Inelastic Collision', summary: 'Compare elastic and inelastic collisions with momentum & KE graphs.' }
     ],
     chemistry: [
         { id: 'orbitals', title: 'Atomic Orbital Visualizer', summary: 's, p, d orbitals in 3D with slicing.' },
         { id: 'vsepr', title: 'Molecular Geometry (VSEPR)', summary: 'Switch shapes and view bond angles.' },
         { id: 'hybrid', title: 'Hybridization Explorer', summary: 'Animate s + p to sp, sp2, sp3.' },
-        { id: 'mo-diagram', title: 'Molecular Orbital Diagram', summary: 'MO energy diagrams for N₂, O₂, F₂, NO, CO.' }
+        { id: 'mo-diagram', title: 'Molecular Orbital Diagram', summary: 'MO energy diagrams for N₂, O₂, F₂, NO, CO.' },
+        { id: 'photoelectric', title: 'Photoelectric Effect', summary: 'Watch electrons ejected as light intensity and frequency change.' },
+        { id: 'orbital-overlap', title: 'Orbital Overlap', summary: 's and p orbital overlap: bonding, antibonding, and zero overlap.' },
+        { id: 'redox-balance', title: 'Redox Balancing', summary: 'Step-by-step balancing via half-reaction or oxidation state method.' }
     ],
     maths: [
         { id: 'coord-3d', title: '3D Coordinate Geometry', summary: 'Points, distance, and section formula.' },
         { id: 'plane-line', title: 'Plane & Line in 3D', summary: 'Rotate planes, see intersections and skew.' },
-        { id: 'lpp', title: 'Linear Programming (LPP)', summary: 'Feasible region, corner points, optimal solution.' }
+        { id: 'lpp', title: 'Linear Programming (LPP)', summary: 'Feasible region, corner points, optimal solution.' },
+        { id: 'function-graph', title: 'Graphs of Functions', summary: 'Relations & Functions: plot multiple function types and their domains.' },
+        { id: 'wave-graph', title: 'Sine & Cosine Waves', summary: 'Visualize A·sin(Bx+C)+D and A·cos(Bx+C)+D with live controls.' }
     ]
 };
 
@@ -980,17 +986,17 @@ function renderSimulators(container) {
                     <div class="sim-category-card" data-category="physics">
                         <div class="category-icon">⚡</div>
                         <h3>Physics</h3>
-                        <p class="sim-status">6 simulators</p>
+                        <p class="sim-status">7 simulators</p>
                     </div>
                     <div class="sim-category-card" data-category="chemistry">
                         <div class="category-icon">🧪</div>
                         <h3>Chemistry</h3>
-                        <p class="sim-status">4 simulators</p>
+                        <p class="sim-status">7 simulators</p>
                     </div>
                     <div class="sim-category-card" data-category="maths">
                         <div class="category-icon">📐</div>
                         <h3>Maths</h3>
-                        <p class="sim-status">3 simulators</p>
+                        <p class="sim-status">5 simulators</p>
                     </div>
                 </div>
                 <div class="game-section-title" style="margin-top: 16px;"><i class="fas fa-cube"></i> 📋 Simulator List</div>
@@ -1094,6 +1100,24 @@ function renderSimulators(container) {
                 break;
             case 'mo-diagram':
                 cleanupFn = initMOSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'photoelectric':
+                cleanupFn = initPhotoelectricSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'orbital-overlap':
+                cleanupFn = initOrbitalOverlapSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'redox-balance':
+                cleanupFn = initRedoxSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'collision':
+                cleanupFn = initCollisionSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'function-graph':
+                cleanupFn = initFunctionGraphSim(simEngine, uiControls, overlayEl);
+                break;
+            case 'wave-graph':
+                cleanupFn = initWaveGraphSim(simEngine, uiControls, overlayEl);
                 break;
             default:
                 break;
@@ -3165,14 +3189,6 @@ function randNormal() {
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
-function randNormal() {
-    let u = 0;
-    let v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
-    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-}
-
 // =====================================================================
 // SHM PENDULUM SIMULATOR
 // =====================================================================
@@ -4012,6 +4028,1180 @@ function initMOSim(engine, controlsContainer, overlayEl) {
     return () => {
         if (moCanvas && moCanvas.parentNode) moCanvas.parentNode.removeChild(moCanvas);
         moResizeObs.disconnect();
+    };
+}
+
+// =====================================================================
+// PHOTOELECTRIC EFFECT SIMULATOR (no user controls — pure animation)
+// =====================================================================
+function initPhotoelectricSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let peCanvas = document.getElementById('peCanvas');
+    if (!peCanvas) {
+        peCanvas = document.createElement('canvas');
+        peCanvas.id = 'peCanvas';
+        peCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
+        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(peCanvas); }
+    }
+    const ctx = peCanvas.getContext('2d');
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-bolt"></i> ⚡ Photoelectric Effect</div>
+            <div style="font-size:0.82rem;color:#94a3b8;line-height:1.6;margin-bottom:8px;">
+                When light of <strong style="color:#fbbf24;">sufficient frequency</strong> strikes a metal surface,
+                electrons are ejected. Below the threshold frequency — no electrons, no matter the intensity.
+            </div>
+            <div class="sim-stat-card" style="border-left:3px solid #f59e0b;">
+                <div class="sim-stat-label">⚙️ Phase</div>
+                <div class="sim-stat-value" id="pePhaseLabel" style="font-size:0.8rem;">—</div>
+            </div>
+            <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:6px;">
+                <div class="sim-stat-label">📋 Key Concept</div>
+                <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;" id="peConceptLabel">—</div>
+            </div>
+            <div style="margin-top:10px;background:#1e293b;border-radius:8px;padding:10px;font-size:0.75rem;color:#64748b;line-height:1.8;">
+                <div>🔴 <strong style="color:#f87171;">Phase 1:</strong> Low frequency — no ejection</div>
+                <div>🟡 <strong style="color:#fbbf24;">Phase 2:</strong> Threshold frequency — barely ejected</div>
+                <div>🟢 <strong style="color:#4ade80;">Phase 3:</strong> High frequency — fast electrons</div>
+                <div>🔵 <strong style="color:#22d3ee;">Phase 4:</strong> Higher intensity — more electrons</div>
+            </div>
+        </div>
+    `;
+
+    const phases = [
+        { label: 'Low Frequency Light', concept: 'Even with high intensity, photon energy E=hf is below work function φ. No electrons ejected.', color: '#f87171', freq: 0.4, intensity: 3, ejectsElectrons: false },
+        { label: 'Threshold Frequency', concept: 'Photon energy exactly equals work function. Electrons just barely escape with zero kinetic energy.', color: '#fbbf24', freq: 1.0, intensity: 2, ejectsElectrons: true, slow: true },
+        { label: 'Above Threshold Frequency', concept: 'Extra energy (hf − φ) goes to kinetic energy of photoelectrons. Faster ejection!', color: '#4ade80', freq: 1.8, intensity: 2, ejectsElectrons: true, slow: false },
+        { label: 'High Intensity + High Frequency', concept: 'More photons → more electrons ejected per second, but speed stays the same (depends only on frequency).', color: '#22d3ee', freq: 1.8, intensity: 5, ejectsElectrons: true, slow: false },
+    ];
+
+    let phaseIdx = 0, phaseTimer = 0;
+    const PHASE_DUR = 220; // frames per phase
+
+    // Photon particles & electrons
+    const photons = [], electrons = [];
+    let frameCount = 0;
+
+    function spawnPhoton(phase) {
+        const W = peCanvas.width, H = peCanvas.height;
+        for (let i = 0; i < phase.intensity; i++) {
+            photons.push({
+                x: W * 0.08 + Math.random() * 20,
+                y: H * 0.25 + Math.random() * H * 0.5,
+                vx: 3.5 + Math.random(),
+                vy: (Math.random() - 0.5) * 0.5,
+                color: phase.color,
+                alive: true,
+                radius: 5,
+                hit: false,
+            });
+        }
+    }
+
+    function spawnElectron(x, y, phase) {
+        const speed = phase.slow ? 0.8 : 3 + Math.random() * 2;
+        electrons.push({
+            x, y,
+            vx: speed * (0.6 + Math.random() * 0.4),
+            vy: (Math.random() - 0.5) * speed,
+            alpha: 1.0,
+            color: '#a78bfa',
+            alive: true
+        });
+    }
+
+    let animId = null;
+    function draw() {
+        animId = requestAnimationFrame(draw);
+        const W = peCanvas.width = peCanvas.offsetWidth || 700;
+        const H = peCanvas.height = peCanvas.offsetHeight || 500;
+
+        ctx.fillStyle = 'rgba(13,17,23,0.85)';
+        ctx.fillRect(0, 0, W, H);
+
+        const phase = phases[phaseIdx];
+
+        // Metal surface
+        const surfX = W * 0.52;
+        const grad = ctx.createLinearGradient(surfX, 0, surfX + 80, 0);
+        grad.addColorStop(0, '#475569');
+        grad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(surfX, H * 0.1, 80, H * 0.8);
+        ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2;
+        ctx.strokeRect(surfX, H * 0.1, 80, H * 0.8);
+        ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('Metal', surfX + 40, H * 0.1 + 20);
+        ctx.fillText('Surface', surfX + 40, H * 0.1 + 34);
+
+        // Spawn photons
+        frameCount++;
+        if (frameCount % Math.max(1, Math.floor(8 / phase.intensity)) === 0) spawnPhoton(phase);
+
+        // Update & draw photons
+        for (let i = photons.length - 1; i >= 0; i--) {
+            const p = photons[i];
+            if (!p.alive) { photons.splice(i, 1); continue; }
+            p.x += p.vx; p.y += p.vy;
+            if (p.x >= surfX && !p.hit) {
+                p.hit = true;
+                if (phase.ejectsElectrons) spawnElectron(surfX, p.y, phase);
+                p.alive = false;
+                // Flash
+                ctx.beginPath(); ctx.arc(surfX, p.y, 14, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,255,180,0.55)'; ctx.fill();
+            }
+            if (p.x > W || p.y < 0 || p.y > H) p.alive = false;
+            // Draw photon as wave packet
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+            ctx.fillStyle = p.color; ctx.fill();
+            // Wave trail
+            ctx.strokeStyle = p.color; ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let w = 0; w < 24; w++) {
+                const wx = p.x - w * 3;
+                const wy = p.y + Math.sin(w * phase.freq * 1.2) * 5;
+                w === 0 ? ctx.moveTo(wx, wy) : ctx.lineTo(wx, wy);
+            }
+            ctx.stroke();
+        }
+
+        // Update & draw electrons
+        for (let i = electrons.length - 1; i >= 0; i--) {
+            const e = electrons[i];
+            if (!e.alive) { electrons.splice(i, 1); continue; }
+            e.x += e.vx; e.y += e.vy;
+            e.alpha -= 0.012;
+            if (e.alpha <= 0 || e.x > W) e.alive = false;
+            ctx.beginPath(); ctx.arc(e.x, e.y, 4, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(167,139,250,${e.alpha})`; ctx.fill();
+        }
+
+        // No-ejection indicator
+        if (!phase.ejectsElectrons) {
+            ctx.fillStyle = 'rgba(248,113,113,0.12)';
+            ctx.fillRect(surfX + 82, H * 0.1, W - surfX - 82, H * 0.8);
+            ctx.fillStyle = '#f87171'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('❌ No electron ejection', W * 0.8, H * 0.5);
+        }
+
+        // Phase progress bar
+        const pct = phaseTimer / PHASE_DUR;
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(20, H - 28, W - 40, 8);
+        ctx.fillStyle = phase.color; ctx.fillRect(20, H - 28, (W - 40) * pct, 8);
+        ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(`Phase ${phaseIdx+1}/4: ${phase.label}`, 20, H - 34);
+
+        // Update phase label
+        const pl = document.getElementById('pePhaseLabel');
+        const cl = document.getElementById('peConceptLabel');
+        if (pl) { pl.textContent = phase.label; pl.style.color = phase.color; }
+        if (cl) cl.textContent = phase.concept;
+
+        phaseTimer++;
+        if (phaseTimer >= PHASE_DUR) {
+            phaseTimer = 0;
+            phaseIdx = (phaseIdx + 1) % phases.length;
+            photons.length = 0; electrons.length = 0;
+        }
+    }
+    draw();
+
+    overlayEl.innerHTML += `<span class="sim-badge">⚡ Photoelectric</span><span class="sim-badge">E=hf</span>`;
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        if (peCanvas && peCanvas.parentNode) peCanvas.parentNode.removeChild(peCanvas);
+    };
+}
+
+// =====================================================================
+// ORBITAL OVERLAP SIMULATOR (s and p orbitals, refer image)
+// =====================================================================
+function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let ooCanvas = document.getElementById('ooCanvas');
+    if (!ooCanvas) {
+        ooCanvas = document.createElement('canvas');
+        ooCanvas.id = 'ooCanvas';
+        ooCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#f8fafc;';
+        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(ooCanvas); }
+    }
+    const ctx = ooCanvas.getContext('2d');
+
+    const OVERLAPS = [
+        { id: 'ss_pos',   label: 's–s (in phase)',        type: 'positive', desc: 'Both s orbitals in phase → constructive interference → σ bonding MO (lower energy)' },
+        { id: 'sp_pos',   label: 's–p (in phase)',        type: 'positive', desc: 's orbital overlaps with lobe of p orbital in phase → σ bonding MO' },
+        { id: 'pp_pos',   label: 'p–p end-on (in phase)', type: 'positive', desc: 'p orbitals, end-on, same phase → σ bonding MO (highest σ overlap)' },
+        { id: 'pp_side',  label: 'p–p side-on (in phase)',type: 'positive', desc: 'p orbitals side-on, parallel, same phase → π bonding MO' },
+        { id: 'ss_neg',   label: 's–s (out of phase)',    type: 'negative', desc: 'Both s orbitals out of phase → destructive interference → σ* antibonding MO (higher energy)' },
+        { id: 'sp_neg',   label: 's–p (out of phase)',    type: 'negative', desc: 's orbital overlaps with p lobe out of phase → σ* antibonding MO (nodal plane between them)' },
+        { id: 'pp_neg',   label: 'p–p side-on (anti)',    type: 'negative', desc: 'p orbitals side-on, opposite phase → π* antibonding MO (nodal plane between them)' },
+        { id: 'sp_zero',  label: 's–p⊥ (zero overlap)',   type: 'zero',     desc: 'p orbital perpendicular to approach direction → net overlap = 0 (+ cancels −)' },
+        { id: 'pp_zero',  label: 'p–p⊥ (zero overlap)',   type: 'zero',     desc: 'p orbitals at right angles → positive and negative regions cancel exactly → no bonding' },
+    ];
+
+    let current = 'ss_pos';
+    let animT = 0;
+    let animId = null;
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-circle"></i> 🔵 Orbital Overlap</div>
+            <select class="game-select" id="ooSelect">
+                ${OVERLAPS.map(o => `<option value="${o.id}">${o.label}</option>`).join('')}
+            </select>
+            <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:10px;">
+                <div class="sim-stat-label">🔗 Type</div>
+                <div class="sim-stat-value" id="ooTypeLabel" style="font-size:0.78rem;"></div>
+            </div>
+            <div style="font-size:0.78rem;color:#94a3b8;margin-top:8px;line-height:1.6;" id="ooDesc"></div>
+            <div style="margin-top:10px;font-size:0.75rem;color:#475569;background:#1e293b;border-radius:6px;padding:8px;line-height:1.9;">
+                <div><span style="color:#6ea8d5;">■</span> Negative phase lobe (grey/blue)</div>
+                <div><span style="color:#e8c46e;">■</span> Positive phase lobe (yellow/orange)</div>
+                <div><span style="color:#f87171;">■</span> Node plane (no electron density)</div>
+            </div>
+        </div>
+    `;
+
+    function updateInfo(id) {
+        const o = OVERLAPS.find(x => x.id === id);
+        if (!o) return;
+        const tl = document.getElementById('ooTypeLabel');
+        const dl = document.getElementById('ooDesc');
+        const typeColors = { positive: '#4ade80', negative: '#f87171', zero: '#94a3b8' };
+        const typeLabels = { positive: '✅ Bonding (Constructive)', negative: '❌ Antibonding (Destructive)', zero: '⚪ Zero Overlap' };
+        if (tl) { tl.textContent = typeLabels[o.type]; tl.style.color = typeColors[o.type]; }
+        if (dl) dl.textContent = o.desc;
+    }
+
+    // Draw an s orbital (filled circle with phase colour)
+    function drawS(cx, cy, R, phase, alpha = 0.7) {
+        const col = phase === '+' ? '#e8c46e' : '#6ea8d5';
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+        ctx.fillStyle = col.replace(')', `,${alpha})`).replace('rgb', 'rgba').replace('#', 'rgba(') + ')';
+        // Use hex directly
+        ctx.fillStyle = phase === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
+        ctx.fill();
+        ctx.strokeStyle = phase === '+' ? '#b8881a' : '#3a6ea0'; ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#333'; ctx.font = `bold ${Math.max(10, R/2.2)}px sans-serif`; ctx.textAlign = 'center';
+        ctx.fillText(phase === '+' ? '+' : '−', cx, cy + R / 5);
+    }
+
+    // Draw a p orbital (two lobes)
+    function drawP(cx, cy, R, dir, phase1, phase2, alpha = 0.7) {
+        // dir: 'h'=horizontal (along x), 'v'=vertical (along y)
+        const off = R * 0.7;
+        if (dir === 'h') {
+            // Right lobe (phase1), left lobe (phase2)
+            ctx.beginPath();
+            ctx.ellipse(cx + off, cy, R, R * 0.55, 0, 0, Math.PI * 2);
+            ctx.fillStyle = phase1 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
+            ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(cx - off, cy, R, R * 0.55, 0, 0, Math.PI * 2);
+            ctx.fillStyle = phase2 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#333'; ctx.font = `bold ${Math.max(9, R/2.5)}px sans-serif`; ctx.textAlign = 'center';
+            ctx.fillText(phase1 === '+' ? '+' : '−', cx + off, cy + 4);
+            ctx.fillText(phase2 === '+' ? '+' : '−', cx - off, cy + 4);
+        } else {
+            // Upper lobe (phase1), lower lobe (phase2)
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - off, R * 0.55, R, 0, 0, Math.PI * 2);
+            ctx.fillStyle = phase1 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
+            ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + off, R * 0.55, R, 0, 0, Math.PI * 2);
+            ctx.fillStyle = phase2 === '+' ? `rgba(232,196,110,${alpha})` : `rgba(110,168,213,${alpha})`;
+            ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#333'; ctx.font = `bold ${Math.max(9, R/2.5)}px sans-serif`; ctx.textAlign = 'center';
+            ctx.fillText(phase1 === '+' ? '+' : '−', cx, cy - off + 4);
+            ctx.fillText(phase2 === '+' ? '+' : '−', cx, cy + off + 4);
+        }
+    }
+
+    function drawAxis(W, H, cy) {
+        ctx.strokeStyle = '#999'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(W - 20, cy); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#666'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText('→ z', W - 30, cy - 6);
+    }
+
+    function drawLabel(x, y, text, color = '#333') {
+        ctx.fillStyle = color; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(text, x, y);
+    }
+
+    function renderOverlap(id, W, H, pulse) {
+        const R = Math.min(W, H) * 0.1;
+        const midY = H * 0.48;
+        const midX = W / 2;
+
+        ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, W, H);
+        drawAxis(W, H, midY);
+
+        // Overlap pulse (animation)
+        const sep = Math.max(0, Math.abs(Math.sin(pulse * 0.04)) * R * 0.7);
+
+        if (id === 'ss_pos') {
+            drawS(midX - R * 1.6 - sep, midY, R, '+');
+            drawLabel(midX - R * 1.6 - sep, midY - R - 10, 'p₁ (s)');
+            drawS(midX + R * 1.6 + sep, midY, R, '+');
+            drawLabel(midX + R * 1.6 + sep, midY - R - 10, 'p₂ (s)');
+            drawLabel(midX, midY - R * 2.2, '✅ Positive / Bonding Overlap', '#2a7a3b');
+        } else if (id === 'ss_neg') {
+            drawS(midX - R * 1.6 - sep, midY, R, '+');
+            drawLabel(midX - R * 1.6 - sep, midY - R - 10, 'p₁ (s)');
+            drawS(midX + R * 1.6 + sep, midY, R, '-');
+            drawLabel(midX + R * 1.6 + sep, midY - R - 10, 'p₂ (s)');
+            if (sep < R * 0.05) {
+                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 3]);
+                ctx.beginPath(); ctx.moveTo(midX, midY - R); ctx.lineTo(midX, midY + R); ctx.stroke();
+                ctx.setLineDash([]);
+                drawLabel(midX, midY + R + 18, 'Nodal plane', '#f87171');
+            }
+            drawLabel(midX, midY - R * 2.2, '❌ Negative / Antibonding Overlap', '#c0392b');
+        } else if (id === 'sp_pos') {
+            drawS(midX - R * 2.0 - sep, midY, R, '+');
+            drawLabel(midX - R * 2.0 - sep, midY - R - 10, 's');
+            drawP(midX + R * 1.2 + sep, midY, R, 'h', '+', '-');
+            drawLabel(midX + R * 1.2 + sep, midY - R * 1.6 - 10, 'p');
+            drawLabel(midX, midY - R * 2.2, '✅ s–p bonding overlap', '#2a7a3b');
+        } else if (id === 'sp_neg') {
+            drawS(midX - R * 2.0 - sep, midY, R, '+');
+            drawLabel(midX - R * 2.0 - sep, midY - R - 10, 's');
+            drawP(midX + R * 1.2 + sep, midY, R, 'h', '-', '+');
+            drawLabel(midX + R * 1.2 + sep, midY - R * 1.6 - 10, 'p');
+            if (sep < R * 0.05) {
+                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 3]);
+                ctx.beginPath(); ctx.moveTo(midX, midY - R); ctx.lineTo(midX, midY + R); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            drawLabel(midX, midY - R * 2.2, '❌ s–p antibonding overlap', '#c0392b');
+        } else if (id === 'pp_pos') {
+            drawP(midX - R * 2.2 - sep, midY, R, 'h', '+', '-');
+            drawLabel(midX - R * 2.2 - sep, midY - R * 1.6 - 10, 'p₁');
+            drawP(midX + R * 2.2 + sep, midY, R, 'h', '+', '-');
+            drawLabel(midX + R * 2.2 + sep, midY - R * 1.6 - 10, 'p₂');
+            drawLabel(midX, midY - R * 2.4, '✅ p–p σ bonding (end-on, in phase)', '#2a7a3b');
+        } else if (id === 'pp_side') {
+            const vOff = H * 0.14;
+            drawP(midX - R * 0.8, midY - vOff - sep * 0.5, R, 'v', '+', '-');
+            drawLabel(midX - R * 0.8, midY - vOff - R * 1.9 - sep * 0.5, 'p₁');
+            drawP(midX + R * 0.8, midY + vOff + sep * 0.5, R, 'v', '+', '-');
+            drawLabel(midX + R * 0.8, midY + vOff + R * 1.9 + sep * 0.5, 'p₂');
+            drawLabel(midX, H * 0.08, '✅ p–p π bonding (side-on, in phase)', '#2a7a3b');
+        } else if (id === 'pp_neg') {
+            const vOff = H * 0.14;
+            drawP(midX - R * 0.8, midY - vOff - sep * 0.5, R, 'v', '+', '-');
+            drawP(midX + R * 0.8, midY + vOff + sep * 0.5, R, 'v', '-', '+');
+            if (sep < R * 0.05) {
+                ctx.strokeStyle = '#f87171'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+                ctx.beginPath(); ctx.moveTo(midX - R * 2, midY); ctx.lineTo(midX + R * 2, midY); ctx.stroke();
+                ctx.setLineDash([]);
+                drawLabel(midX, midY + 14, 'Nodal plane', '#f87171');
+            }
+            drawLabel(midX, H * 0.08, '❌ p–p π* antibonding (side-on, anti)', '#c0392b');
+        } else if (id === 'sp_zero') {
+            drawS(midX - R * 2.0 - sep, midY, R, '+');
+            drawLabel(midX - R * 2.0 - sep, midY - R - 10, 's');
+            drawP(midX + R * 0.8 + sep, midY, R * 1.1, 'v', '+', '-');
+            drawLabel(midX + R * 0.8 + sep, midY - R * 1.9, 'p⊥');
+            drawLabel(midX, H * 0.08, '⚪ Zero overlap (perpendicular approach)', '#666');
+            drawLabel(midX, H - 30, '+ and − lobes cancel → net overlap = 0', '#888');
+        } else if (id === 'pp_zero') {
+            drawP(midX - R * 2.2 - sep, midY, R, 'h', '+', '-');
+            drawP(midX + R * 0.8 + sep, midY, R * 1.1, 'v', '+', '-');
+            drawLabel(midX, H * 0.08, '⚪ Zero overlap (p ⊥ to approach)', '#666');
+            drawLabel(midX, H - 30, 'Orthogonal orbitals: net overlap = 0', '#888');
+        }
+
+        // Atom dots at positions
+        ctx.beginPath(); ctx.arc(midX - R * 1.6 - sep, midY, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#333'; ctx.fill();
+        ctx.beginPath(); ctx.arc(midX + R * 1.6 + sep, midY, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#333'; ctx.fill();
+    }
+
+    function animate() {
+        animId = requestAnimationFrame(animate);
+        const W = ooCanvas.width = ooCanvas.offsetWidth || 600;
+        const H = ooCanvas.height = ooCanvas.offsetHeight || 500;
+        animT++;
+        renderOverlap(current, W, H, animT);
+    }
+    animate();
+    updateInfo(current);
+
+    document.getElementById('ooSelect').addEventListener('change', e => {
+        current = e.target.value;
+        updateInfo(current);
+        animT = 0;
+    });
+
+    overlayEl.innerHTML += `<span class="sim-badge">🔵 Orbital Overlap</span><span class="sim-badge">σ/π bonds</span>`;
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        if (ooCanvas && ooCanvas.parentNode) ooCanvas.parentNode.removeChild(ooCanvas);
+    };
+}
+
+// =====================================================================
+// REDOX BALANCING SIMULATOR (5 reactions, step-by-step teaching)
+// =====================================================================
+function initRedoxSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let rxCanvas = document.getElementById('rxCanvas');
+    if (!rxCanvas) {
+        rxCanvas = document.createElement('canvas');
+        rxCanvas.id = 'rxCanvas';
+        rxCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
+        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(rxCanvas); }
+    }
+    const ctx = rxCanvas.getContext('2d');
+
+    const REACTIONS = [
+        {
+            name: 'KMnO₄ + FeSO₄ (Acidic)',
+            unbalanced: 'MnO₄⁻ + Fe²⁺ → Mn²⁺ + Fe³⁺',
+            balanced: '10Fe²⁺ + 2MnO₄⁻ + 16H⁺ → 10Fe³⁺ + 2Mn²⁺ + 8H₂O',
+            half: [
+                { type: 'oxidation', label: 'Oxidation Half-Reaction', steps: ['Fe²⁺ → Fe³⁺', 'Fe²⁺ → Fe³⁺ + e⁻  (×5, removing 1e⁻ each)'] },
+                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['MnO₄⁻ → Mn²⁺', 'MnO₄⁻ + 8H⁺ → Mn²⁺ + 4H₂O', 'MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O'] },
+                { type: 'combine', label: 'Equalise electrons (×5 and ×1), Add:', steps: ['5Fe²⁺ → 5Fe³⁺ + 5e⁻', 'MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O', '─────────────────────────────', 'Net: 5Fe²⁺ + MnO₄⁻ + 8H⁺ → 5Fe³⁺ + Mn²⁺ + 4H₂O', '(×2 for full balanced)'] }
+            ],
+            os: [
+                { step: 'Assign OS:', detail: 'Fe: +2 → +3 (oxidised, loses e⁻) | Mn: +7 → +2 (reduced, gains e⁻)' },
+                { step: 'Change in OS:', detail: 'Fe: increases by 1 | Mn: decreases by 5' },
+                { step: 'Balance change (ratio 5:1):', detail: '10 × Fe, 2 × Mn changes balance (both contribute 10 e⁻)' },
+                { step: 'Final balanced:', detail: '10Fe²⁺ + 2MnO₄⁻ + 16H⁺ → 10Fe³⁺ + 2Mn²⁺ + 8H₂O ✅' }
+            ]
+        },
+        {
+            name: 'Cr₂O₇²⁻ + I⁻ (Acidic)',
+            unbalanced: 'Cr₂O₇²⁻ + I⁻ → Cr³⁺ + I₂',
+            balanced: 'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O',
+            half: [
+                { type: 'oxidation', label: 'Oxidation Half-Reaction', steps: ['2I⁻ → I₂ + 2e⁻  (×3)'] },
+                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['Cr₂O₇²⁻ → 2Cr³⁺', 'Cr₂O₇²⁻ + 14H⁺ → 2Cr³⁺ + 7H₂O', 'Cr₂O₇²⁻ + 14H⁺ + 6e⁻ → 2Cr³⁺ + 7H₂O'] },
+                { type: 'combine', label: 'Add both (electrons cancel):', steps: ['6I⁻ → 3I₂ + 6e⁻', 'Cr₂O₇²⁻ + 14H⁺ + 6e⁻ → 2Cr³⁺ + 7H₂O', '─────────', 'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O ✅'] }
+            ],
+            os: [
+                { step: 'Assign OS:', detail: 'I: −1 → 0 (oxidised) | Cr: +6 → +3 (reduced)' },
+                { step: 'Change in OS:', detail: 'I increases by 1 | Cr decreases by 3 (×2 Cr atoms = 6 total)' },
+                { step: 'Balance:', detail: '6 I⁻ and 1 Cr₂O₇²⁻ (6 e⁻ each side)' },
+                { step: 'Final balanced:', detail: 'Cr₂O₇²⁻ + 6I⁻ + 14H⁺ → 2Cr³⁺ + 3I₂ + 7H₂O ✅' }
+            ]
+        },
+        {
+            name: 'Zn + H₂SO₄ (Dilute)',
+            unbalanced: 'Zn + H₂SO₄ → ZnSO₄ + H₂',
+            balanced: 'Zn + H₂SO₄ → ZnSO₄ + H₂↑',
+            half: [
+                { type: 'oxidation', label: 'Oxidation Half-Reaction', steps: ['Zn → Zn²⁺ + 2e⁻'] },
+                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['2H⁺ + 2e⁻ → H₂↑'] },
+                { type: 'combine', label: 'Add (2e⁻ cancel):', steps: ['Zn + 2H⁺ → Zn²⁺ + H₂', 'With SO₄²⁻ spectator ion:', 'Zn + H₂SO₄ → ZnSO₄ + H₂↑ ✅'] }
+            ],
+            os: [
+                { step: 'Assign OS:', detail: 'Zn: 0 → +2 (oxidised) | H: +1 → 0 (reduced)' },
+                { step: 'Change in OS:', detail: 'Zn increases by 2 | H decreases by 1 (×2 = 2 total)' },
+                { step: 'Balance:', detail: '1 Zn : 2 H → already balanced!' },
+                { step: 'Final balanced:', detail: 'Zn + H₂SO₄ → ZnSO₄ + H₂↑ ✅' }
+            ]
+        },
+        {
+            name: 'Cl₂ Disproportionation (Basic)',
+            unbalanced: 'Cl₂ → Cl⁻ + ClO₃⁻',
+            balanced: '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O',
+            half: [
+                { type: 'reduction', label: 'Reduction Half-Reaction', steps: ['Cl₂ + 2e⁻ → 2Cl⁻  (×5)'] },
+                { type: 'oxidation', label: 'Oxidation Half-Reaction (basic medium add OH⁻):', steps: ['Cl₂ + 12OH⁻ → 2ClO₃⁻ + 6H₂O + 10e⁻  (×1)'] },
+                { type: 'combine', label: 'Equalise (×5 and ×1) then add:', steps: ['5Cl₂ + 10e⁻ → 10Cl⁻', 'Cl₂ + 12OH⁻ → 2ClO₃⁻ + 6H₂O + 10e⁻', '─────────', '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O ✅'] }
+            ],
+            os: [
+                { step: 'Assign OS:', detail: 'Cl₂ (0) → Cl⁻ (−1) reduced | Cl₂ (0) → ClO₃⁻ (Cl=+5) oxidised' },
+                { step: 'This is DISPROPORTIONATION:', detail: 'Same element simultaneously oxidised AND reduced!' },
+                { step: 'Change:', detail: 'Reduction: 0 → −1 (gain 1e⁻, ×5) | Oxidation: 0 → +5 (lose 5e⁻, ×1)' },
+                { step: 'Final balanced:', detail: '3Cl₂ + 6OH⁻ → 5Cl⁻ + ClO₃⁻ + 3H₂O ✅' }
+            ]
+        },
+        {
+            name: 'MnO₄⁻ + C₂O₄²⁻ (Acidic)',
+            unbalanced: 'MnO₄⁻ + C₂O₄²⁻ → Mn²⁺ + CO₂',
+            balanced: '2KMnO₄ + 5H₂C₂O₄ + 3H₂SO₄ → 2MnSO₄ + K₂SO₄ + 10CO₂ + 8H₂O',
+            half: [
+                { type: 'oxidation', label: 'Oxidation (Oxalate → CO₂):', steps: ['C₂O₄²⁻ → 2CO₂ + 2e⁻  (×5)'] },
+                { type: 'reduction', label: 'Reduction (MnO₄⁻):', steps: ['MnO₄⁻ + 8H⁺ + 5e⁻ → Mn²⁺ + 4H₂O  (×2)'] },
+                { type: 'combine', label: 'Equalise (×5 and ×2):', steps: ['5C₂O₄²⁻ → 10CO₂ + 10e⁻', '2MnO₄⁻ + 16H⁺ + 10e⁻ → 2Mn²⁺ + 8H₂O', '─────────', '2MnO₄⁻ + 5C₂O₄²⁻ + 16H⁺ → 2Mn²⁺ + 10CO₂ + 8H₂O ✅'] }
+            ],
+            os: [
+                { step: 'Assign OS:', detail: 'C in C₂O₄²⁻: +3 → +4 (oxidised) | Mn: +7 → +2 (reduced)' },
+                { step: 'Change:', detail: 'C increases by 1 ×10 = 10 | Mn decreases by 5 ×2 = 10 ✅' },
+                { step: 'Balance ratio:', detail: '2 Mn : 5 C₂O₄²⁻ (i.e., 10 C atoms)' },
+                { step: 'Final balanced:', detail: '2MnO₄⁻ + 5C₂O₄²⁻ + 16H⁺ → 2Mn²⁺ + 10CO₂ + 8H₂O ✅' }
+            ]
+        }
+    ];
+
+    let rxIdx = 0, method = 'half', stepIdx = 0, stepTimer = 0;
+    const STEP_FRAMES = 120; // auto-advance speed
+    let animId = null;
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-flask"></i> ⚗️ Redox Balancing</div>
+            <div class="sim-control-row">
+                <label style="color:#a78bfa;">🧪 Reaction</label>
+                <select class="game-select" id="rxSelect">
+                    ${REACTIONS.map((r, i) => `<option value="${i}">${r.name}</option>`).join('')}
+                </select>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn-primary" id="halfBtn" style="flex:1;font-size:0.8rem;padding:6px;">Half-Reaction</button>
+                <button class="btn-secondary" id="osBtn" style="flex:1;font-size:0.8rem;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;">OS Method</button>
+            </div>
+            <button class="btn-primary sim-action-btn" id="rxResetBtn" style="margin-top:8px;"><i class="fas fa-redo"></i> Restart Steps</button>
+            <button class="btn-primary sim-action-btn" id="rxNextBtn" style="margin-top:4px;background:#10b981;"><i class="fas fa-forward"></i> Next Step</button>
+        </div>
+    `;
+
+    controlsContainer.querySelector('#rxSelect').addEventListener('change', e => {
+        rxIdx = parseInt(e.target.value); stepIdx = 0; stepTimer = 0;
+    });
+    controlsContainer.querySelector('#halfBtn').addEventListener('click', () => {
+        method = 'half'; stepIdx = 0; stepTimer = 0;
+        controlsContainer.querySelector('#halfBtn').style.background = '';
+        controlsContainer.querySelector('#osBtn').style.background = '#1e293b';
+    });
+    controlsContainer.querySelector('#osBtn').addEventListener('click', () => {
+        method = 'os'; stepIdx = 0; stepTimer = 0;
+        controlsContainer.querySelector('#osBtn').style.background = '#7c3aed';
+        controlsContainer.querySelector('#halfBtn').style.background = '#1e293b';
+    });
+    controlsContainer.querySelector('#rxResetBtn').addEventListener('click', () => { stepIdx = 0; stepTimer = 0; });
+    controlsContainer.querySelector('#rxNextBtn').addEventListener('click', () => {
+        const maxStep = method === 'half' ? REACTIONS[rxIdx].half.length : REACTIONS[rxIdx].os.length;
+        stepIdx = Math.min(stepIdx + 1, maxStep - 1);
+        stepTimer = 0;
+    });
+
+    function wrapText(ctx2, text, x, y, maxW, lineH) {
+        const words = text.split(' ');
+        let line = '';
+        for (const word of words) {
+            const test = line + word + ' ';
+            if (ctx2.measureText(test).width > maxW && line) {
+                ctx2.fillText(line, x, y); y += lineH; line = word + ' ';
+            } else { line = test; }
+        }
+        if (line) ctx2.fillText(line.trim(), x, y);
+        return y + lineH;
+    }
+
+    function draw() {
+        animId = requestAnimationFrame(draw);
+        const W = rxCanvas.width = rxCanvas.offsetWidth || 700;
+        const H = rxCanvas.height = rxCanvas.offsetHeight || 500;
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+
+        const rx = REACTIONS[rxIdx];
+        const pad = 30;
+
+        // Title
+        ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(rx.name, W / 2, 30);
+
+        // Unbalanced equation
+        ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif';
+        ctx.fillText('Unbalanced: ' + rx.unbalanced, W / 2, 52);
+
+        // Method label
+        const methodLabel = method === 'half' ? '⚗️ Half-Reaction Method' : '🔢 Oxidation State Method';
+        ctx.fillStyle = '#22d3ee'; ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(methodLabel, W / 2, 76);
+
+        // Steps area
+        ctx.textAlign = 'left';
+        let y = 100;
+        const steps = method === 'half' ? rx.half : rx.os;
+        const maxStep = method === 'half' ? REACTIONS[rxIdx].half.length : REACTIONS[rxIdx].os.length;
+
+        // Auto advance
+        stepTimer++;
+        if (stepTimer > STEP_FRAMES) { stepTimer = 0; if (stepIdx < maxStep - 1) stepIdx++; }
+
+        steps.forEach((step, i) => {
+            const visible = i <= stepIdx;
+            if (!visible) return;
+            const isActive = i === stepIdx;
+            const alpha = isActive ? 1 : 0.6;
+
+            // Card bg
+            const cardH = method === 'half' ? 90 : 72;
+            ctx.fillStyle = isActive ? 'rgba(59,130,246,0.12)' : 'rgba(30,41,59,0.5)';
+            ctx.beginPath();
+            ctx.roundRect(pad, y, W - pad * 2, cardH, 8);
+            ctx.fill();
+            ctx.strokeStyle = isActive ? '#3b82f6' : '#334155';
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.stroke();
+
+            // Step header
+            const header = method === 'half' ? step.label : step.step;
+            const stepColors = { oxidation: '#f97316', reduction: '#22d3ee', combine: '#10b981' };
+            ctx.fillStyle = method === 'half' ? (stepColors[step.type] || '#a78bfa') : '#fbbf24';
+            ctx.font = `bold 12px monospace`;
+            ctx.globalAlpha = alpha;
+            ctx.fillText(header, pad + 12, y + 20);
+
+            // Step content
+            ctx.fillStyle = '#e2e8f0'; ctx.font = '11px monospace';
+            if (method === 'half') {
+                step.steps.forEach((s, si) => {
+                    ctx.fillText(s, pad + 18, y + 36 + si * 16);
+                });
+            } else {
+                y = wrapText(ctx, step.detail, pad + 18, y + 34, W - pad * 2 - 30, 16) - 16;
+            }
+            ctx.globalAlpha = 1;
+            y += cardH + 8;
+        });
+
+        // Final balanced (show when all steps done)
+        if (stepIdx >= maxStep - 1) {
+            ctx.fillStyle = 'rgba(16,185,129,0.15)';
+            ctx.beginPath(); ctx.roundRect(pad, y + 5, W - pad * 2, 44, 8); ctx.fill();
+            ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#4ade80'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+            ctx.fillText('✅ Balanced: ' + rx.balanced, W / 2, y + 26);
+        }
+
+        // Progress dots
+        const dotY = H - 20;
+        for (let i = 0; i < maxStep; i++) {
+            ctx.beginPath(); ctx.arc(W / 2 - (maxStep - 1) * 10 + i * 20, dotY, 5, 0, Math.PI * 2);
+            ctx.fillStyle = i <= stepIdx ? '#3b82f6' : '#334155'; ctx.fill();
+        }
+    }
+    draw();
+
+    overlayEl.innerHTML += `<span class="sim-badge">⚗️ Redox</span><span class="sim-badge">📋 Step-by-step</span>`;
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        if (rxCanvas && rxCanvas.parentNode) rxCanvas.parentNode.removeChild(rxCanvas);
+    };
+}
+
+// =====================================================================
+// ELASTIC vs INELASTIC COLLISION SIMULATOR
+// =====================================================================
+function initCollisionSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let colCanvas = document.getElementById('colCanvas');
+    if (!colCanvas) {
+        colCanvas = document.createElement('canvas');
+        colCanvas.id = 'colCanvas';
+        colCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
+        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(colCanvas); }
+    }
+    const ctx = colCanvas.getContext('2d');
+
+    let m1 = 2, m2 = 3, u1 = 6, u2 = -2, ctype = 'elastic';
+    let state = 'before'; // 'before', 'colliding', 'after'
+    let animT = 0, animId = null;
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-atom"></i> 💥 Collision Simulator</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <button class="btn-primary" id="elasticBtn" style="flex:1;font-size:0.8rem;padding:6px;">⚡ Elastic</button>
+                <button class="btn-secondary" id="inelasticBtn" style="flex:1;font-size:0.8rem;padding:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;">💧 Inelastic</button>
+            </div>
+            <div class="sim-control-row">
+                <label>Mass 1: <strong id="m1Lbl">${m1}</strong> kg</label>
+                <input type="range" class="game-slider" id="m1Sl" min="1" max="8" step="0.5" value="${m1}">
+            </div>
+            <div class="sim-control-row">
+                <label>Mass 2: <strong id="m2Lbl">${m2}</strong> kg</label>
+                <input type="range" class="game-slider" id="m2Sl" min="1" max="8" step="0.5" value="${m2}">
+            </div>
+            <div class="sim-control-row">
+                <label>v₁ initial: <strong id="u1Lbl">${u1}</strong> m/s →</label>
+                <input type="range" class="game-slider" id="u1Sl" min="1" max="12" step="0.5" value="${u1}">
+            </div>
+            <div class="sim-control-row">
+                <label>v₂ initial: <strong id="u2Lbl">${Math.abs(u2)}</strong> m/s ← </label>
+                <input type="range" class="game-slider" id="u2Sl" min="0" max="8" step="0.5" value="${Math.abs(u2)}">
+            </div>
+            <div class="sim-stats-grid" style="margin-top:8px;">
+                <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
+                    <div class="sim-stat-label">p (before)</div>
+                    <div class="sim-stat-value" id="pBefore" style="font-size:0.8rem;">--</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #10b981">
+                    <div class="sim-stat-label">p (after)</div>
+                    <div class="sim-stat-value" id="pAfter" style="font-size:0.8rem;">--</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #f59e0b">
+                    <div class="sim-stat-label">KE (before)</div>
+                    <div class="sim-stat-value" id="keBefore" style="font-size:0.8rem;">--</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #f97316">
+                    <div class="sim-stat-label">KE (after)</div>
+                    <div class="sim-stat-value" id="keAfter" style="font-size:0.8rem;">--</div>
+                </div>
+            </div>
+            <div class="sim-status" id="colStatus" style="margin-top:8px;"></div>
+            <button class="btn-primary sim-action-btn" id="colResetBtn"><i class="fas fa-redo"></i> Replay</button>
+        </div>
+    `;
+
+    function calcFinals() {
+        let v1f, v2f;
+        if (ctype === 'elastic') {
+            v1f = ((m1 - m2) * u1 + 2 * m2 * u2) / (m1 + m2);
+            v2f = ((m2 - m1) * u2 + 2 * m1 * u1) / (m1 + m2);
+        } else {
+            // perfectly inelastic: stick together
+            v1f = v2f = (m1 * u1 + m2 * u2) / (m1 + m2);
+        }
+        return { v1f, v2f };
+    }
+
+    function reset() { animT = 0; state = 'before'; }
+
+    function updateSliders() {
+        m1 = parseFloat(controlsContainer.querySelector('#m1Sl').value);
+        m2 = parseFloat(controlsContainer.querySelector('#m2Sl').value);
+        u1 = parseFloat(controlsContainer.querySelector('#u1Sl').value);
+        u2 = -parseFloat(controlsContainer.querySelector('#u2Sl').value);
+        controlsContainer.querySelector('#m1Lbl').textContent = m1;
+        controlsContainer.querySelector('#m2Lbl').textContent = m2;
+        controlsContainer.querySelector('#u1Lbl').textContent = u1;
+        controlsContainer.querySelector('#u2Lbl').textContent = Math.abs(u2);
+        reset();
+    }
+
+    ['#m1Sl','#m2Sl','#u1Sl','#u2Sl'].forEach(id => controlsContainer.querySelector(id).addEventListener('input', updateSliders));
+    controlsContainer.querySelector('#colResetBtn').addEventListener('click', reset);
+    controlsContainer.querySelector('#elasticBtn').addEventListener('click', () => {
+        ctype = 'elastic'; reset();
+        controlsContainer.querySelector('#elasticBtn').style.background = '';
+        controlsContainer.querySelector('#inelasticBtn').style.background = '#1e293b';
+    });
+    controlsContainer.querySelector('#inelasticBtn').addEventListener('click', () => {
+        ctype = 'inelastic'; reset();
+        controlsContainer.querySelector('#inelasticBtn').style.background = '#7c3aed';
+        controlsContainer.querySelector('#elasticBtn').style.background = '#1e293b';
+    });
+
+    let KEbeforeGraphHistory = [], KEafterGraphHistory = [];
+
+    function draw() {
+        animId = requestAnimationFrame(draw);
+        const W = colCanvas.width = colCanvas.offsetWidth || 700;
+        const H = colCanvas.height = colCanvas.offsetHeight || 500;
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+
+        const { v1f, v2f } = calcFinals();
+        const pBefore = m1 * u1 + m2 * u2;
+        const pAfter = m1 * v1f + m2 * v2f;
+        const keBefore = 0.5 * m1 * u1 * u1 + 0.5 * m2 * u2 * u2;
+        const keAfter = 0.5 * m1 * v1f * v1f + 0.5 * m2 * v2f * v2f;
+
+        document.getElementById('pBefore').textContent = pBefore.toFixed(1) + ' kg·m/s';
+        document.getElementById('pAfter').textContent = pAfter.toFixed(1) + ' kg·m/s';
+        document.getElementById('keBefore').textContent = keBefore.toFixed(1) + ' J';
+        document.getElementById('keAfter').textContent = keAfter.toFixed(1) + ' J';
+
+        const floorY = H * 0.72;
+        ctx.fillStyle = '#1e293b'; ctx.fillRect(0, floorY, W, 3);
+
+        const r1 = 20 + m1 * 5, r2 = 20 + m2 * 5;
+        const TOTAL_FRAMES = 180;
+        const COLLIDE_AT = 80;
+        animT++;
+        if (animT > TOTAL_FRAMES + 60) animT = 0;
+
+        let x1, x2;
+        const t = animT;
+        if (t < COLLIDE_AT) {
+            state = 'before';
+            const pct = t / COLLIDE_AT;
+            x1 = W * 0.15 + pct * (W * 0.4 - W * 0.15 - r1 - r2);
+            x2 = W * 0.85 - pct * (W * 0.85 - W * 0.6 - r1 - r2);
+        } else if (t < COLLIDE_AT + 20) {
+            state = 'colliding';
+            x1 = W * 0.4 - r1;
+            x2 = W * 0.4 + r2;
+        } else {
+            state = 'after';
+            const tPost = t - COLLIDE_AT - 20;
+            const pctPost = tPost / (TOTAL_FRAMES - COLLIDE_AT);
+            x1 = W * 0.4 - r1 + pctPost * (v1f * 12);
+            x2 = W * 0.4 + r2 + pctPost * (v2f * 12);
+        }
+
+        // Ball 1 (blue)
+        ctx.beginPath(); ctx.arc(x1, floorY - r1, r1, 0, Math.PI * 2);
+        ctx.fillStyle = '#22d3ee'; ctx.fill();
+        ctx.strokeStyle = state === 'colliding' ? '#fff' : '#0891b2'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, r1 * 0.5)}px sans-serif`; ctx.textAlign = 'center';
+        ctx.fillText(`${m1}kg`, x1, floorY - r1 + 5);
+
+        // Ball 2 (orange)
+        ctx.beginPath(); ctx.arc(x2, floorY - r2, r2, 0, Math.PI * 2);
+        ctx.fillStyle = '#f97316'; ctx.fill();
+        ctx.strokeStyle = state === 'colliding' ? '#fff' : '#c2410c'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(10, r2 * 0.5)}px sans-serif`; ctx.textAlign = 'center';
+        ctx.fillText(`${m2}kg`, x2, floorY - r2 + 5);
+
+        // Collision flash
+        if (state === 'colliding') {
+            ctx.beginPath(); ctx.arc((x1 + x2) / 2, floorY - (r1 + r2) / 2, (r1 + r2) * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,200,0.25)'; ctx.fill();
+            ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('💥', (x1 + x2) / 2, floorY - r1 - r2 - 8);
+        }
+
+        // Velocity arrows
+        function drawArrowV(x, y, vx, color, label) {
+            if (Math.abs(vx) < 0.1) return;
+            const len = vx * 6;
+            ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + len, y); ctx.stroke();
+            const dir = len > 0 ? 1 : -1;
+            ctx.beginPath(); ctx.moveTo(x + len, y); ctx.lineTo(x + len - dir * 8, y - 5);
+            ctx.lineTo(x + len - dir * 8, y + 5); ctx.fillStyle = color; ctx.fill();
+            ctx.fillStyle = color; ctx.font = '11px sans-serif'; ctx.textAlign = len > 0 ? 'left' : 'right';
+            ctx.fillText(label, x + len + dir * 6, y + 4);
+        }
+
+        const v1disp = state === 'before' ? u1 : (state === 'colliding' ? 0 : v1f);
+        const v2disp = state === 'before' ? u2 : (state === 'colliding' ? 0 : v2f);
+        drawArrowV(x1, floorY - r1 * 2 - 15, v1disp, '#22d3ee', `v₁=${v1disp.toFixed(1)}`);
+        drawArrowV(x2, floorY - r2 * 2 - 15, v2disp, '#f97316', `v₂=${v2disp.toFixed(1)}`);
+
+        // KE bar chart (bottom)
+        const chartY = H - 20, chartH = 60;
+        const maxKE = Math.max(keBefore, 1);
+        const barW = 55;
+        [[keBefore, '#22d3ee', 'KE before', W / 2 - 80], [keAfter, '#10b981', 'KE after', W / 2 + 10]].forEach(([ke, col, lbl, bx]) => {
+            const bh = (ke / maxKE) * chartH;
+            ctx.fillStyle = col;
+            ctx.fillRect(bx, chartY - bh, barW, bh);
+            ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(lbl, bx + barW / 2, chartY + 14);
+            ctx.fillStyle = '#fff'; ctx.fillText(ke.toFixed(1) + 'J', bx + barW / 2, chartY - bh - 4);
+        });
+
+        // Type label
+        ctx.fillStyle = ctype === 'elastic' ? '#4ade80' : '#f97316';
+        ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(ctype === 'elastic' ? '⚡ Elastic — KE conserved' : `💧 Inelastic — KE lost: ${(keBefore - keAfter).toFixed(1)} J`, W / 2, 24);
+
+        const cs = document.getElementById('colStatus');
+        if (cs) cs.innerHTML = state === 'colliding' ? '<strong style="color:#fbbf24;">💥 Collision happening!</strong>' :
+            state === 'after' ? `<strong style="color:#10b981;">After:</strong> v₁=${v1f.toFixed(2)} m/s | v₂=${v2f.toFixed(2)} m/s` :
+            '<strong style="color:#64748b;">Approaching...</strong>';
+    }
+    draw();
+
+    overlayEl.innerHTML += `<span class="sim-badge">💥 Collision</span><span class="sim-badge">p & KE</span>`;
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        if (colCanvas && colCanvas.parentNode) colCanvas.parentNode.removeChild(colCanvas);
+    };
+}
+
+// =====================================================================
+// FUNCTION GRAPHS — Relations & Functions (Maths)
+// =====================================================================
+function initFunctionGraphSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let fgCanvas = document.getElementById('fgCanvas');
+    if (!fgCanvas) {
+        fgCanvas = document.createElement('canvas');
+        fgCanvas.id = 'fgCanvas';
+        fgCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
+        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(fgCanvas); }
+    }
+    const ctx = fgCanvas.getContext('2d');
+
+    const FUNCTIONS = [
+        { id: 'linear',    label: 'Linear: f(x) = mx + c',          fn: (x,p) => p[0]*x + p[1],           params: [{name:'m',min:-5,max:5,step:0.5,val:1},{name:'c',min:-10,max:10,step:1,val:0}] },
+        { id: 'quad',      label: 'Quadratic: f(x) = ax² + bx + c', fn: (x,p) => p[0]*x*x + p[1]*x + p[2], params: [{name:'a',min:-3,max:3,step:0.5,val:1},{name:'b',min:-5,max:5,step:0.5,val:0},{name:'c',min:-10,max:10,step:1,val:0}] },
+        { id: 'sqrt',      label: 'Square root: f(x) = √(x + k)',   fn: (x,p) => Math.sqrt(Math.max(0, x + p[0])), params: [{name:'k',min:-5,max:5,step:0.5,val:0}] },
+        { id: 'abs',       label: 'Absolute: f(x) = |x + a| + b',   fn: (x,p) => Math.abs(x + p[0]) + p[1], params: [{name:'a',min:-5,max:5,step:0.5,val:0},{name:'b',min:-5,max:5,step:0.5,val:0}] },
+        { id: 'rational',  label: 'Rational: f(x) = 1/(x + a)',      fn: (x,p) => 1 / (x + p[0]),           params: [{name:'a',min:-4,max:4,step:0.5,val:1}] },
+        { id: 'cubic',     label: 'Cubic: f(x) = x³ + ax',          fn: (x,p) => x*x*x + p[0]*x,           params: [{name:'a',min:-5,max:5,step:0.5,val:0}] },
+        { id: 'expo',      label: 'Exponential: f(x) = aᵉˣ',        fn: (x,p) => Math.pow(Math.max(0.01, p[0]), x), params: [{name:'a(base)',min:0.1,max:5,step:0.1,val:2}] },
+        { id: 'log',       label: 'Logarithmic: f(x) = log_a(x)',    fn: (x,p) => x > 0 ? Math.log(x) / Math.log(Math.max(1.01, p[0])) : NaN, params: [{name:'a(base)',min:1.1,max:10,step:0.5,val:10}] },
+    ];
+
+    let currentFn = FUNCTIONS[0];
+    let paramVals = currentFn.params.map(p => p.val);
+
+    function buildParamUI() {
+        const pc = controlsContainer.querySelector('#fgParams');
+        if (!pc) return;
+        pc.innerHTML = currentFn.params.map((p, i) => `
+            <div class="sim-control-row">
+                <label>${p.name}: <strong id="fgP${i}Lbl">${paramVals[i]}</strong></label>
+                <input type="range" class="game-slider" id="fgP${i}" min="${p.min}" max="${p.max}" step="${p.step}" value="${paramVals[i]}">
+            </div>
+        `).join('');
+        currentFn.params.forEach((p, i) => {
+            const sl = controlsContainer.querySelector(`#fgP${i}`);
+            if (sl) sl.addEventListener('input', e => {
+                paramVals[i] = parseFloat(e.target.value);
+                const lbl = controlsContainer.querySelector(`#fgP${i}Lbl`);
+                if (lbl) lbl.textContent = paramVals[i];
+            });
+        });
+    }
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-chart-line"></i> 📈 Function Graphs</div>
+            <select class="game-select" id="fgSelect">
+                ${FUNCTIONS.map(f => `<option value="${f.id}">${f.label}</option>`).join('')}
+            </select>
+            <div id="fgParams" style="margin-top:8px;"></div>
+            <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:8px;">
+                <div class="sim-stat-label">f(x) at x=0</div>
+                <div class="sim-stat-value" id="fgAtZero">--</div>
+            </div>
+        </div>
+    `;
+
+    controlsContainer.querySelector('#fgSelect').addEventListener('change', e => {
+        currentFn = FUNCTIONS.find(f => f.id === e.target.value) || FUNCTIONS[0];
+        paramVals = currentFn.params.map(p => p.val);
+        buildParamUI();
+    });
+    buildParamUI();
+
+    function drawGrid(W, H, ox, oy, scale) {
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+        for (let gx = ox % scale; gx < W; gx += scale) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+        for (let gy = oy % scale; gy < H; gy += scale) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke(); // Y axis
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke(); // X axis
+        ctx.fillStyle = '#475569'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+        for (let gv = 1; gv * scale < Math.max(W, H); gv++) {
+            const px = ox + gv * scale, nx = ox - gv * scale;
+            const py = oy - gv * scale, ny = oy + gv * scale;
+            if (px < W) ctx.fillText(gv, px, oy + 14);
+            if (nx > 0) ctx.fillText(-gv, nx, oy + 14);
+            if (py > 0) { ctx.textAlign = 'right'; ctx.fillText(gv, ox - 4, py + 4); ctx.textAlign = 'center'; }
+            if (ny < H) { ctx.textAlign = 'right'; ctx.fillText(-gv, ox - 4, ny + 4); ctx.textAlign = 'center'; }
+        }
+        ctx.fillStyle = '#64748b'; ctx.textAlign = 'left';
+        ctx.fillText('x', W - 20, oy - 6);
+        ctx.fillText('y', ox + 6, 16);
+    }
+
+    let animId = null;
+    function draw() {
+        animId = requestAnimationFrame(draw);
+        const W = fgCanvas.width = fgCanvas.offsetWidth || 700;
+        const H = fgCanvas.height = fgCanvas.offsetHeight || 500;
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+
+        const scale = 50;
+        const ox = W / 2, oy = H / 2;
+        drawGrid(W, H, ox, oy, scale);
+
+        // Plot function
+        ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        let started = false;
+        for (let px = 0; px < W; px += 1.5) {
+            const xVal = (px - ox) / scale;
+            const yVal = currentFn.fn(xVal, paramVals);
+            if (!isFinite(yVal) || isNaN(yVal) || Math.abs(yVal) > 1e4) { started = false; continue; }
+            const py = oy - yVal * scale;
+            if (!started) { ctx.moveTo(px, py); started = true; } else { ctx.lineTo(px, py); }
+        }
+        ctx.stroke();
+
+        // f(0) marker
+        const y0 = currentFn.fn(0, paramVals);
+        if (isFinite(y0) && !isNaN(y0)) {
+            ctx.beginPath(); ctx.arc(ox, oy - y0 * scale, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#f59e0b'; ctx.fill();
+            const az = document.getElementById('fgAtZero');
+            if (az) az.textContent = y0.toFixed(3);
+        }
+
+        ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(currentFn.label, 16, 22);
+    }
+    draw();
+
+    overlayEl.innerHTML += `<span class="sim-badge">📈 Function Graph</span>`;
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        if (fgCanvas && fgCanvas.parentNode) fgCanvas.parentNode.removeChild(fgCanvas);
+    };
+}
+
+// =====================================================================
+// SINE & COSINE WAVE GRAPHS
+// =====================================================================
+function initWaveGraphSim(engine, controlsContainer, overlayEl) {
+    engine.setUpdate(() => {});
+
+    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
+    let wgCanvas = document.getElementById('wgCanvas');
+    if (!wgCanvas) {
+        wgCanvas = document.createElement('canvas');
+        wgCanvas.id = 'wgCanvas';
+        wgCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
+        if (simArea) { simArea.style.position = 'relative'; simArea.appendChild(wgCanvas); }
+    }
+    const ctx = wgCanvas.getContext('2d');
+
+    let sinA = 1, sinB = 1, sinC = 0, sinD = 0;
+    let cosA = 1, cosB = 1, cosC = 0, cosD = 0;
+    let showSin = true, showCos = true, animOffset = 0;
+
+    controlsContainer.innerHTML = `
+        <div class="game-panel sim-controls-panel">
+            <div class="game-section-title"><i class="fas fa-wave-square"></i> 〜 Sine & Cosine Waves</div>
+            <div style="background:#1e293b;border-radius:6px;padding:6px 10px;margin-bottom:6px;">
+                <div style="color:#22d3ee;font-weight:700;font-size:0.82rem;">y = A·sin(Bx + C) + D</div>
+                <div class="sim-control-row"><label>A (amp): <strong id="sinALbl">${sinA}</strong></label><input type="range" class="game-slider" id="sinASl" min="0.1" max="3" step="0.1" value="${sinA}"></div>
+                <div class="sim-control-row"><label>B (freq): <strong id="sinBLbl">${sinB}</strong></label><input type="range" class="game-slider" id="sinBSl" min="0.1" max="5" step="0.1" value="${sinB}"></div>
+                <div class="sim-control-row"><label>C (phase): <strong id="sinCLbl">${sinC}</strong>π</label><input type="range" class="game-slider" id="sinCSl" min="-2" max="2" step="0.25" value="${sinC}"></div>
+                <div class="sim-control-row"><label>D (shift): <strong id="sinDLbl">${sinD}</strong></label><input type="range" class="game-slider" id="sinDSl" min="-3" max="3" step="0.5" value="${sinD}"></div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;"><input type="checkbox" id="showSin" checked> Show sin (cyan)</label>
+            </div>
+            <div style="background:#1e293b;border-radius:6px;padding:6px 10px;margin-bottom:6px;">
+                <div style="color:#f97316;font-weight:700;font-size:0.82rem;">y = A·cos(Bx + C) + D</div>
+                <div class="sim-control-row"><label>A: <strong id="cosALbl">${cosA}</strong></label><input type="range" class="game-slider" id="cosASl" min="0.1" max="3" step="0.1" value="${cosA}"></div>
+                <div class="sim-control-row"><label>B: <strong id="cosBLbl">${cosB}</strong></label><input type="range" class="game-slider" id="cosBSl" min="0.1" max="5" step="0.1" value="${cosB}"></div>
+                <div class="sim-control-row"><label>C: <strong id="cosCLbl">${cosC}</strong>π</label><input type="range" class="game-slider" id="cosCSl" min="-2" max="2" step="0.25" value="${cosC}"></div>
+                <div class="sim-control-row"><label>D: <strong id="cosDLbl">${cosD}</strong></label><input type="range" class="game-slider" id="cosDSl" min="-3" max="3" step="0.5" value="${cosD}"></div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;"><input type="checkbox" id="showCos" checked> Show cos (orange)</label>
+            </div>
+            <div class="sim-stats-grid" style="margin-top:6px;">
+                <div class="sim-stat-card" style="border-left:3px solid #22d3ee">
+                    <div class="sim-stat-label">sin Period T</div>
+                    <div class="sim-stat-value" id="sinPeriod" style="font-size:0.85rem;">--</div>
+                </div>
+                <div class="sim-stat-card" style="border-left:3px solid #f97316">
+                    <div class="sim-stat-label">cos Period T</div>
+                    <div class="sim-stat-value" id="cosPeriod" style="font-size:0.85rem;">--</div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    function bindSlider(id, lblId, setter, getLbl) {
+        const el = controlsContainer.querySelector(id);
+        if (el) el.addEventListener('input', e => {
+            setter(parseFloat(e.target.value));
+            const lbl = controlsContainer.querySelector(lblId);
+            if (lbl) lbl.textContent = getLbl ? getLbl(parseFloat(e.target.value)) : parseFloat(e.target.value);
+        });
+    }
+    bindSlider('#sinASl','#sinALbl', v => sinA = v);
+    bindSlider('#sinBSl','#sinBLbl', v => sinB = v);
+    bindSlider('#sinCSl','#sinCLbl', v => sinC = v);
+    bindSlider('#sinDSl','#sinDLbl', v => sinD = v);
+    bindSlider('#cosASl','#cosALbl', v => cosA = v);
+    bindSlider('#cosBSl','#cosBLbl', v => cosB = v);
+    bindSlider('#cosCSl','#cosCLbl', v => cosC = v);
+    bindSlider('#cosDSl','#cosDLbl', v => cosD = v);
+    controlsContainer.querySelector('#showSin').addEventListener('change', e => showSin = e.target.checked);
+    controlsContainer.querySelector('#showCos').addEventListener('change', e => showCos = e.target.checked);
+
+    let animId = null;
+    function draw() {
+        animId = requestAnimationFrame(draw);
+        const W = wgCanvas.width = wgCanvas.offsetWidth || 700;
+        const H = wgCanvas.height = wgCanvas.offsetHeight || 500;
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+
+        const scaleX = W / (4 * Math.PI), scaleY = (H * 0.35);
+        const ox = 0, oy = H / 2;
+        animOffset += 0.012;
+
+        // Grid
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+        for (let g = 0; g <= 4; g++) {
+            const gx = (g * Math.PI) * scaleX;
+            ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+            ctx.fillStyle = '#334155'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(g === 0 ? '0' : g + 'π', gx, oy + 18);
+        }
+        for (let g = -3; g <= 3; g++) {
+            const gy = oy - g * scaleY / 3;
+            ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+            if (g !== 0) { ctx.fillStyle = '#334155'; ctx.textAlign = 'left'; ctx.fillText(g, 4, gy + 4); }
+        }
+        // Axes
+        ctx.strokeStyle = '#475569'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(4, H); ctx.stroke();
+
+        function plotWave(A, B, C, D, fn, color, label) {
+            ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            for (let px = 0; px < W; px += 1.5) {
+                const xRad = px / scaleX;
+                const y = A * fn(B * xRad + C * Math.PI) + D;
+                const py = oy - y * scaleY;
+                px === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            // Animated tracer dot
+            const tracerX = (animOffset % (2 * Math.PI / B)) * scaleX * B;
+            const tracerXClamped = tracerX % W;
+            const xRad2 = tracerXClamped / scaleX;
+            const tracerY = oy - (A * fn(B * xRad2 + C * Math.PI) + D) * scaleY;
+            ctx.beginPath(); ctx.arc(tracerXClamped, tracerY, 5, 0, Math.PI*2);
+            ctx.fillStyle = color; ctx.fill();
+            ctx.fillStyle = color; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+            ctx.fillText(label, 12, tracerY - 8);
+        }
+
+        if (showSin) plotWave(sinA, sinB, sinC, sinD, Math.sin, '#22d3ee', `sin: A=${sinA} B=${sinB} C=${sinC}π D=${sinD}`);
+        if (showCos) plotWave(cosA, cosB, cosC, cosD, Math.cos, '#f97316', `cos: A=${cosA} B=${cosB} C=${cosC}π D=${cosD}`);
+
+        // Period labels
+        const sp = document.getElementById('sinPeriod'), cp = document.getElementById('cosPeriod');
+        if (sp) sp.textContent = (2 * Math.PI / sinB).toFixed(2) + ' rad';
+        if (cp) cp.textContent = (2 * Math.PI / cosB).toFixed(2) + ' rad';
+
+        // Key properties annotations
+        ctx.fillStyle = '#22d3ee'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+        if (showSin) ctx.fillText(`sin: |max|=${sinA}, T=${(2*Math.PI/sinB).toFixed(2)}rad`, 10, H - 40);
+        ctx.fillStyle = '#f97316';
+        if (showCos) ctx.fillText(`cos: |max|=${cosA}, T=${(2*Math.PI/cosB).toFixed(2)}rad`, 10, H - 22);
+    }
+    draw();
+
+    overlayEl.innerHTML += `<span class="sim-badge">〜 sin/cos Waves</span>`;
+    return () => {
+        if (animId) cancelAnimationFrame(animId);
+        if (wgCanvas && wgCanvas.parentNode) wgCanvas.parentNode.removeChild(wgCanvas);
     };
 }
 
