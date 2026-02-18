@@ -3656,360 +3656,270 @@ function initLPPSim(engine, controlsContainer, overlayEl) {
 function initMOSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
 
-    // Pre-coded MO data for 5 molecules
-    // Each level: { label, y (0=bottom), x (center=0, neg=left atom, pos=right atom), electrons }
-    // x: 0 = MO (center), -1 = left atomic, +1 = right atomic
-    // electrons: 0,1,2
     const MO_DATA = {
-        N2: {
-            name: 'N₂', left: 'N', right: 'N',
-            bondOrder: 3, magnetic: 'Diamagnetic',
-            config: 'σ1s² σ*1s² σ2s² σ*2s² π2p⁴ σ2p² (10 BMO, 4 ABMO)',
-            levels: [
-                // Bottom: 1s AOs
-                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
-                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
-                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
-                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
-                // 2s
-                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
-                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
-                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2,  e: 2 },
-                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6,  e: 2 },
-                // 2p (NOTE: N2 has π below σ2p)
-                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
-                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
-                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.1, e: 2 },
-                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.1, e: 2 },
-                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.7,   e: 2 },
-                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 0 },
-                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 0 },
-                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
-            ]
-        },
-        O2: {
-            name: 'O₂', left: 'O', right: 'O',
-            bondOrder: 2, magnetic: 'Paramagnetic (2 unpaired e⁻)',
-            config: 'σ1s² σ*1s² σ2s² σ*2s² σ2p² π2p⁴ π*2p²',
-            levels: [
-                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
-                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
-                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
-                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
-                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
-                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
-                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
-                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
-                // O2: σ2p below π2p
-                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
-                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
-                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.0,  e: 2 },
-                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.7, e: 2 },
-                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.7, e: 2 },
-                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 1 },
-                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 1 },
-                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
-            ]
-        },
-        F2: {
-            name: 'F₂', left: 'F', right: 'F',
-            bondOrder: 1, magnetic: 'Diamagnetic',
-            config: 'σ1s² σ*1s² σ2s² σ*2s² σ2p² π2p⁴ π*2p⁴',
-            levels: [
-                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
-                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
-                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
-                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
-                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
-                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
-                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
-                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
-                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
-                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
-                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.0,  e: 2 },
-                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.7, e: 2 },
-                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.7, e: 2 },
-                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 2 },
-                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 2 },
-                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
-            ]
-        },
-        NO: {
-            name: 'NO', left: 'N', right: 'O',
-            bondOrder: 2.5, magnetic: 'Paramagnetic (1 unpaired e⁻)',
-            config: 'σ1s² σ*1s² σ2s² σ*2s² π2p⁴ σ2p² π*2p¹',
-            levels: [
-                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
-                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
-                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
-                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
-                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
-                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
-                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
-                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
-                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
-                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
-                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.1, e: 2 },
-                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.1, e: 2 },
-                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.7,    e: 2 },
-                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 1 },
-                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 0 },
-                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
-            ]
-        },
-        CO: {
-            name: 'CO', left: 'C', right: 'O',
-            bondOrder: 3, magnetic: 'Diamagnetic',
-            config: 'σ1s² σ*1s² σ2s² σ*2s² π2p⁴ σ2p²',
-            levels: [
-                { label: '1s', side: 'left',  x: -1, y: 0,   e: 2 },
-                { label: '1s', side: 'right', x:  1, y: 0,   e: 2 },
-                { label: 'σ₁s',  side: 'mo', x: 0, y: -0.6, e: 2 },
-                { label: 'σ*₁s', side: 'mo', x: 0, y:  0.9, e: 2 },
-                { label: '2s', side: 'left',  x: -1, y: 2.8, e: 2 },
-                { label: '2s', side: 'right', x:  1, y: 2.8, e: 2 },
-                { label: 'σ₂s',  side: 'mo', x: 0, y: 2.2, e: 2 },
-                { label: 'σ*₂s', side: 'mo', x: 0, y: 3.6, e: 2 },
-                { label: '2p', side: 'left',  x: -1, y: 5.5, e: 1, triple: true },
-                { label: '2p', side: 'right', x:  1, y: 5.5, e: 1, triple: true },
-                { label: 'π₂p',  side: 'mo', x:  0.35, y: 5.1, e: 2 },
-                { label: 'π₂p',  side: 'mo', x: -0.35, y: 5.1, e: 2 },
-                { label: 'σ₂p',  side: 'mo', x: 0, y: 5.7,    e: 2 },
-                { label: 'π*₂p', side: 'mo', x:  0.35, y: 6.5, e: 0 },
-                { label: 'π*₂p', side: 'mo', x: -0.35, y: 6.5, e: 0 },
-                { label: 'σ*₂p', side: 'mo', x: 0, y: 7.2,    e: 0 },
-            ]
-        }
+        N2: { name:'N\u2082', left:'N', right:'N', bondOrder:3, magnetic:'Diamagnetic',
+              config:'\u03c31s\u00b2 \u03c3*1s\u00b2 \u03c32s\u00b2 \u03c3*2s\u00b2 \u03c02p\u2074 \u03c32p\u00b2',
+              levels:[
+                {label:'1s',       side:'left',  x:-1,    y:0,    e:2},
+                {label:'1s',       side:'right', x: 1,    y:0,    e:2},
+                {label:'\u03c3\u2081s',  side:'mo',   x:0,     y:-0.6, e:2},
+                {label:'\u03c3*\u2081s', side:'mo',   x:0,     y: 0.9, e:2},
+                {label:'2s',       side:'left',  x:-1,    y:2.8,  e:2},
+                {label:'2s',       side:'right', x: 1,    y:2.8,  e:2},
+                {label:'\u03c3\u2082s',  side:'mo',   x:0,     y:2.2,  e:2},
+                {label:'\u03c3*\u2082s', side:'mo',   x:0,     y:3.6,  e:2},
+                {label:'2p',       side:'left',  x:-1,    y:5.5,  e:1, triple:true},
+                {label:'2p',       side:'right', x: 1,    y:5.5,  e:1, triple:true},
+                {label:'\u03c0\u2082p',  side:'mo',   x: 0.38, y:5.1, e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x:-0.38, y:5.1, e:2},
+                {label:'\u03c3\u2082p',  side:'mo',   x:0,     y:5.7,  e:2},
+                {label:'\u03c0*\u2082p', side:'mo',   x: 0.38, y:6.5, e:0},
+                {label:'\u03c0*\u2082p', side:'mo',   x:-0.38, y:6.5, e:0},
+                {label:'\u03c3*\u2082p', side:'mo',   x:0,     y:7.2,  e:0},
+              ]},
+        O2: { name:'O\u2082', left:'O', right:'O', bondOrder:2, magnetic:'Paramagnetic (2 unpaired e\u207b)',
+              config:'\u03c31s\u00b2 \u03c3*1s\u00b2 \u03c32s\u00b2 \u03c3*2s\u00b2 \u03c32p\u00b2 \u03c02p\u2074 \u03c0*2p\u00b2',
+              levels:[
+                {label:'1s',       side:'left',  x:-1,    y:0,    e:2},
+                {label:'1s',       side:'right', x: 1,    y:0,    e:2},
+                {label:'\u03c3\u2081s',  side:'mo',   x:0,     y:-0.6, e:2},
+                {label:'\u03c3*\u2081s', side:'mo',   x:0,     y: 0.9, e:2},
+                {label:'2s',       side:'left',  x:-1,    y:2.8,  e:2},
+                {label:'2s',       side:'right', x: 1,    y:2.8,  e:2},
+                {label:'\u03c3\u2082s',  side:'mo',   x:0,     y:2.2,  e:2},
+                {label:'\u03c3*\u2082s', side:'mo',   x:0,     y:3.6,  e:2},
+                {label:'2p',       side:'left',  x:-1,    y:5.5,  e:1, triple:true},
+                {label:'2p',       side:'right', x: 1,    y:5.5,  e:1, triple:true},
+                {label:'\u03c3\u2082p',  side:'mo',   x:0,     y:5.0,  e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x: 0.38, y:5.7, e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x:-0.38, y:5.7, e:2},
+                {label:'\u03c0*\u2082p', side:'mo',   x: 0.38, y:6.5, e:1},
+                {label:'\u03c0*\u2082p', side:'mo',   x:-0.38, y:6.5, e:1},
+                {label:'\u03c3*\u2082p', side:'mo',   x:0,     y:7.2,  e:0},
+              ]},
+        F2: { name:'F\u2082', left:'F', right:'F', bondOrder:1, magnetic:'Diamagnetic',
+              config:'\u03c31s\u00b2 \u03c3*1s\u00b2 \u03c32s\u00b2 \u03c3*2s\u00b2 \u03c32p\u00b2 \u03c02p\u2074 \u03c0*2p\u2074',
+              levels:[
+                {label:'1s',       side:'left',  x:-1,    y:0,    e:2},
+                {label:'1s',       side:'right', x: 1,    y:0,    e:2},
+                {label:'\u03c3\u2081s',  side:'mo',   x:0,     y:-0.6, e:2},
+                {label:'\u03c3*\u2081s', side:'mo',   x:0,     y: 0.9, e:2},
+                {label:'2s',       side:'left',  x:-1,    y:2.8,  e:2},
+                {label:'2s',       side:'right', x: 1,    y:2.8,  e:2},
+                {label:'\u03c3\u2082s',  side:'mo',   x:0,     y:2.2,  e:2},
+                {label:'\u03c3*\u2082s', side:'mo',   x:0,     y:3.6,  e:2},
+                {label:'2p',       side:'left',  x:-1,    y:5.5,  e:1, triple:true},
+                {label:'2p',       side:'right', x: 1,    y:5.5,  e:1, triple:true},
+                {label:'\u03c3\u2082p',  side:'mo',   x:0,     y:5.0,  e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x: 0.38, y:5.7, e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x:-0.38, y:5.7, e:2},
+                {label:'\u03c0*\u2082p', side:'mo',   x: 0.38, y:6.5, e:2},
+                {label:'\u03c0*\u2082p', side:'mo',   x:-0.38, y:6.5, e:2},
+                {label:'\u03c3*\u2082p', side:'mo',   x:0,     y:7.2,  e:0},
+              ]},
+        NO: { name:'NO', left:'N', right:'O', bondOrder:2.5, magnetic:'Paramagnetic (1 unpaired e\u207b)',
+              config:'\u03c31s\u00b2 \u03c3*1s\u00b2 \u03c32s\u00b2 \u03c3*2s\u00b2 \u03c02p\u2074 \u03c32p\u00b2 \u03c0*2p\u00b9',
+              levels:[
+                {label:'1s',       side:'left',  x:-1,    y:0,    e:2},
+                {label:'1s',       side:'right', x: 1,    y:0,    e:2},
+                {label:'\u03c3\u2081s',  side:'mo',   x:0,     y:-0.6, e:2},
+                {label:'\u03c3*\u2081s', side:'mo',   x:0,     y: 0.9, e:2},
+                {label:'2s',       side:'left',  x:-1,    y:2.8,  e:2},
+                {label:'2s',       side:'right', x: 1,    y:2.8,  e:2},
+                {label:'\u03c3\u2082s',  side:'mo',   x:0,     y:2.2,  e:2},
+                {label:'\u03c3*\u2082s', side:'mo',   x:0,     y:3.6,  e:2},
+                {label:'2p',       side:'left',  x:-1,    y:5.5,  e:1, triple:true},
+                {label:'2p',       side:'right', x: 1,    y:5.5,  e:1, triple:true},
+                {label:'\u03c0\u2082p',  side:'mo',   x: 0.38, y:5.1, e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x:-0.38, y:5.1, e:2},
+                {label:'\u03c3\u2082p',  side:'mo',   x:0,     y:5.7,  e:2},
+                {label:'\u03c0*\u2082p', side:'mo',   x: 0.38, y:6.5, e:1},
+                {label:'\u03c0*\u2082p', side:'mo',   x:-0.38, y:6.5, e:0},
+                {label:'\u03c3*\u2082p', side:'mo',   x:0,     y:7.2,  e:0},
+              ]},
+        CO: { name:'CO', left:'C', right:'O', bondOrder:3, magnetic:'Diamagnetic',
+              config:'\u03c31s\u00b2 \u03c3*1s\u00b2 \u03c32s\u00b2 \u03c3*2s\u00b2 \u03c02p\u2074 \u03c32p\u00b2',
+              levels:[
+                {label:'1s',       side:'left',  x:-1,    y:0,    e:2},
+                {label:'1s',       side:'right', x: 1,    y:0,    e:2},
+                {label:'\u03c3\u2081s',  side:'mo',   x:0,     y:-0.6, e:2},
+                {label:'\u03c3*\u2081s', side:'mo',   x:0,     y: 0.9, e:2},
+                {label:'2s',       side:'left',  x:-1,    y:2.8,  e:2},
+                {label:'2s',       side:'right', x: 1,    y:2.8,  e:2},
+                {label:'\u03c3\u2082s',  side:'mo',   x:0,     y:2.2,  e:2},
+                {label:'\u03c3*\u2082s', side:'mo',   x:0,     y:3.6,  e:2},
+                {label:'2p',       side:'left',  x:-1,    y:5.5,  e:1, triple:true},
+                {label:'2p',       side:'right', x: 1,    y:5.5,  e:1, triple:true},
+                {label:'\u03c0\u2082p',  side:'mo',   x: 0.38, y:5.1, e:2},
+                {label:'\u03c0\u2082p',  side:'mo',   x:-0.38, y:5.1, e:2},
+                {label:'\u03c3\u2082p',  side:'mo',   x:0,     y:5.7,  e:2},
+                {label:'\u03c0*\u2082p', side:'mo',   x: 0.38, y:6.5, e:0},
+                {label:'\u03c0*\u2082p', side:'mo',   x:-0.38, y:6.5, e:0},
+                {label:'\u03c3*\u2082p', side:'mo',   x:0,     y:7.2,  e:0},
+              ]},
     };
 
     let currentMol = 'N2';
 
     controlsContainer.innerHTML = `
         <div class="game-panel sim-controls-panel">
-            <div class="game-section-title"><i class="fas fa-atom"></i> ⚛️ Molecular Orbital Diagram</div>
+            <div class="game-section-title">\u269b\ufe0f Molecular Orbital Diagram</div>
             <div class="sim-control-row">
-                <label style="font-weight:700;color:#a78bfa;">🔬 Select Molecule</label>
+                <label style="font-weight:700;color:#a78bfa;">Select Molecule</label>
                 <select class="game-select" id="moMolSelect" style="margin-top:4px;">
-                    ${Object.keys(MO_DATA).map(k => `<option value="${k}">${MO_DATA[k].name}</option>`).join('')}
+                    ${Object.keys(MO_DATA).map(k=>`<option value="${k}">${MO_DATA[k].name}</option>`).join('')}
                 </select>
             </div>
             <div class="sim-stats-grid" style="margin-top:10px;">
                 <div class="sim-stat-card" style="border-left:3px solid #10b981">
-                    <div class="sim-stat-label">🔗 Bond Order</div>
+                    <div class="sim-stat-label">\ud83d\udd17 Bond Order</div>
                     <div class="sim-stat-value" id="moBondOrder">--</div>
                 </div>
                 <div class="sim-stat-card" style="border-left:3px solid #f97316">
-                    <div class="sim-stat-label">🧲 Magnetic</div>
+                    <div class="sim-stat-label">\ud83e\udde8 Magnetic</div>
                     <div class="sim-stat-value" id="moMagnetic" style="font-size:0.7rem;">--</div>
                 </div>
             </div>
             <div class="sim-stat-card" style="border-left:3px solid #22d3ee;margin-top:6px;">
-                <div class="sim-stat-label">📋 Configuration</div>
+                <div class="sim-stat-label">\ud83d\udccb Configuration</div>
                 <div style="font-size:0.72rem;color:#94a3b8;margin-top:4px;" id="moConfig">--</div>
             </div>
-            <div style="margin-top:8px;font-size:0.75rem;color:#475569;">
-                <span style="display:inline-block;width:12px;height:12px;background:#e8d5a3;border:1px solid #b0904a;margin-right:4px;"></span>MO (bonding/antibonding)
-                <span style="display:inline-block;width:12px;height:12px;background:#9db5d6;border:1px solid #5a7fa8;margin-left:8px;margin-right:4px;"></span>Atomic orbital
+            <div style="margin-top:8px;font-size:0.74rem;color:#64748b;line-height:2;">
+                <span style="display:inline-block;width:12px;height:12px;background:#d4a843;border-radius:2px;margin-right:4px;"></span>Bonding MO
+                <span style="display:inline-block;width:12px;height:12px;background:#e05252;border-radius:2px;margin-left:8px;margin-right:4px;"></span>Antibonding MO*
+                <br>
+                <span style="display:inline-block;width:12px;height:12px;background:#4a7fb5;border-radius:2px;margin-right:4px;"></span>Atomic Orbital
             </div>
-        </div>
-    `;
+        </div>`;
 
-    const moCanvas = make2DCanvas(engine, 'moCanvas', '#ffffff');
+    const moCanvas = make2DCanvas(engine, 'moCanvas', '#0d1117');
     const ctx2 = moCanvas.getContext('2d');
+
+    const CLR = {
+        bg:'#0d1117', bgGrid:'#111827', axisLine:'#334155', axisText:'#94a3b8',
+        colLabel:'#cbd5e1', moBox:'#2a1f08', moBord:'#d4a843',
+        moBoxAb:'#2a0808', moBordAb:'#e05252', aoBox:'#0f2038', aoBord:'#4a7fb5',
+        dash:'#2d3f54', arrowCol:'#e2e8f0', labelBond:'#d4a843', labelAb:'#e05252', labelAO:'#7cb8e8',
+    };
 
     function drawMO(molKey) {
         const mol = MO_DATA[molKey];
-        const W = moCanvas.width = moCanvas.offsetWidth || 600;
-        const H = moCanvas.height = moCanvas.offsetHeight || 600;
+        const W = moCanvas.width  = moCanvas.offsetWidth  || 680;
+        const H = moCanvas.height = moCanvas.offsetHeight || 620;
 
-        // White background (like the attached image)
-        ctx2.fillStyle = '#ffffff';
-        ctx2.fillRect(0, 0, W, H);
+        ctx2.fillStyle = CLR.bg; ctx2.fillRect(0,0,W,H);
+        ctx2.strokeStyle = CLR.bgGrid; ctx2.lineWidth = 0.5;
+        for (let gy=28; gy<H; gy+=28) { ctx2.beginPath(); ctx2.moveTo(0,gy); ctx2.lineTo(W,gy); ctx2.stroke(); }
 
-        // Layout constants
-        const cx = W / 2;        // center x for MO column
-        const lx = W * 0.18;     // left atom x
-        const rx = W * 0.82;     // right atom x
-        const topPad = 40, botPad = 50;
+        const lx = W*0.20, rx = W*0.80, cx = W*0.50;
+        const topPad = 36, botPad = 54;
         const availH = H - topPad - botPad;
-        const maxY = 8.0;
+        function toY(v) { return topPad + availH*(1 - v/8.4); }
 
-        function toY(yVal) { return topPad + availH * (1 - yVal / maxY); }
-
-        // Arrow label — ENERGY
-        ctx2.fillStyle = '#222'; ctx2.font = 'bold 12px sans-serif';
+        // ENERGY axis
         ctx2.save();
-        ctx2.translate(14, H / 2);
-        ctx2.rotate(-Math.PI / 2);
-        ctx2.fillText('ENERGY', -20, 0);
+        ctx2.strokeStyle = CLR.axisLine; ctx2.lineWidth = 2;
+        ctx2.beginPath(); ctx2.moveTo(18,H-botPad); ctx2.lineTo(18,topPad+4); ctx2.stroke();
+        ctx2.beginPath(); ctx2.moveTo(13,topPad+10); ctx2.lineTo(18,topPad+2); ctx2.lineTo(23,topPad+10); ctx2.stroke();
+        ctx2.fillStyle = CLR.axisText; ctx2.font = 'bold 11px sans-serif';
+        ctx2.translate(11,H/2); ctx2.rotate(-Math.PI/2);
+        ctx2.textAlign='center'; ctx2.fillText('ENERGY',0,0);
         ctx2.restore();
-        ctx2.strokeStyle = '#333'; ctx2.lineWidth = 2;
-        ctx2.beginPath(); ctx2.moveTo(22, H - botPad - 5); ctx2.lineTo(22, topPad);
-        ctx2.stroke();
-        // arrowhead
-        ctx2.beginPath(); ctx2.moveTo(17, topPad + 6); ctx2.lineTo(22, topPad); ctx2.lineTo(27, topPad + 6); ctx2.stroke();
 
         // Column labels
-        ctx2.fillStyle = '#333'; ctx2.font = 'bold 14px sans-serif'; ctx2.textAlign = 'center';
-        ctx2.fillText(mol.left, lx, H - 28);
-        ctx2.fillText(mol.name, cx, H - 28);
-        ctx2.fillText(mol.right, rx, H - 28);
+        ctx2.fillStyle = CLR.colLabel; ctx2.font = 'bold 15px sans-serif'; ctx2.textAlign='center';
+        ctx2.fillText(mol.left, lx, H-14);
+        ctx2.fillStyle = '#a78bfa'; ctx2.fillText(mol.name, cx, H-14);
+        ctx2.fillStyle = CLR.colLabel; ctx2.fillText(mol.right, rx, H-14);
 
-        const boxW = 36, boxH = 22;
+        const boxW=40, boxH=22;
 
-        // Dashed connector lines colour
-        const dashColor = '#999';
-
-        // Group levels by label+side for triple 2p AOs
-        const drawn = {};
-
-        mol.levels.forEach(lvl => {
-            const x = lvl.side === 'mo' ? cx + lvl.x * W * 0.14 : (lvl.side === 'left' ? lx : rx);
-            const y = toY(lvl.y + 0.5);
-            const boxColor = lvl.side === 'mo' ? '#e8d5a3' : '#9db5d6';
-            const borderColor = lvl.side === 'mo' ? '#b0904a' : '#5a7fa8';
-
-            // For triple 2p AOs: draw 3 boxes side by side
-            if (lvl.triple) {
-                const key = `${lvl.side}-${lvl.y}`;
-                if (!drawn[key]) {
-                    drawn[key] = true;
-                    for (let k = -1; k <= 1; k++) {
-                        const bx = x + k * (boxW + 4) - boxW / 2;
-                        ctx2.fillStyle = boxColor;
-                        ctx2.strokeStyle = borderColor; ctx2.lineWidth = 1.5;
-                        ctx2.fillRect(bx, y - boxH / 2, boxW, boxH);
-                        ctx2.strokeRect(bx, y - boxH / 2, boxW, boxH);
-                        // 1 electron (up arrow) in middle box
-                        if (k === 0) drawArrows(ctx2, bx + boxW/2, y, 1, false);
-                    }
-                    // Label
-                    ctx2.fillStyle = '#333'; ctx2.font = '11px sans-serif'; ctx2.textAlign = 'left';
-                    ctx2.fillText('2p 2p 2p', x - boxW + 4, y - boxH / 2 - 4);
-                    // Horizontal level line
-                    ctx2.strokeStyle = '#333'; ctx2.lineWidth = 1;
-                    ctx2.beginPath(); ctx2.moveTo(x - boxW*1.8, y); ctx2.lineTo(x - boxW - 4, y); ctx2.stroke();
-                    ctx2.beginPath(); ctx2.moveTo(x + boxW + 4, y); ctx2.lineTo(x + boxW*1.8, y); ctx2.stroke();
-                }
-                return;
-            }
-
-            // Single box
-            const bx = x - boxW / 2;
-            ctx2.fillStyle = boxColor;
-            ctx2.strokeStyle = borderColor; ctx2.lineWidth = 1.5;
-            ctx2.fillRect(bx, y - boxH / 2, boxW, boxH);
-            ctx2.strokeRect(bx, y - boxH / 2, boxW, boxH);
-
-            // Electrons
-            const paired = lvl.e === 2;
-            const single = lvl.e === 1;
-            if (paired) drawArrows(ctx2, x, y, 2, true);
-            else if (single) drawArrows(ctx2, x, y, 1, false);
-
-            // Label
-            const isAbMO = lvl.label.includes('*');
-            ctx2.fillStyle = isAbMO ? '#c0392b' : '#2c3e50';
-            ctx2.font = '10px sans-serif'; ctx2.textAlign = 'left';
-
-            // Position label to left for left AO, right for right AO, right-side for MOs
-            if (lvl.side === 'left') {
-                ctx2.fillText(lvl.label, bx - 24, y + 4);
-            } else if (lvl.side === 'right') {
-                ctx2.textAlign = 'left';
-                ctx2.fillText(lvl.label, bx + boxW + 4, y + 4);
-            } else {
-                // MO label: left side of box
-                ctx2.textAlign = 'right';
-                ctx2.fillText(lvl.label, bx - 4, y + 4);
-            }
-
-            // Level line stubs
-            ctx2.strokeStyle = '#333'; ctx2.lineWidth = 1;
-            if (lvl.side !== 'mo') {
-                ctx2.beginPath(); ctx2.moveTo(bx - 10, y); ctx2.lineTo(bx, y); ctx2.stroke();
-                ctx2.beginPath(); ctx2.moveTo(bx + boxW, y); ctx2.lineTo(bx + boxW + 10, y); ctx2.stroke();
-            }
-        });
-
-        // Draw dashed connector lines from AO levels to MO levels
-        // Connect by matching shell group (1s→σ1s, σ*1s; 2s→σ2s,σ*2s; 2p→π2p,σ2p,etc.)
-        const groups = [
-            { aoY: 0,   moYs: [-0.6, 0.9] },
-            { aoY: 2.8, moYs: [2.2, 3.6] },
-            { aoY: 5.5, moYs: [5.0, 5.1, 5.7, 6.5, 6.5, 7.2] },
+        // Dashed connectors (behind boxes)
+        const groups=[
+            {aoY:0,   moYs:[-0.6,0.9]},
+            {aoY:2.8, moYs:[2.2,3.6]},
+            {aoY:5.5, moYs:[5.0,5.1,5.7,6.5,7.2]},
         ];
-        ctx2.setLineDash([4, 5]);
-        ctx2.strokeStyle = dashColor; ctx2.lineWidth = 1;
-        groups.forEach(g => {
-            const ayL = toY(g.aoY + 0.5), ayR = toY(g.aoY + 0.5);
-            g.moYs.forEach(my => {
-                const moy = toY(my + 0.5);
-                // Left AO → MO
-                ctx2.beginPath();
-                ctx2.moveTo(lx + boxW / 2 + 22, ayL);
-                ctx2.lineTo(cx - boxW * 0.7, moy);
-                ctx2.stroke();
-                // Right AO → MO
-                ctx2.beginPath();
-                ctx2.moveTo(rx - boxW / 2 - 22, ayR);
-                ctx2.lineTo(cx + boxW * 0.7, moy);
-                ctx2.stroke();
+        ctx2.setLineDash([5,5]); ctx2.strokeStyle=CLR.dash; ctx2.lineWidth=1;
+        groups.forEach(g=>{
+            const ay=toY(g.aoY+0.5);
+            g.moYs.forEach(my=>{
+                const moy=toY(my+0.5);
+                ctx2.beginPath(); ctx2.moveTo(lx+boxW*0.7,ay);   ctx2.lineTo(cx-boxW,moy); ctx2.stroke();
+                ctx2.beginPath(); ctx2.moveTo(rx-boxW*0.7,ay);   ctx2.lineTo(cx+boxW,moy); ctx2.stroke();
             });
         });
         ctx2.setLineDash([]);
 
+        // Boxes
+        const drawn={};
+        mol.levels.forEach(lvl=>{
+            const bCx = lvl.side==='mo' ? cx+lvl.x*W*0.13 : (lvl.side==='left'?lx:rx);
+            const bCy = toY(lvl.y+0.5);
+            const isAb = lvl.label.includes('*');
+            const isMO = lvl.side==='mo';
+            const fill  = isMO?(isAb?CLR.moBoxAb:CLR.moBox):CLR.aoBox;
+            const bord  = isMO?(isAb?CLR.moBordAb:CLR.moBord):CLR.aoBord;
+            const lc    = isMO?(isAb?CLR.labelAb:CLR.labelBond):CLR.labelAO;
+
+            if (lvl.triple) {
+                const key=`${lvl.side}-${lvl.y}`;
+                if (drawn[key]) return; drawn[key]=true;
+                for (let k=-1;k<=1;k++) {
+                    const bx=bCx+k*(boxW+4)-boxW/2;
+                    ctx2.shadowBlur=6; ctx2.shadowColor=bord;
+                    ctx2.fillStyle=fill; ctx2.strokeStyle=bord; ctx2.lineWidth=1.5;
+                    ctx2.fillRect(bx,bCy-boxH/2,boxW,boxH); ctx2.strokeRect(bx,bCy-boxH/2,boxW,boxH);
+                    ctx2.shadowBlur=0;
+                    if (k===0) drawArrow(bCx+k*(boxW+4),bCy,1,false);
+                }
+                ctx2.fillStyle=lc; ctx2.font='10px monospace'; ctx2.textAlign='left';
+                ctx2.fillText('2p  2p  2p', bCx-boxW+2, bCy-boxH/2-5);
+                return;
+            }
+
+            const bx=bCx-boxW/2;
+            ctx2.shadowBlur=10; ctx2.shadowColor=bord;
+            ctx2.fillStyle=fill; ctx2.strokeStyle=bord; ctx2.lineWidth=2;
+            ctx2.fillRect(bx,bCy-boxH/2,boxW,boxH); ctx2.strokeRect(bx,bCy-boxH/2,boxW,boxH);
+            ctx2.shadowBlur=0;
+
+            if (lvl.e===2) drawArrow(bCx,bCy,2,true);
+            else if (lvl.e===1) drawArrow(bCx,bCy,1,false);
+
+            ctx2.fillStyle=lc; ctx2.font=`${isAb?'italic ':''}10px monospace`; ctx2.textAlign='left';
+            if (lvl.side==='left')       ctx2.fillText(lvl.label, bx-28, bCy+4);
+            else if (lvl.side==='right') ctx2.fillText(lvl.label, bx+boxW+4, bCy+4);
+            else { ctx2.textAlign='right'; ctx2.fillText(lvl.label, bx-4, bCy+4); }
+        });
+
         controlsContainer.querySelector('#moBondOrder').textContent = mol.bondOrder;
-        controlsContainer.querySelector('#moMagnetic').textContent = mol.magnetic;
-        controlsContainer.querySelector('#moConfig').textContent = mol.config;
+        controlsContainer.querySelector('#moMagnetic').textContent  = mol.magnetic;
+        controlsContainer.querySelector('#moConfig').textContent    = mol.config;
     }
 
-    function drawArrows(ctx, cx, cy, count, paired) {
-        // count: 1 or 2. paired: if 2, draw ↑↓; if 1, draw ↑
-        const arrowH = 12;
-        ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5;
-        if (count === 2) {
-            // ↑ on left, ↓ on right
-            [-5, 5].forEach((dx, i) => {
-                const up = i === 0;
-                ctx.beginPath();
-                ctx.moveTo(cx + dx, cy + (up ? 6 : -6));
-                ctx.lineTo(cx + dx, cy + (up ? -6 : 6));
-                ctx.stroke();
-                // arrowhead
-                const tip = cy + (up ? -6 : 6);
-                const dir = up ? -1 : 1;
-                ctx.beginPath();
-                ctx.moveTo(cx + dx - 3, tip - dir * 4);
-                ctx.lineTo(cx + dx, tip);
-                ctx.lineTo(cx + dx + 3, tip - dir * 4);
-                ctx.stroke();
+    function drawArrow(cx,cy,count,paired) {
+        ctx2.strokeStyle=CLR.arrowCol; ctx2.lineWidth=1.8;
+        if (count===2) {
+            [-5,5].forEach((dx,i)=>{
+                const up=i===0, y1=cy+(up?6:-6), y2=cy+(up?-6:6), dir=up?-1:1;
+                ctx2.beginPath(); ctx2.moveTo(cx+dx,y1); ctx2.lineTo(cx+dx,y2); ctx2.stroke();
+                ctx2.beginPath(); ctx2.moveTo(cx+dx-3,y2-dir*4); ctx2.lineTo(cx+dx,y2); ctx2.lineTo(cx+dx+3,y2-dir*4); ctx2.stroke();
             });
         } else {
-            // single ↑
-            ctx.beginPath(); ctx.moveTo(cx, cy + 6); ctx.lineTo(cx, cy - 6); ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(cx - 3, cy - 2); ctx.lineTo(cx, cy - 6); ctx.lineTo(cx + 3, cy - 2);
-            ctx.stroke();
+            ctx2.beginPath(); ctx2.moveTo(cx,cy+6); ctx2.lineTo(cx,cy-6); ctx2.stroke();
+            ctx2.beginPath(); ctx2.moveTo(cx-3,cy-2); ctx2.lineTo(cx,cy-6); ctx2.lineTo(cx+3,cy-2); ctx2.stroke();
         }
     }
 
-    controlsContainer.querySelector('#moMolSelect').addEventListener('change', e => {
-        currentMol = e.target.value;
-        drawMO(currentMol);
-    });
-
+    controlsContainer.querySelector('#moMolSelect').addEventListener('change', e=>{ currentMol=e.target.value; drawMO(currentMol); });
     drawMO(currentMol);
 
-    const moResizeObs = new ResizeObserver(() => drawMO(currentMol));
+    const moResizeObs = new ResizeObserver(()=>drawMO(currentMol));
     moResizeObs.observe(moCanvas.parentElement);
 
-    overlayEl.innerHTML += `<span class="sim-badge">⚛️ MO Diagram</span><span class="sim-badge">🔗 Bond Order</span>`;
-
-    return () => {
-        moCanvas.remove();
-        moResizeObs.disconnect();
-    };
+    overlayEl.innerHTML += `<span class="sim-badge">\u269b\ufe0f MO Diagram</span><span class="sim-badge">\ud83d\udd17 Bond Order</span>`;
+    return () => { moCanvas.remove(); moResizeObs.disconnect(); };
 }
 
 // =====================================================================
@@ -4260,7 +4170,7 @@ function initPhotoelectricSim(engine, controlsContainer, overlayEl) {
 // =====================================================================
 function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
     engine.setUpdate(() => {});
-    const ooCanvas = make2DCanvas(engine, 'ooCanvas', '#f8fafc');
+    const ooCanvas = make2DCanvas(engine, 'ooCanvas', '#0d1117');
     const ctx = ooCanvas.getContext('2d');
 
     const CASES = [
@@ -4313,7 +4223,7 @@ function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
         ctx.fillStyle = g; ctx.fill();
         ctx.strokeStyle = phase==='+'?'#b8881a':'#3a6ea0'; ctx.lineWidth = 1.8; ctx.stroke();
-        ctx.fillStyle = phase==='+'?'#5a3a00':'#1a3a5a'; ctx.font = `bold ${Math.max(11,R*0.45)}px serif`; ctx.textAlign = 'center';
+        ctx.fillStyle = phase==='+'?'#fde68a':'#bfdbfe'; ctx.font = `bold ${Math.max(11,R*0.45)}px serif`; ctx.textAlign = 'center';
         ctx.fillText(phase, cx, cy + R*0.15);
     }
     function lobe(cx, cy, rx, ry, phase, alpha=0.75) {
@@ -4325,34 +4235,34 @@ function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
         ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
         ctx.fillStyle = g; ctx.fill();
         ctx.strokeStyle = phase==='+'?'#b8881a':'#3a6ea0'; ctx.lineWidth = 1.5; ctx.stroke();
-        ctx.fillStyle = phase==='+'?'#5a3a00':'#1a3a5a'; ctx.font = `bold ${Math.max(10, Math.min(rx,ry)*0.5)}px serif`; ctx.textAlign = 'center';
+        ctx.fillStyle = phase==='+'?'#fde68a':'#bfdbfe'; ctx.font = `bold ${Math.max(10, Math.min(rx,ry)*0.5)}px serif`; ctx.textAlign = 'center';
         ctx.fillText(phase, cx, cy + Math.min(rx,ry)*0.2);
     }
     function nucleus(cx, cy) {
         ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI*2);
-        ctx.fillStyle = '#1e293b'; ctx.fill();
-        ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#e2e8f0'; ctx.fill();
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5; ctx.stroke();
     }
     function nodePlane(x1,y1,x2,y2) {
         ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2.5; ctx.setLineDash([6,4]);
         ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
         ctx.setLineDash([]);
     }
-    function label(x, y, text, color='#1e293b', size=12) {
+    function label(x, y, text, color='#e2e8f0', size=12) {
         ctx.fillStyle = color; ctx.font = `bold ${size}px sans-serif`; ctx.textAlign = 'center';
         ctx.fillText(text, x, y);
     }
 
     function renderCase(id, W, H, t) {
-        ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,W,H);
         const cx = W/2, cy = H/2;
         const R = Math.min(W,H) * 0.11;
         // Breathe animation — orbitals gently pulse toward/away
         const breathe = 0.94 + 0.06 * Math.sin(t * 0.03);
-        const gap = R * 1.55 * breathe;
+        const gap = R * 0.85 * breathe;
 
         const c = CASES.find(x=>x.id===id);
-        const typeColor = c.type==='bonding'?'#166534':c.type==='antibonding'?'#991b1b':'#475569';
+        const typeColor = c.type==='bonding'?'#4ade80':c.type==='antibonding'?'#f87171':'#94a3b8';
         label(cx, 28, c.typeLabel, typeColor, 14);
 
         if (id==='ss_bond') {
@@ -4418,7 +4328,7 @@ function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
             lobe(cx + R*0.5, cy + R*1.2, R*0.65, R*1.1, '-');
             nucleus(cx + R*0.5, cy);
             // cancel arrows
-            ctx.fillStyle = '#999'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#94a3b8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
             ctx.fillText('+ and − cancel → 0', cx + R, cy + R*2.6);
         }
         else if (id==='pp_zero') {
@@ -4430,12 +4340,12 @@ function initOrbitalOverlapSim(engine, controlsContainer, overlayEl) {
             lobe(cx + R*0.5, cy - R*1.2, R*0.65, R*1.1, '+');
             lobe(cx + R*0.5, cy + R*1.2, R*0.65, R*1.1, '-');
             nucleus(cx + R*0.5, cy);
-            ctx.fillStyle = '#999'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#94a3b8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
             ctx.fillText('Orthogonal → net overlap = 0', cx, cy + R*2.8);
         }
 
         // Bond type badge
-        const bdCol = c.type==='bonding'?'#d1fae5':c.type==='antibonding'?'#fee2e2':'#f1f5f9';
+        const bdCol = c.type==='bonding'?'#0f2a1a':c.type==='antibonding'?'#2a0808':'#1e293b';
         const bdBdr = c.type==='bonding'?'#10b981':c.type==='antibonding'?'#ef4444':'#94a3b8';
         ctx.fillStyle = bdCol;
         ctx.beginPath(); ctx.roundRect(W - 80, H-38, 72, 26, 6); ctx.fill();
