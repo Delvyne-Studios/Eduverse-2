@@ -3429,17 +3429,7 @@ function initLPPSim(engine, controlsContainer, overlayEl) {
         </div>
     `;
 
-    // Canvas is the THREE.js canvas — we handle LPP as overlay in controlsContainer
-    // Create a dedicated canvas in the sim area overlay
-    const simArea = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let lppCanvas = document.getElementById('lppCanvas');
-    if (!lppCanvas) {
-        lppCanvas = document.createElement('canvas');
-        lppCanvas.id = 'lppCanvas';
-        lppCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#0d1117;';
-        if (simArea) simArea.style.position = 'relative';
-        if (simArea) simArea.appendChild(lppCanvas);
-    }
+    const lppCanvas = make2DCanvas(engine, 'lppCanvas', '#0d1117');
     const ctx = lppCanvas.getContext('2d');
 
     function renderConstraintList() {
@@ -3649,14 +3639,13 @@ function initLPPSim(engine, controlsContainer, overlayEl) {
     });
     controlsContainer.querySelector('#lppGoal').addEventListener('change', drawLPP);
 
-    // Resize observer
     const resizeObs = new ResizeObserver(() => drawLPP());
-    if (simArea) resizeObs.observe(simArea);
+    resizeObs.observe(lppCanvas.parentElement);
 
     overlayEl.innerHTML += `<span class="sim-badge">📊 Feasible Region</span><span class="sim-badge">🎯 Corner Point</span>`;
 
     return () => {
-        if (lppCanvas && lppCanvas.parentNode) lppCanvas.parentNode.removeChild(lppCanvas);
+        lppCanvas.remove();
         resizeObs.disconnect();
     };
 }
@@ -3825,15 +3814,7 @@ function initMOSim(engine, controlsContainer, overlayEl) {
         </div>
     `;
 
-    const simArea2 = document.querySelector('#simCanvas') || document.querySelector('.sim-canvas-container');
-    let moCanvas = document.getElementById('moCanvas');
-    if (!moCanvas) {
-        moCanvas = document.createElement('canvas');
-        moCanvas.id = 'moCanvas';
-        moCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border-radius:12px;background:#ffffff;';
-        if (simArea2) simArea2.style.position = 'relative';
-        if (simArea2) simArea2.appendChild(moCanvas);
-    }
+    const moCanvas = make2DCanvas(engine, 'moCanvas', '#ffffff');
     const ctx2 = moCanvas.getContext('2d');
 
     function drawMO(molKey) {
@@ -4021,12 +4002,12 @@ function initMOSim(engine, controlsContainer, overlayEl) {
     drawMO(currentMol);
 
     const moResizeObs = new ResizeObserver(() => drawMO(currentMol));
-    if (simArea2) moResizeObs.observe(simArea2);
+    moResizeObs.observe(moCanvas.parentElement);
 
     overlayEl.innerHTML += `<span class="sim-badge">⚛️ MO Diagram</span><span class="sim-badge">🔗 Bond Order</span>`;
 
     return () => {
-        if (moCanvas && moCanvas.parentNode) moCanvas.parentNode.removeChild(moCanvas);
+        moCanvas.remove();
         moResizeObs.disconnect();
     };
 }
