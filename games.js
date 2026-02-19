@@ -4491,16 +4491,16 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
             if (p.type === 'elec') {
                 if (p.delay > 0) { p.delay--; return; }
                 p.t++;
-                const prog = Math.min(p.t / 55, 1);
+                const prog = Math.min(p.t / 90, 1);
                 const ease = prog < 0.5 ? 2*prog*prog : -1+(4-2*prog)*prog;
-                p.x = p.x + (p.tx - p.x) * 0.065;
-                p.y = p.y + (p.ty - p.y) * 0.065 - Math.sin(prog*Math.PI)*35;
+                p.x = p.x + (p.tx - p.x) * 0.042;
+                p.y = p.y + (p.ty - p.y) * 0.042 - Math.sin(prog*Math.PI)*35;
                 p.alpha = prog < 0.85 ? 1 : 1 - (prog-0.85)/0.15;
                 p.trail.push({x:p.x, y:p.y});
                 if (p.trail.length > 8) p.trail.shift();
             } else if (p.type === 'pop') {
                 p.t++; p.y += p.vy; p.vy *= 0.95;
-                p.alpha = Math.max(0, 1 - p.t/55);
+                p.alpha = Math.max(0, 1 - p.t/75);
             }
         });
     }
@@ -4596,11 +4596,131 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
         }
     }
 
+    // ─── Per-species charge sum (drawn on diagram) ────────────────────────────
+    // slide.chargeBar.breakdown = { lhs:[{q},...], rhs:[{q},...] }
+    // Each entry corresponds 1-to-1 with slide.eq.lhs / slide.eq.rhs chips.
+    function drawChargeSumRow(slide, W, H, FS, transIn) {
+        const cb  = slide.chargeBar;
+        const bd  = cb.breakdown;
+        if (!slide.eq) return;
+
+        const eqY  = slide.halfTitle ? H*0.34 : H*0.32;
+        const tagY = eqY + FS * 1.7;   // small tiles sit just below the chips
+
+        // Recompute chip positions (same layout as drawEquation)
+        const lhsLaid = layoutEqRow(slide.eq.lhs, W*0.27, eqY, FS, W);
+        const rhsLaid = layoutEqRow(slide.eq.rhs, W*0.73, eqY, FS, W);
+
+        // ── Draw one charge tile below a chip ──────────────────────────────
+        function chargeTile(spX, y, q, revealT) {
+            // revealT is a slideT threshold — tile fades in after that frame
+            const tAlpha = Math.min(1, Math.max(0, (slideT - revealT) / 22));
+            if (tAlpha <= 0) return;
+            const col  = q > 0 ? '#fb923c' : q < 0 ? '#818cf8' : '#6b7280';
+            const fill = q > 0 ? '#1c0800' : q < 0 ? '#0a0a22' : '#111827';
+            const txt  = (q >= 0 ? '+' : '') + q;
+            const bW = 44, bH = 22;
+            ctx.globalAlpha = tAlpha;
+            ctx.fillStyle = fill; ctx.strokeStyle = col; ctx.lineWidth = 1.8;
+            ctx.shadowBlur = 10; ctx.shadowColor = col;
+            ctx.beginPath(); ctx.roundRect(spX - bW/2, y, bW, bH, 5); ctx.fill(); ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = col; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+            ctx.fillText(txt, spX, y + 15);
+            ctx.globalAlpha = 1;
+        }
+
+        // ── Sequentially reveal each tile ─────────────────────────────────
+        let lhsTotal = 0, rhsTotal = 0;
+        const BASE = 12, STEP = 20;   // reveal tile[i] at slideT = BASE + i*STEP
+
+        bd.lhs.forEach((item, i) => {
+            const sp = lhsLaid[i]; if (!sp) return;
+            chargeTile(sp.x, tagY, item.q, BASE + i * STEP);
+            lhsTotal += item.q;
+        });
+        bd.rhs.forEach((item, i) => {
+            const sp = rhsLaid[i]; if (!sp) return;
+            chargeTile(sp.x, tagY, item.q, BASE + (bd.lhs.length + i) * STEP);
+            rhsTotal += item.q;
+        });
+
+        // ── Sum row ─────────────────────────────────────────────────────────
+        const sumReveal = BASE + (bd.lhs.length + bd.rhs.length) * STEP + 8;
+        const sumAlpha  = Math.min(1, Math.max(0, (slideT - sumReveal) / 22));
+        if (sumAlpha <= 0) return;
+
+        ctx.globalAlpha = sumAlpha;
+        const sumY = tagY + 32;
+        const balanced = lhsTotal === rhsTotal;
+        const sumCol = balanced ? '#4ade80' : '#f87171';
+
+        // LHS sum expression string, e.g.  "-1 + 8 = +7"
+        const lhsExpr = bd.lhs.map(it => (it.q >= 0 ? '+' : '') + it.q).join(' + ');
+        const rhsExpr = bd.rhs.map(it => (it.q >= 0 ? '+' : '') + it.q).join(' + ');
+
+        // Count-up animation for the total values
+        const countProg = Math.min(1, Math.max(0, (slideT - sumReveal) / 28));
+        const countedL  = Math.round(lhsTotal * countProg);
+        const countedR  = Math.round(rhsTotal * countProg);
+
+        // LHS side
+        ctx.fillStyle = '#475569'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(lhsExpr, W * 0.27, sumY);
+        ctx.fillStyle = sumCol; ctx.font = 'bold 14px monospace';
+        const lhsBox = { x: W*0.27, w: 52, h: 26 };
+        ctx.fillStyle = balanced ? '#052e16' : '#2a0808';
+        ctx.strokeStyle = sumCol; ctx.lineWidth = 2;
+        ctx.shadowBlur = 10; ctx.shadowColor = sumCol;
+        ctx.beginPath(); ctx.roundRect(lhsBox.x - lhsBox.w/2, sumY + 6, lhsBox.w, lhsBox.h, 7);
+        ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.fillStyle = sumCol; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+        ctx.fillText((countedL >= 0 ? '+' : '') + countedL, lhsBox.x, sumY + 24);
+
+        // "=" label between sides
+        ctx.fillStyle = '#334155'; ctx.font = 'bold 18px sans-serif';
+        ctx.fillText('vs', W * 0.5, sumY + 22);
+
+        // RHS side
+        ctx.fillStyle = '#475569'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(rhsExpr, W * 0.73, sumY);
+        const rhsBox = { x: W*0.73, w: 52, h: 26 };
+        ctx.fillStyle = balanced ? '#052e16' : '#2a0808';
+        ctx.strokeStyle = sumCol; ctx.lineWidth = 2;
+        ctx.shadowBlur = 10; ctx.shadowColor = sumCol;
+        ctx.beginPath(); ctx.roundRect(rhsBox.x - rhsBox.w/2, sumY + 6, rhsBox.w, rhsBox.h, 7);
+        ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.fillStyle = sumCol; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+        ctx.fillText((countedR >= 0 ? '+' : '') + countedR, rhsBox.x, sumY + 24);
+
+        ctx.globalAlpha = 1;
+
+        // ── Verdict badge ────────────────────────────────────────────────────
+        const verdReveal = sumReveal + 30;
+        const verdAlpha  = Math.min(1, Math.max(0, (slideT - verdReveal) / 20));
+        if (verdAlpha > 0) {
+            ctx.globalAlpha = verdAlpha;
+            const diff = Math.abs(lhsTotal - rhsTotal);
+            const verdText = balanced
+                ? '\u2714 Charge balanced! Both sides = ' + (lhsTotal >= 0 ? '+' : '') + lhsTotal
+                : '\u2717 LHS ' + (lhsTotal >= 0 ? '+' : '') + lhsTotal + '  \u2260  RHS +' + rhsTotal + '  \u2014  need ' + diff + 'e\u207b';
+            const vW = Math.min(W - 40, verdText.length * 8 + 40), vH = 30;
+            ctx.fillStyle = balanced ? '#052e16' : '#2a0808';
+            ctx.strokeStyle = sumCol; ctx.lineWidth = 2;
+            ctx.shadowBlur = 14; ctx.shadowColor = sumCol;
+            ctx.beginPath(); ctx.roundRect(W/2 - vW/2, sumY + 42, vW, vH, 8); ctx.fill(); ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = sumCol; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText(verdText, W/2, sumY + 62);
+            ctx.globalAlpha = 1;
+        }
+    }
+
     // ─── Narration typewriter ─────────────────────────────────────────────────
     let _lastNarr = '', _typeIdx = 0;
     function drawNarration(text, t, W) {
         if (text !== _lastNarr) { _lastNarr = text; _typeIdx = 0; }
-        _typeIdx = Math.min(text.length, _typeIdx + Math.ceil(text.length / 42));
+        _typeIdx = Math.min(text.length, _typeIdx + Math.ceil(text.length / 68));
         const shown = text.substring(0, _typeIdx);
         ctx.fillStyle='#0d1f30'; ctx.strokeStyle='#1e3f5f'; ctx.lineWidth=1.5;
         ctx.beginPath(); ctx.roundRect(12, 8, W-24, 58, 10); ctx.fill(); ctx.stroke();
@@ -4727,13 +4847,19 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
           { narr: 'All atoms are balanced! Now check the CHARGE. Left side: MnO\u2084\u207b is \u22121, and 8H\u207a is +8. Total LEFT charge = +7. Right side: Mn\u00b2\u207a is +2, water has 0 charge. Total RIGHT charge = +2.',
             halfTitle: 'Check charge balance',
             eq: { lhs:[MNO4(), HP(8)], rhs:[MN2(), H2O(4)] },
-            chargeBar: { lhs:7, rhs:2 },
+            chargeBar: { lhs:7, rhs:2, breakdown:{
+              lhs:[{q:-1},{q:8}],
+              rhs:[{q:2},{q:0}]
+            }},
             sub: null },
 
           { narr: 'The left is +7 and right is +2. Difference = 5. We add 5 electrons to the LEFT to balance the charge. Watch the electrons fly across!',
             halfTitle: 'Add 5e\u207b to LEFT to balance charge',
             eq: { lhs:[MNO4(), HP(8), {...ELEC(5), glow:true, enterFrom:'left'}], rhs:[MN2(), H2O(4)] },
-            chargeBar: { lhs:2, rhs:2 },
+            chargeBar: { lhs:2, rhs:2, breakdown:{
+              lhs:[{q:-1},{q:8},{q:-5}],
+              rhs:[{q:2},{q:0}]
+            }},
             spawnElec: true,
             sub: null },
 
@@ -4911,7 +5037,7 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
     // Returns offset dx based on enterFrom and transIn (0->60 frames)
     function entryDx(enterFrom, transIn) {
         if (!enterFrom) return 0;
-        const prog = Math.min(transIn/40, 1);
+        const prog = Math.min(transIn/65, 1);
         const ease = 1 - Math.pow(1-prog, 3);
         if (enterFrom==='left')  return -(1-ease)*320;
         if (enterFrom==='right') return  (1-ease)*320;
@@ -4919,7 +5045,7 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
     }
     function entryAlpha(enterFrom, transIn) {
         if (!enterFrom) return 1;
-        return Math.min(1, transIn/25);
+        return Math.min(1, transIn/45);
     }
 
     // ─── Oxidation state banner ───────────────────────────────────────────────
@@ -4981,7 +5107,7 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
         ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
 
         slideT++;
-        if (transIn < 60) transIn++;
+        if (transIn < 90) transIn++;
 
         const slide = REACTIONS[rxIdx].slides[slideIdx];
         const maxSlide = REACTIONS[rxIdx].slides.length - 1;
@@ -4992,7 +5118,7 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
 
         // ── Step title ──
         if (slide.halfTitle) {
-            const tAlpha = Math.min(1, transIn/20);
+            const tAlpha = Math.min(1, transIn/32);
             ctx.globalAlpha = tAlpha;
             const isGood = slide.halfTitle.includes('\u2705') || slide.halfTitle.includes('\u2728');
             ctx.fillStyle = isGood ? '#4ade80' : '#a78bfa';
@@ -5011,12 +5137,12 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
             const lhs = slide.eq.lhs.map(sp => ({
                 ...sp,
                 _dx: sp.enterFrom ? entryDx(sp.enterFrom, transIn) : 0,
-                alpha: sp.enterFrom ? entryAlpha(sp.enterFrom, transIn) : (Math.min(1, transIn/15)),
+                alpha: sp.enterFrom ? entryAlpha(sp.enterFrom, transIn) : (Math.min(1, transIn/26)),
             }));
             const rhs = slide.eq.rhs.map(sp => ({
                 ...sp,
                 _dx: sp.enterFrom ? entryDx(sp.enterFrom, transIn) : 0,
-                alpha: sp.enterFrom ? entryAlpha(sp.enterFrom, transIn) : (Math.min(1, transIn/15)),
+                alpha: sp.enterFrom ? entryAlpha(sp.enterFrom, transIn) : (Math.min(1, transIn/26)),
             }));
             drawEquation({lhs, rhs}, eqY, W, FS, transIn);
         }
@@ -5029,7 +5155,7 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
         // ── Atom count ──
         if (slide.atomCount) {
             const ac = slide.atomCount;
-            const acAlpha = Math.min(1, (transIn-20)/30);
+            const acAlpha = Math.min(1, (transIn-30)/45);
             ctx.globalAlpha = Math.max(0, acAlpha);
             drawAtomCount(W/2, H*0.56, W, H, ac.elem, ac.lhsN, ac.rhsN, slideT, P[ac.pal]);
             ctx.globalAlpha = 1;
@@ -5046,14 +5172,18 @@ function initRedoxSim(engine, controlsContainer, overlayEl) {
 
         // ── Charge bar ──
         if (slide.chargeBar) {
-            const cbAlpha = Math.min(1, (transIn-15)/25);
-            ctx.globalAlpha = Math.max(0, cbAlpha);
-            drawChargeBar(W/2, H*0.57, slide.chargeBar.lhs, slide.chargeBar.rhs);
-            ctx.globalAlpha = 1;
+            if (slide.chargeBar.breakdown) {
+                drawChargeSumRow(slide, W, H, FS, transIn);
+            } else {
+                const cbAlpha = Math.min(1, (transIn-25)/40);
+                ctx.globalAlpha = Math.max(0, cbAlpha);
+                drawChargeBar(W/2, H*0.57, slide.chargeBar.lhs, slide.chargeBar.rhs);
+                ctx.globalAlpha = 1;
+            }
         }
 
         // ── Spawn electrons once ──
-        if (slide.spawnElec && slideT === 35) {
+        if (slide.spawnElec && slideT === 55) {
             const arrX = W*0.5;
             spawnElectrons(5, W*0.68, H*0.34, W*0.27, H*0.34);
         }
