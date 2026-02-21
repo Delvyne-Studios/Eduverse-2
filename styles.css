@@ -99,9 +99,9 @@
     --warning: #f59e0b;
     --danger: #ef4444;
 
-    --glass-bg: rgba(255, 255, 255, 0.025);
-    --glass-border: rgba(255, 255, 255, 0.06);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.7);
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
 
     --bg-primary: #000000;
     --bg-secondary: #0d0d0d;
@@ -525,22 +525,57 @@ body {
 [data-theme="amoled"] .orb-3 { background: radial-gradient(circle, #1a1a1a 0%, transparent 70%); filter: blur(120px); opacity: 0.7; }
 [data-theme="amoled"] .floating-shape { opacity: 0.04; filter: blur(120px); background: linear-gradient(135deg, #1e1e1e 0%, #0a0a0a 100%); }
 
-[data-theme="amoled"] .glass-premium { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.055); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04); transition: all 0.25s ease; }
-[data-theme="amoled"] .glass-premium:hover { border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.035); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-[data-theme="amoled"] .glass-btn { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); transition: all 0.2s ease; }
-[data-theme="amoled"] .glass-btn:hover { background: rgba(255, 255, 255, 0.055); border-color: rgba(255, 255, 255, 0.12); }
-[data-theme="amoled"] .btn-primary { background: linear-gradient(135deg, #2a2a2a 0%, #161616 100%); color: #f8f8f8; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.2s ease; }
-[data-theme="amoled"] .btn-primary:hover { background: linear-gradient(135deg, #343434 0%, #202020 100%); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.8); transform: translateY(-2px); }
-[data-theme="amoled"] .navbar { background: rgba(0, 0, 0, 0.92); border-bottom: 1px solid rgba(255, 255, 255, 0.06); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 24px rgba(0, 0, 0, 0.6); backdrop-filter: blur(24px); }
-[data-theme="amoled"] .logo-icon { background: linear-gradient(135deg, #2a2a2a, #161616); color: #f8f8f8; border: 1px solid rgba(255, 255, 255, 0.1); }
-[data-theme="amoled"] .nav-link.active { background: rgba(255, 255, 255, 0.055); border: 1px solid rgba(255, 255, 255, 0.1); }
-[data-theme="amoled"] .nav-link:hover { background: rgba(255, 255, 255, 0.03); color: #f5f5f5; }
-[data-theme="amoled"] .dashboard-card { background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5); transition: all 0.25s ease; }
-[data-theme="amoled"] .dashboard-card:hover { border-color: rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.03); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); }
+[data-theme="amoled"] .glass-premium { background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06); transition: all 0.25s ease; }
+[data-theme="amoled"] .glass-premium:hover { border-color: rgba(255, 255, 255, 0.28); background: rgba(255, 255, 255, 0.04); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+[data-theme="amoled"] .glass-btn { background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.18); transition: all 0.2s ease; }
+[data-theme="amoled"] .glass-btn:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.3); }
+[data-theme="amoled"] .btn-primary { background: linear-gradient(135deg, #2e2e2e 0%, #181818 100%); color: #f8f8f8; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.2s ease; }
+[data-theme="amoled"] .btn-primary:hover { background: linear-gradient(135deg, #3a3a3a 0%, #242424 100%); border-color: rgba(255, 255, 255, 0.32); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.8); transform: translateY(-2px); }
+[data-theme="amoled"] .navbar { background: rgba(0, 0, 0, 0.94); border-bottom: 1px solid rgba(255, 255, 255, 0.16); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 24px rgba(0, 0, 0, 0.7); backdrop-filter: blur(24px); }
+[data-theme="amoled"] .logo-icon { background: linear-gradient(135deg, #2e2e2e, #181818); color: #f8f8f8; border: 1px solid rgba(255, 255, 255, 0.22); }
+[data-theme="amoled"] .nav-link.active { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.2); }
+[data-theme="amoled"] .nav-link:hover { background: rgba(255, 255, 255, 0.04); color: #f5f5f5; }
+[data-theme="amoled"] .dashboard-card { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 2px 16px rgba(0, 0, 0, 0.6); transition: all 0.25s ease; }
+[data-theme="amoled"] .dashboard-card:hover { border-color: rgba(255, 255, 255, 0.26); background: rgba(255, 255, 255, 0.035); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7); }
 [data-theme="amoled"] .dashboard-card::before { display: none; }
 [data-theme="amoled"] .xp-fill, [data-theme="amoled"] .progress-fill { background: linear-gradient(90deg, #e2e2e2, #a0a0a0); }
-[data-theme="amoled"] .level-badge, [data-theme="amoled"] .stat-icon { background: linear-gradient(135deg, #2a2a2a, #161616); color: #f8f8f8; border: 1px solid rgba(255, 255, 255, 0.08); }
+[data-theme="amoled"] .xp-bar, [data-theme="amoled"] .progress-bar-bg { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12); }
+[data-theme="amoled"] .level-badge, [data-theme="amoled"] .stat-icon { background: linear-gradient(135deg, #2e2e2e, #181818); color: #f8f8f8; border: 1px solid rgba(255, 255, 255, 0.2); }
 [data-theme="amoled"] .gradient-text-animated { background: linear-gradient(135deg, #e2e2e2 0%, #f8f8f8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+/* Inputs, selects, textareas */
+[data-theme="amoled"] .tool-input,
+[data-theme="amoled"] .tool-select,
+[data-theme="amoled"] .tool-input-small,
+[data-theme="amoled"] .filter-select,
+[data-theme="amoled"] .doubt-textarea,
+[data-theme="amoled"] .subject-select,
+[data-theme="amoled"] .chat-input { background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.18); color: #f8f8f8; }
+[data-theme="amoled"] .tool-input:focus,
+[data-theme="amoled"] .tool-select:focus,
+[data-theme="amoled"] .doubt-textarea:focus,
+[data-theme="amoled"] .chat-input:focus { border-color: rgba(255, 255, 255, 0.38); outline: none; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06); }
+/* Chat panels */
+[data-theme="amoled"] .chat-sidebar-card,
+[data-theme="amoled"] .chat-main-card,
+[data-theme="amoled"] .chat-input-card { background: rgba(255, 255, 255, 0.018); border: 1px solid rgba(255, 255, 255, 0.15); }
+[data-theme="amoled"] .chat-input-wrapper { border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.025); }
+[data-theme="amoled"] .chat-input-wrapper:focus-within { border-color: rgba(255, 255, 255, 0.35); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06); }
+[data-theme="amoled"] .chat-header { border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+[data-theme="amoled"] .chat-sidebar-header { border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+/* Modals and overlays */
+[data-theme="amoled"] .modal-container,
+[data-theme="amoled"] .modal-content { background: #0a0a0a; border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.9); }
+[data-theme="amoled"] .modal-header { border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+[data-theme="amoled"] .modal-footer { border-top: 1px solid rgba(255, 255, 255, 0.14); }
+/* Tab bars */
+[data-theme="amoled"] .tab-bar,
+[data-theme="amoled"] .tabs-container { border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+[data-theme="amoled"] .tab-btn.active,
+[data-theme="amoled"] .tab-item.active { border-bottom: 2px solid rgba(255, 255, 255, 0.7); color: #f8f8f8; }
+/* Page section separators */
+[data-theme="amoled"] .card-header { border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.75rem; }
+[data-theme="amoled"] .section-divider,
+[data-theme="amoled"] hr { border-color: rgba(255, 255, 255, 0.12); }
 
 /* =================================================================
    GLASSMORPHISM STYLES
