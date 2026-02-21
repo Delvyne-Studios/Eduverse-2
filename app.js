@@ -64,15 +64,18 @@
     }, { passive: true });
 })();
 
-// Theme Management - Cycles through 6 themes
+// Theme Management - Cycles through 7 themes
+const validThemes = ['dark', 'amoled', 'slate', 'minimal', 'purple', 'red', 'neon'];
 let currentTheme = localStorage.getItem('theme') || 'dark';
+if (!validThemes.includes(currentTheme)) currentTheme = 'dark';
 document.documentElement.setAttribute('data-theme', currentTheme);
 
-const themes = ['dark', 'light', 'minimal', 'purple', 'red', 'neon'];
+const themes = validThemes;
 const themeIcons = {
     'dark': 'fas fa-moon',
-    'light': 'fas fa-sun',
-    'minimal': 'fas fa-circle',
+    'amoled': 'fas fa-circle',
+    'slate': 'fas fa-adjust',
+    'minimal': 'fas fa-water',
     'purple': 'fas fa-gem',
     'red': 'fas fa-fire',
     'neon': 'fas fa-star'
